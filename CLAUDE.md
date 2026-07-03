@@ -139,29 +139,31 @@ Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(serve
 
 GitHub Actions runs on push/PR to main:
 - **CI**: Matrix test (Node 20, 22) → `pnpm run check` + coverage
-- **Release**: Tag push (`v*`) → check + build + GitHub Release + pnpm publish + **Lightsail deploy**
+- **Release**: Tag push (`v*`) → check + build + GitHub Release + npm publish (Trusted Publishing/OIDC, no NPM_TOKEN)
 - **CodeQL**: Weekly security scanning
 
-### Deployment Flow
+### Release Flow
 
 ```
-feature branch → PR → merge to main → git tag v1.x.x → push tag → CI auto-deploys
+feature branch → PR → merge to main → git tag v1.x.x → push tag → GitHub Release + npm publish
 ```
 
-No manual deployment needed. The release workflow handles: pnpm publish → Docker build → Lightsail push → deployment creation.
+Direct pushes to main are blocked — version-bump commits go through a PR as well.
 
-## Hosting (AWS Lightsail)
+### Deployment
 
-The service runs on AWS Lightsail but is reached through the public
-`mcp.honeyfield.at` gateway (the direct `*.amazonlightsail.com` URL is retired).
+Production is NOT deployed by CI. The service runs behind the `mcp.honeyfield.at`
+gateway (single AWS host in eu-central-1, Caddy reverse proxy, multiple MCPs under
+path prefixes) and is updated server-side. The former Lightsail container service
+`ris-mcp` was decommissioned; the CI deploy job that targeted it has been removed.
+
+## Hosting
 
 | Property | Value |
 |----------|-------|
-| **Platform** | AWS Lightsail Container Service |
+| **Gateway** | `mcp.honeyfield.at` (Caddy, AWS eu-central-1) |
 | **Transport** | Streamable HTTP (MCP Spec v2025-03-26) |
-| **Region** | eu-central-1 |
-| **Power** | Nano (0.25 vCPU, 512 MB RAM) |
-| **Port** | 3000 |
+| **Port (container route)** | 3000 |
 | **Public MCP Endpoint** | `POST https://mcp.honeyfield.at/ris/mcp` (container route: `POST /mcp`) |
 | **Public Health Check** | `GET https://mcp.honeyfield.at/ris/health` (container route: `GET /health`) |
 

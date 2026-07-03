@@ -96,8 +96,6 @@ jobs:
         with:
           body_path: release-notes.md
 
-  # Runs in parallel with deploy-lightsail so an npm auth/registry problem
-  # cannot block the production deployment (and vice versa).
   publish-npm:
     name: Publish to npm
     needs: release
@@ -131,54 +129,3 @@ jobs:
       # trusted publisher for this repo/workflow is configured on npmjs.com.
       - name: Publish to npm
         run: pnpm publish --provenance --access public --no-git-checks
-
-  deploy-lightsail:
-    name: Deploy to Lightsail
-    needs: release
-    runs-on: ubuntu-latest
-    env:
-      AWS_REGION: eu-central-1
-      SERVICE_NAME: ris-mcp
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Install Lightsail plugin
-        run: |
-          curl -s "https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl" \
-            -o /usr/local/bin/lightsailctl && chmod +x /usr/local/bin/lightsailctl
-
-      - name: Build and push image
-        run: |
-          docker build --platform linux/amd64 -t $SERVICE_NAME .
-          aws lightsail push-container-image \
-            --service-name $SERVICE_NAME \
-            --label $SERVICE_NAME \
-            --image $SERVICE_NAME:latest \
-            --region $AWS_REGION 2>&1 | tee push-output.txt
-
-      - name: Deploy
-        run: |
-          IMAGE=$(grep -oP '":[\w.-]+"' push-output.txt | tr -d '"')
-          aws lightsail create-container-service-deployment \
-            --service-name $SERVICE_NAME \
-            --region $AWS_REGION \
-            --containers "{
-              \"$SERVICE_NAME\": {
-                \"image\": \"$IMAGE\",
-                \"ports\": {\"3000\": \"HTTP\"},
-                \"environment\": {}
-              }
-            }" \
-            --public-endpoint "{
-              \"containerName\": \"$SERVICE_NAME\",
-              \"containerPort\": 3000,
-              \"healthCheck\": {\"path\": \"/health\", \"intervalSeconds\": 30}
-            }"
