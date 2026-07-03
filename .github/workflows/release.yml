@@ -122,10 +122,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm run build
+      # Trusted publishing requires npm >= 11.5.1; Node 22 ships npm 10.
+      - name: Update npm CLI
+        run: npm install -g npm@latest
 
       # Auth via npm Trusted Publishing (OIDC) — no NPM_TOKEN needed. The
       # trusted publisher for this repo/workflow is configured on npmjs.com.
+      # prepublishOnly runs check + build via pnpm.
       - name: Publish to npm
-        run: pnpm publish --provenance --access public --no-git-checks
+        run: npm publish --provenance --access public
