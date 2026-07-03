@@ -125,10 +125,10 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      # Auth via npm Trusted Publishing (OIDC) — no NPM_TOKEN needed. The
+      # trusted publisher for this repo/workflow is configured on npmjs.com.
       - name: Publish to npm
         run: pnpm publish --provenance --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   deploy-lightsail:
     name: Deploy to Lightsail
