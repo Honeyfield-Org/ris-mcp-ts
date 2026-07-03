@@ -113,11 +113,13 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
 
+      # No registry-url here: setup-node would write an .npmrc authToken
+      # placeholder (with a dummy NODE_AUTH_TOKEN), which makes pnpm send the
+      # dummy token instead of attempting the OIDC exchange.
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
