@@ -203,8 +203,8 @@ describe('SSRF protection on search-derived content URL', () => {
       arguments: { dokumentnummer: 'NOR40052761' },
     });
 
-    const fetchedEvil = mockFetch.mock.calls.some(([u]) => String(u).includes('evil.example.com'));
-    expect(fetchedEvil).toBe(false);
+    const fetchedHosts = mockFetch.mock.calls.map(([u]) => new URL(String(u)).hostname);
+    expect(fetchedHosts).not.toContain('evil.example.com');
   });
 });
 
