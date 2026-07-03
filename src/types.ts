@@ -24,7 +24,10 @@ export const BundesrechtApplikationSchema = z.enum([
 export type BundesrechtApplikation = z.infer<typeof BundesrechtApplikationSchema>;
 
 /**
- * Court types for case law searches in RIS.
+ * Court/jurisdiction types for case law searches in RIS.
+ *
+ * This value selects the RIS "Applikation" (data collection), i.e. which
+ * court's decisions to search — not an individual court within a collection.
  */
 export const JudikaturGerichtSchema = z.enum([
   'Justiz', // Ordinary courts (OGH, OLG, LG, BG)
@@ -38,8 +41,43 @@ export const JudikaturGerichtSchema = z.enum([
   'Pvak', // Personnel Representation Supervision Commission
   'Gbk', // Equal Treatment Commission
   'Dok', // Disciplinary Commission
+  // Historical jurisdictions dissolved on 2014-01-01 (case stock still searchable).
+  'Verg', // Federal Procurement Office (Bundesvergabeamt)
+  'Uvs', // Independent Administrative Senates (Unabhängige Verwaltungssenate)
+  'Ubas', // Independent Federal Asylum Senate (Unabhängiger Bundesasylsenat)
+  'Umse', // Environmental Senate (Umweltsenat)
+  'Bks', // Federal Communications Board (Bundeskommunikationssenat)
 ]);
 export type JudikaturGericht = z.infer<typeof JudikaturGerichtSchema>;
+
+/**
+ * Document type filter for Judikatur searches.
+ *
+ * The RIS API only searches Rechtssätze (abstract legal principles) by default.
+ * "entscheidungstext" additionally/instead searches the full decision texts,
+ * and "beide" (the default here) searches both for the most complete results.
+ */
+export const JudikaturDokumenttypSchema = z.enum(['rechtssatz', 'entscheidungstext', 'beide']);
+export type JudikaturDokumenttyp = z.infer<typeof JudikaturDokumenttypSchema>;
+
+/**
+ * Broad legal area filter (Justiz only).
+ */
+export const JudikaturRechtsgebietSchema = z.enum(['Zivilrecht', 'Strafrecht']);
+export type JudikaturRechtsgebiet = z.infer<typeof JudikaturRechtsgebietSchema>;
+
+/**
+ * Sort order for Judikatur searches (by decision date).
+ */
+export const JudikaturSortierungSchema = z.enum(['datum_auf', 'datum_ab']);
+export type JudikaturSortierung = z.infer<typeof JudikaturSortierungSchema>;
+
+/**
+ * Section type for Bundesrecht/Landesrecht Abschnitt (Von/Bis) filters.
+ * Article-based laws (e.g. B-VG) require "Artikel"; most laws use "Paragraph".
+ */
+export const AbschnittTypSchema = z.enum(['Paragraph', 'Artikel', 'Anlage']);
+export type AbschnittTyp = z.infer<typeof AbschnittTypSchema>;
 
 /**
  * Austrian federal states (Bundesländer).
@@ -97,6 +135,23 @@ export const DokumenteProSeiteSchema = z.enum([
   'OneHundred', // 100 documents
 ]);
 export type DokumenteProSeite = z.infer<typeof DokumenteProSeiteSchema>;
+
+/**
+ * Allowed page sizes for tool `limit` parameters.
+ *
+ * Only 10/20/50/100 map cleanly to the RIS API's DokumenteProSeite enum;
+ * any other value would be silently coerced to 20, so the schema rejects it
+ * up front instead.
+ */
+export const LimitSchema = z
+  .union([z.literal(10), z.literal(20), z.literal(50), z.literal(100)])
+  .default(20);
+export type Limit = z.infer<typeof LimitSchema>;
+
+/**
+ * Page number for tool `seite` parameters (1-based integer).
+ */
+export const SeiteSchema = z.number().int().min(1).default(1);
 
 /**
  * Output format for MCP tool responses.
@@ -198,6 +253,48 @@ export interface RawHitsInfo {
 }
 
 /**
+ * Court-specific head-note block nested under the applikation name inside
+ * Judikatur metadata (e.g. Judikatur.Vfgh, Judikatur.Dsk).
+ *
+ * Which field is populated depends on the court: Vfgh/Vwgh/Justiz/Bvwg expose
+ * "Leitsatz", while Dsk/Pvak/Dok use "Kurzinformation" (verified against RIS
+ * API v2.6). Most courts populate at most one; some (Lvwg, Gbk, Bks, ...) expose
+ * neither.
+ */
+export interface RawJudikaturCourtBlock {
+  Leitsatz?: string;
+  Kurzinformation?: string;
+}
+
+/**
+ * Judikatur (case-law) metadata from the API response.
+ *
+ * The head-note lives in a nested block keyed by the RIS applikation name, so
+ * every supported court is declared here. This lets the parser read the block
+ * via a typed lookup instead of an untyped `Record<string, unknown>` index.
+ */
+export interface RawJudikaturMetadata {
+  Geschaeftszahl?: { item?: string | string[] } | string;
+  Entscheidungsdatum?: string;
+  Justiz?: RawJudikaturCourtBlock;
+  Vfgh?: RawJudikaturCourtBlock;
+  Vwgh?: RawJudikaturCourtBlock;
+  Bvwg?: RawJudikaturCourtBlock;
+  Lvwg?: RawJudikaturCourtBlock;
+  Dsk?: RawJudikaturCourtBlock;
+  Gbk?: RawJudikaturCourtBlock;
+  Pvak?: RawJudikaturCourtBlock;
+  Dok?: RawJudikaturCourtBlock;
+  AsylGH?: RawJudikaturCourtBlock;
+  Normenliste?: RawJudikaturCourtBlock;
+  Verg?: RawJudikaturCourtBlock;
+  Uvs?: RawJudikaturCourtBlock;
+  Ubas?: RawJudikaturCourtBlock;
+  Umse?: RawJudikaturCourtBlock;
+  Bks?: RawJudikaturCourtBlock;
+}
+
+/**
  * Raw document reference from API response.
  */
 export interface RawDocumentReference {
@@ -236,14 +333,7 @@ export interface RawDocumentReference {
           GesamteRechtsvorschriftUrl?: string;
         };
       };
-      Judikatur?: {
-        Geschaeftszahl?: { item?: string | string[] } | string;
-        Entscheidungsdatum?: string;
-        Vfgh?: { Leitsatz?: string };
-        Vwgh?: { Leitsatz?: string };
-        Justiz?: { Leitsatz?: string };
-        Bvwg?: { Leitsatz?: string };
-      };
+      Judikatur?: RawJudikaturMetadata;
     };
     Dokumentliste?: {
       ContentReference?: RawContentReference | RawContentReference[];

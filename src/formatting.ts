@@ -16,6 +16,31 @@ import type { Document, SearchResult } from './types.js';
 
 const CHARACTER_LIMIT = 25000;
 
+/**
+ * All RIS Judikatur applikationen (court systems). Documents from these are
+ * formatted as court citations rather than law citations. Includes the courts
+ * dissolved in 2014 (Verg/Uvs/Ubas/Umse/Bks) whose stock is still searchable.
+ * Verified against the RIS API v2.6 Judikatur court list.
+ */
+const JUDIKATUR_APPLIKATIONEN = new Set([
+  'Justiz',
+  'Vfgh',
+  'Vwgh',
+  'Bvwg',
+  'Lvwg',
+  'Dsk',
+  'Gbk',
+  'Pvak',
+  'Dok',
+  'AsylGH',
+  'Normenliste',
+  'Verg',
+  'Uvs',
+  'Ubas',
+  'Umse',
+  'Bks',
+]);
+
 // =============================================================================
 // Date Formatting
 // =============================================================================
@@ -106,7 +131,7 @@ export function formatCitation(doc: Document | CitationData): string {
   const kurztitel = data.kurztitel ?? citationData.kurztitel ?? '';
 
   // Handle court decisions (Judikatur)
-  if (['Justiz', 'Vfgh', 'Vwgh', 'Bvwg', 'Lvwg', 'Dsk'].includes(applikation)) {
+  if (JUDIKATUR_APPLIKATIONEN.has(applikation)) {
     return formatCourtCitation(data, applikation, titel);
   }
 
@@ -119,12 +144,19 @@ export function formatCitation(doc: Document | CitationData): string {
  */
 function formatCourtCitation(data: CitationData, applikation: string, titel: string): string {
   const courtPrefixes: Record<string, string> = {
-    Justiz: '',
+    Justiz: '', // extracted from title (OGH/OLG/LG/BG)
     Vfgh: 'VfGH',
     Vwgh: 'VwGH',
     Bvwg: 'BVwG',
     Lvwg: 'LVwG',
     Dsk: 'DSK',
+    Gbk: 'GBK',
+    AsylGH: 'AsylGH',
+    Uvs: 'UVS',
+    Ubas: 'UBAS',
+    Bks: 'BKS',
+    // Pvak, Dok, Verg, Umse, Normenliste have no widely-used short form; they
+    // fall back to the case number / Geschaeftszahl below.
   };
 
   const dokumentnummer = data.dokumentnummer ?? '';

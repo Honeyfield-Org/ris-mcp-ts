@@ -13,6 +13,8 @@ import type {
   RawContentReference,
   RawContentUrl,
   RawDocumentReference,
+  RawJudikaturCourtBlock,
+  RawJudikaturMetadata,
   SearchResult,
 } from './types.js';
 
@@ -43,6 +45,49 @@ export function extractText(elem: unknown): string | null {
     }
   }
   return null;
+}
+
+/**
+ * Judikatur metadata keys that carry a court-specific head-note block. The
+ * remaining keys (Geschaeftszahl, Entscheidungsdatum) are not courts.
+ */
+const JUDIKATUR_COURT_KEYS = [
+  'Justiz',
+  'Vfgh',
+  'Vwgh',
+  'Bvwg',
+  'Lvwg',
+  'Dsk',
+  'Gbk',
+  'Pvak',
+  'Dok',
+  'AsylGH',
+  'Normenliste',
+  'Verg',
+  'Uvs',
+  'Ubas',
+  'Umse',
+  'Bks',
+] as const;
+
+type JudikaturCourtKey = (typeof JUDIKATUR_COURT_KEYS)[number];
+
+function isCourtKey(key: string): key is JudikaturCourtKey {
+  return (JUDIKATUR_COURT_KEYS as readonly string[]).includes(key);
+}
+
+/**
+ * Extract the court-specific sub-block that carries the head-note. RIS nests
+ * this block under the applikation name (e.g. Judikatur.Vfgh, Judikatur.Dsk).
+ */
+function getCourtHeadNote(
+  judikatur: RawJudikaturMetadata | undefined,
+  applikation: string | undefined,
+): RawJudikaturCourtBlock | undefined {
+  if (!judikatur || !applikation || !isCourtKey(applikation)) {
+    return undefined;
+  }
+  return judikatur[applikation];
 }
 
 /**
@@ -172,12 +217,14 @@ export function parseDocumentFromApiResponse(docRef: RawDocumentReference): Docu
 
     entscheidungsdatum = judikatur.Entscheidungsdatum ?? '';
 
-    // Get court-specific nested data
-    const courtNested = judikatur.Vfgh ?? judikatur.Vwgh ?? judikatur.Justiz ?? judikatur.Bvwg;
-    const leitsatz = courtNested?.Leitsatz ?? '';
+    // The head-note lives in a nested block keyed by the applikation name
+    // (e.g. "Vfgh"). Only some courts expose one: Vfgh uses "Leitsatz", while
+    // Dsk/Pvak/Dok use "Kurzinformation" (verified against RIS API v2.6). Others
+    // (Lvwg, Gbk, Bks, ...) have no head-note and leave langtitel empty.
+    const courtNested = getCourtHeadNote(judikatur, technisch.Applikation);
 
     kurztitelElem = geschaeftszahl; // Use Geschaeftszahl as kurztitel
-    langtitelElem = leitsatz; // Use Leitsatz as langtitel
+    langtitelElem = extractText(courtNested?.Leitsatz) ?? extractText(courtNested?.Kurzinformation);
   }
 
   // Build Citation

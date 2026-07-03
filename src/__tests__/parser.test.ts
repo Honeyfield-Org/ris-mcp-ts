@@ -663,6 +663,64 @@ describe('parseDocumentFromApiResponse', () => {
       expect(result.citation.langtitel).toBe('BVwG Leitsatz der Entscheidung');
     });
 
+    it('should read Kurzinformation as head-note for Dsk decisions (N1)', () => {
+      // Dsk/Pvak/Dok expose "Kurzinformation" instead of "Leitsatz" (verified
+      // against RIS API v2.6). The head-note block is keyed by the applikation.
+      const rawDoc = {
+        Data: {
+          Metadaten: {
+            Technisch: { ID: 'PDKT_20260519_2026', Applikation: 'Dsk' },
+            Judikatur: {
+              Geschaeftszahl: 'DSB-D123.456',
+              Entscheidungsdatum: '2026-05-19',
+              Dsk: { Kurzinformation: 'Kurzinfo zur Datenschutz-Entscheidung' },
+            },
+          },
+        },
+      } as unknown as RawDocumentReference;
+
+      const result = parseDocumentFromApiResponse(rawDoc);
+      expect(result.citation.langtitel).toBe('Kurzinfo zur Datenschutz-Entscheidung');
+      expect(result.kurztitel).toBe('DSB-D123.456');
+    });
+
+    it('should read Kurzinformation as head-note for Pvak decisions (N1)', () => {
+      const rawDoc = {
+        Data: {
+          Metadaten: {
+            Technisch: { ID: 'PVABT_20260213_B10', Applikation: 'Pvak' },
+            Judikatur: {
+              Geschaeftszahl: 'B 10-PVAB/25',
+              Entscheidungsdatum: '2026-02-13',
+              Pvak: { Kurzinformation: 'PVAB Kurzinformation' },
+            },
+          },
+        },
+      } as unknown as RawDocumentReference;
+
+      const result = parseDocumentFromApiResponse(rawDoc);
+      expect(result.citation.langtitel).toBe('PVAB Kurzinformation');
+    });
+
+    it('should leave langtitel null for courts without a head-note field (Lvwg)', () => {
+      const rawDoc = {
+        Data: {
+          Metadaten: {
+            Technisch: { ID: 'LVWGT_NI_20260630', Applikation: 'Lvwg' },
+            Judikatur: {
+              Geschaeftszahl: 'LVwG-AV-757/001/2026',
+              Entscheidungsdatum: '2026-06-30',
+              Lvwg: { Entscheidungsart: 'Erkenntnis' },
+            },
+          },
+        },
+      } as unknown as RawDocumentReference;
+
+      const result = parseDocumentFromApiResponse(rawDoc);
+      expect(result.citation.langtitel).toBeNull();
+      expect(result.kurztitel).toBe('LVwG-AV-757/001/2026');
+    });
+
     it('should use GZ prefix when kurztitel is empty but Geschaeftszahl exists', () => {
       const rawDoc: RawDocumentReference = {
         Data: {

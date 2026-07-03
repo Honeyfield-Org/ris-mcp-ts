@@ -24,12 +24,14 @@ import {
   executeSearchTool,
   hasAnyParam,
 } from '../helpers.js';
-import { DateSchema } from '../types.js';
+import { DateSchema, LimitSchema, SeiteSchema } from '../types.js';
 
 export function registerSonstigeTool(server: McpServer): void {
-  server.tool(
+  server.registerTool(
     'ris_sonstige',
-    `Search miscellaneous Austrian legal collections (Sonstige).
+    {
+      title: 'Sonstige Sammlungen durchsuchen',
+      description: `Search miscellaneous Austrian legal collections (Sonstige).
 
 Use this tool for specialized legal documents and historical materials.
 
@@ -49,101 +51,103 @@ Example queries:
   - applikation="Upts", partei="SPÖ - Sozialdemokratische Partei Österreichs"
   - applikation="KmGer", kmger_typ="Geschaeftsordnung"
   - applikation="Avsv", dokumentart="Richtlinie"`,
-    {
-      applikation: z
-        .enum(['PruefGewO', 'Avsv', 'Spg', 'Avn', 'KmGer', 'Upts', 'Mrp', 'Erlaesse'])
-        .describe(
-          'Collection to search - "PruefGewO" (trade exams), "Avsv" (social insurance), "Spg" (health plans), "Avn" (veterinary notices), "KmGer" (court announcements), "Upts" (party transparency), "Mrp" (cabinet protocols), "Erlaesse" (decrees)',
+      inputSchema: {
+        applikation: z
+          .enum(['PruefGewO', 'Avsv', 'Spg', 'Avn', 'KmGer', 'Upts', 'Mrp', 'Erlaesse'])
+          .describe(
+            'Collection to search - "PruefGewO" (trade exams), "Avsv" (social insurance), "Spg" (health plans), "Avn" (veterinary notices), "KmGer" (court announcements), "Upts" (party transparency), "Mrp" (cabinet protocols), "Erlaesse" (decrees)',
+          ),
+        suchworte: z.string().max(1000).optional().describe('Full-text search terms'),
+        titel: z.string().max(500).optional().describe('Search in titles'),
+        datum_von: DateSchema.optional().describe('Date from (YYYY-MM-DD)'),
+        datum_bis: DateSchema.optional().describe('Date to (YYYY-MM-DD)'),
+        // Common parameters
+        im_ris_seit: z
+          .enum(IM_RIS_SEIT_VALUES)
+          .optional()
+          .describe(
+            'Filter by time in RIS - EinerWoche, ZweiWochen, EinemMonat, DreiMonaten, SechsMonaten, EinemJahr',
+          ),
+        sortierung_richtung: z
+          .enum(['Ascending', 'Descending'])
+          .optional()
+          .describe('Sort direction'),
+        geschaeftszahl: z
+          .string()
+          .max(200)
+          .optional()
+          .describe('File number/Aktenzeichen (for Mrp, Upts, KmGer)'),
+        norm: z.string().max(500).optional().describe('Legal norm reference (for Erlaesse, Upts)'),
+        fassung_vom: DateSchema.optional().describe(
+          'Historical version date (YYYY-MM-DD, for Erlaesse)',
         ),
-      suchworte: z.string().max(1000).optional().describe('Full-text search terms'),
-      titel: z.string().max(500).optional().describe('Search in titles'),
-      datum_von: DateSchema.optional().describe('Date from (YYYY-MM-DD)'),
-      datum_bis: DateSchema.optional().describe('Date to (YYYY-MM-DD)'),
-      // Common parameters
-      im_ris_seit: z
-        .enum(IM_RIS_SEIT_VALUES)
-        .optional()
-        .describe(
-          'Filter by time in RIS - EinerWoche, ZweiWochen, EinemMonat, DreiMonaten, SechsMonaten, EinemJahr',
-        ),
-      sortierung_richtung: z
-        .enum(['Ascending', 'Descending'])
-        .optional()
-        .describe('Sort direction'),
-      geschaeftszahl: z
-        .string()
-        .max(200)
-        .optional()
-        .describe('File number/Aktenzeichen (for Mrp, Upts, KmGer)'),
-      norm: z.string().max(500).optional().describe('Legal norm reference (for Erlaesse, Upts)'),
-      fassung_vom: DateSchema.optional().describe(
-        'Historical version date (YYYY-MM-DD, for Erlaesse)',
-      ),
-      // Mrp-specific parameters
-      einbringer: z
-        .string()
-        .max(200)
-        .optional()
-        .describe('Submitter (Mrp only, e.g., ministry abbreviation)'),
-      sitzungsnummer: z.string().max(50).optional().describe('Session number (Mrp only)'),
-      gesetzgebungsperiode: z
-        .string()
-        .max(10)
-        .optional()
-        .describe("Legislative period (Mrp only, e.g., '27')"),
-      // Erlaesse-specific parameters
-      bundesministerium: z
-        .enum(BUNDESMINISTERIEN)
-        .optional()
-        .describe('Federal ministry (Erlaesse only)'),
-      abteilung: z.string().max(200).optional().describe('Department/division (Erlaesse only)'),
-      fundstelle: z.string().max(200).optional().describe('Source reference (Erlaesse only)'),
-      // Upts-specific parameters
-      partei: z.enum(UPTS_PARTEIEN).optional().describe('Political party (Upts only)'),
-      // KmGer-specific parameters
-      kmger_typ: z
-        .enum(KMGER_TYP_VALUES)
-        .optional()
-        .describe('Announcement type (KmGer only) - Geschaeftsordnung, Geschaeftsverteilung'),
-      gericht: z.string().max(200).optional().describe('Court name (KmGer only)'),
-      // Avsv-specific parameters
-      dokumentart: z
-        .string()
-        .max(200)
-        .optional()
-        .describe('Document type search (Avsv only) - free text search expression'),
-      urheber: z.enum(AVSV_URHEBER_VALUES).optional().describe('Author/institution (Avsv only)'),
-      avsvnummer: z.string().max(100).optional().describe('AVSV number (Avsv only)'),
-      // Avn-specific parameters
-      avnnummer: z.string().max(100).optional().describe('AVN number (Avn only)'),
-      avn_typ: z
-        .enum(AVN_TYP_VALUES)
-        .optional()
-        .describe('Notice type (Avn only) - Kundmachung, Verordnung, Erlass'),
-      // Spg-specific parameters
-      spgnummer: z.string().max(100).optional().describe('SPG number (Spg only)'),
-      osg_typ: z
-        .enum(SPG_OSG_TYP_VALUES)
-        .optional()
-        .describe('Austrian health structure plan type (Spg only) - ÖSG, ÖSG - Großgeräteplan'),
-      rsg_typ: z
-        .enum(SPG_RSG_TYP_VALUES)
-        .optional()
-        .describe('Regional health structure plan type (Spg only) - RSG, RSG - Großgeräteplan'),
-      rsg_land: z.string().max(100).optional().describe('Federal state for RSG (Spg only)'),
-      // PruefGewO-specific parameters
-      pruefgewo_typ: z
-        .enum(PRUEFGEWO_TYP_VALUES)
-        .optional()
-        .describe(
-          'Examination type (PruefGewO only) - Befähigungsprüfung, Eignungsprüfung, Meisterprüfung',
-        ),
-      seite: z.number().default(1).describe('Page number (default: 1)'),
-      limit: z.number().default(20).describe('Results per page 10/20/50/100 (default: 20)'),
-      response_format: z
-        .enum(['markdown', 'json'])
-        .default('markdown')
-        .describe('"markdown" (default) or "json"'),
+        // Mrp-specific parameters
+        einbringer: z
+          .string()
+          .max(200)
+          .optional()
+          .describe('Submitter (Mrp only, e.g., ministry abbreviation)'),
+        sitzungsnummer: z.string().max(50).optional().describe('Session number (Mrp only)'),
+        gesetzgebungsperiode: z
+          .string()
+          .max(10)
+          .optional()
+          .describe("Legislative period (Mrp only, e.g., '27')"),
+        // Erlaesse-specific parameters
+        bundesministerium: z
+          .enum(BUNDESMINISTERIEN)
+          .optional()
+          .describe('Federal ministry (Erlaesse only)'),
+        abteilung: z.string().max(200).optional().describe('Department/division (Erlaesse only)'),
+        fundstelle: z.string().max(200).optional().describe('Source reference (Erlaesse only)'),
+        // Upts-specific parameters
+        partei: z.enum(UPTS_PARTEIEN).optional().describe('Political party (Upts only)'),
+        // KmGer-specific parameters
+        kmger_typ: z
+          .enum(KMGER_TYP_VALUES)
+          .optional()
+          .describe('Announcement type (KmGer only) - Geschaeftsordnung, Geschaeftsverteilung'),
+        gericht: z.string().max(200).optional().describe('Court name (KmGer only)'),
+        // Avsv-specific parameters
+        dokumentart: z
+          .string()
+          .max(200)
+          .optional()
+          .describe('Document type search (Avsv only) - free text search expression'),
+        urheber: z.enum(AVSV_URHEBER_VALUES).optional().describe('Author/institution (Avsv only)'),
+        avsvnummer: z.string().max(100).optional().describe('AVSV number (Avsv only)'),
+        // Avn-specific parameters
+        avnnummer: z.string().max(100).optional().describe('AVN number (Avn only)'),
+        avn_typ: z
+          .enum(AVN_TYP_VALUES)
+          .optional()
+          .describe('Notice type (Avn only) - Kundmachung, Verordnung, Erlass'),
+        // Spg-specific parameters
+        spgnummer: z.string().max(100).optional().describe('SPG number (Spg only)'),
+        osg_typ: z
+          .enum(SPG_OSG_TYP_VALUES)
+          .optional()
+          .describe('Austrian health structure plan type (Spg only) - ÖSG, ÖSG - Großgeräteplan'),
+        rsg_typ: z
+          .enum(SPG_RSG_TYP_VALUES)
+          .optional()
+          .describe('Regional health structure plan type (Spg only) - RSG, RSG - Großgeräteplan'),
+        rsg_land: z.string().max(100).optional().describe('Federal state for RSG (Spg only)'),
+        // PruefGewO-specific parameters
+        pruefgewo_typ: z
+          .enum(PRUEFGEWO_TYP_VALUES)
+          .optional()
+          .describe(
+            'Examination type (PruefGewO only) - Befähigungsprüfung, Eignungsprüfung, Meisterprüfung',
+          ),
+        seite: SeiteSchema.describe('Page number (default: 1)'),
+        limit: LimitSchema.describe('Results per page: 10, 20, 50, or 100 (default: 20)'),
+        response_format: z
+          .enum(['markdown', 'json'])
+          .default('markdown')
+          .describe('"markdown" (default) or "json"'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {
       const {

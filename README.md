@@ -33,11 +33,11 @@ The server translates these natural language requests into structured API calls 
 
 - **12 specialized tools** covering all major RIS collections
 - **Federal law** (ABGB, StGB, UGB, ...) and **state law** for all 9 provinces
-- **Court decisions** from 11 court types (Supreme Court, Constitutional Court, Administrative Court, ...)
+- **Court decisions** from 16 court types (Supreme Court, Constitutional Court, Administrative Court, ...)
 - **Law gazettes** — Federal (BGBl) and state (LGBl)
 - **Government bills**, ministerial decrees, cabinet protocols
 - **Full document retrieval** with smart prefix-based routing
-- **Change history tracking** across 30 application types
+- **Change history tracking** across 36 application types
 - **Markdown and JSON** output formats
 - **Free and open** — uses Austria's Open Government Data API, no API key needed
 
@@ -148,7 +148,7 @@ npx -y ris-mcp-ts
 |------|-------------|
 | `ris_bundesrecht` | Search federal laws (ABGB, StGB, UGB, etc.) |
 | `ris_landesrecht` | Search state/provincial laws (all 9 provinces) |
-| `ris_judikatur` | Search court decisions (11 court types) |
+| `ris_judikatur` | Search court decisions (16 court types) |
 | `ris_bundesgesetzblatt` | Search Federal Law Gazettes (BGBl I/II/III) |
 | `ris_landesgesetzblatt` | Search State Law Gazettes (LGBl) |
 | `ris_regierungsvorlagen` | Search government bills |
@@ -156,7 +156,7 @@ npx -y ris-mcp-ts
 | `ris_bezirke` | Search district authority announcements |
 | `ris_gemeinden` | Search municipal law and regulations |
 | `ris_sonstige` | Search miscellaneous collections (8 sub-apps) |
-| `ris_history` | Track document change history (30 app types) |
+| `ris_history` | Track document change history (36 app types) |
 | `ris_verordnungen` | Search state ordinance gazettes |
 
 ## Tool Reference
@@ -172,14 +172,17 @@ Search Austrian federal laws such as ABGB, StGB, UGB, and more.
 |-----------|------|-------------|
 | `suchworte` | string | Full-text search (e.g., "Mietrecht", "Schadenersatz") |
 | `titel` | string | Search in law titles (e.g., "ABGB", "Strafgesetzbuch") |
-| `paragraph` | string | Section number (e.g., "1295" for §1295) |
-| `applikation` | string | "BrKons" (consolidated, default), "Begut" (draft reviews), "Erv" (English version) |
+| `paragraph` | string | Section number (e.g., "1295" for §1295, "7" for Art 7) |
+| `abschnitt_typ` | string | Type of section `paragraph` refers to: "Paragraph" (default), "Artikel" (article-based laws like B-VG), "Anlage" (annex) |
+| `applikation` | string | "BrKons" (consolidated, default), "Begut" (drafts), "BgblAuth" (gazette), "Erv" (English translations) |
 | `fassung_vom` | string | Date for historical version (YYYY-MM-DD) |
 | `seite` | number | Page number (default: 1) |
 | `limit` | number | Results per page: 10, 20, 50, 100 (default: 20) |
 | `response_format` | string | "markdown" (default) or "json" |
 
 All parameters are optional. At least one search parameter (`suchworte`, `titel`, or `paragraph`) should be provided.
+
+> **Note:** `applikation="Erv"` (English translations) uses a different parameter vocabulary internally (`SearchTerms`/`Title`) and does not support `paragraph`/`abschnitt_typ` or `fassung_vom`.
 
 </details>
 
@@ -195,6 +198,10 @@ Search state laws of the nine Austrian provinces.
 | `suchworte` | string | Full-text search |
 | `titel` | string | Search in law titles |
 | `bundesland` | string | Province: Wien, Niederoesterreich, Oberoesterreich, Salzburg, Tirol, Vorarlberg, Kaernten, Steiermark, Burgenland |
+| `paragraph` | string | Section number (e.g., "1" for §1, "7" for Art 7) |
+| `abschnitt_typ` | string | Type of section `paragraph` refers to: "Paragraph" (default), "Artikel", "Anlage" |
+| `fassung_vom` | string | Date for historical version (YYYY-MM-DD) |
+| `gesetzesnummer` | string | Exact law number (Gesetzesnummer) of a specific state law |
 | `applikation` | string | "LrKons" (consolidated, default) |
 | `seite` | number | Page number |
 | `limit` | number | Results per page |
@@ -212,18 +219,25 @@ Search court decisions from Austrian courts.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `suchworte` | string | Full-text search in decisions |
-| `gericht` | string | Court type (see below) |
+| `gerichtsbarkeit` | string | Court system / data collection to search — the RIS "Applikation" (see below; default "Justiz") |
+| `dokumenttyp` | string | "rechtssatz" (headnotes only), "entscheidungstext" (full texts only), or "beide" (both, default) |
+| `gericht` | string | Actual court within the jurisdiction (e.g., "OGH", "OLG Wien"); applies to gerichtsbarkeit="Justiz" |
+| `rechtsgebiet` | string | Broad legal area: "Zivilrecht" or "Strafrecht" (Justiz) |
+| `fachgebiet` | string | OGH subject area (e.g., "Arbeitsrecht"); Justiz, needs dokumenttyp "entscheidungstext"/"beide" |
+| `entscheidungsart` | string | Decision type (e.g., "Erkenntnis", "Beschluss"); allowed values differ by jurisdiction |
+| `sammlungsnummer` | string | Collection number: VfSlg (Vfgh) or VwSlg (Vwgh) |
 | `norm` | string | Legal norm (e.g., "1319a ABGB") |
 | `geschaeftszahl` | string | Case number (e.g., "5Ob234/20b") |
 | `entscheidungsdatum_von` | string | Decision date from (YYYY-MM-DD) |
 | `entscheidungsdatum_bis` | string | Decision date to (YYYY-MM-DD) |
+| `sortierung` | string | Sort by decision date: "datum_auf" (oldest first) or "datum_ab" (newest first) |
 | `seite` | number | Page number |
 | `limit` | number | Results per page |
 | `response_format` | string | "markdown" or "json" |
 
-**Available courts:**
+**Available `gerichtsbarkeit` values (16):**
 
-| Value | Court |
+| Value | Court system |
 |-------|-------|
 | `Justiz` | Supreme Court (OGH), Higher Regional Courts (OLG), Regional Courts (LG) — default |
 | `Vfgh` | Constitutional Court |
@@ -231,11 +245,16 @@ Search court decisions from Austrian courts.
 | `Bvwg` | Federal Administrative Court |
 | `Lvwg` | Provincial Administrative Courts |
 | `Dsk` | Data Protection Authority |
-| `AsylGH` | Asylum Court (historical) |
+| `AsylGH` | Asylum Court (historical, until 2013) |
 | `Normenliste` | Index of legal norms |
 | `Pvak` | Personnel Representation Supervisory Commission |
 | `Gbk` | Equal Treatment Commission |
 | `Dok` | Disciplinary Commission |
+| `Verg` | Federal Procurement Office (historical, dissolved 2014) |
+| `Uvs` | Independent Administrative Senates (historical, dissolved 2014) |
+| `Ubas` | Independent Federal Asylum Senate (historical, dissolved 2014) |
+| `Umse` | Environmental Senate (historical, dissolved 2014) |
+| `Bks` | Federal Communications Board (historical, dissolved 2014) |
 
 </details>
 
@@ -325,12 +344,19 @@ At least one of `dokumentnummer` or `url` is required. Long documents are trunca
 |--------|------|
 | NOR | Federal norms |
 | LBG, LKT, LNO, LOO, LSB, LST, LTI, LVB, LWI | State laws (9 provinces) |
-| JWR, JFR, JWT, BVWG, LVWG, DSB, GBK, PVAK, ASYLGH | Court decisions |
-| BGBLA, BGBL | Federal Law Gazette |
+| JWR, JWT | Supreme Administrative Court (VwGH) |
+| JFR, JFT | Constitutional Court (VfGH) |
+| JJR, JJT | Ordinary courts (Justiz) |
+| BVWG, LVWG | Federal / State Administrative Courts |
+| DSB, PDK, GBK, PVAB, DKT, NL, ASYLGH | Data protection, equal treatment, personnel, disciplinary, norm lists, asylum |
+| VERG, JUR, JUT, UBAS, UMSE, BKS | Historical jurisdictions (dissolved 2014) |
+| BGBLA, BGBL, BGBLPDF | Federal Law Gazette (authentic / 1945–2003 / PDF) |
 | REGV | Government bills |
 | BVB | District authorities |
 | VBL | Ordinance gazettes |
-| MRP, ERL | Cabinet protocols, ministerial decrees |
+| MRP, ERL, PRUEF, AVSV, SPG, KMGER | Cabinet protocols, decrees, trade exams, social insurance, health plans, court announcements |
+
+> The full routing registry lives in `DOCUMENT_ROUTES` (`src/client.ts`); unknown prefixes fall back to a Justiz search.
 
 </details>
 

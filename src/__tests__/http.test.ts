@@ -10,7 +10,16 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import request from 'supertest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { app, mcpLimiter, sessions } from '../http.js';
+import {
+  app,
+  mcpLimiter,
+  sessions,
+  VERSION,
+  SESSION_IDLE_TIMEOUT_MS,
+  MAX_SESSIONS,
+  sweepIdleSessions,
+  registerSession,
+} from '../http.js';
 import { registerAllTools } from '../tools/index.js';
 
 // ---------------------------------------------------------------------------
@@ -151,7 +160,10 @@ describe('HTTP transport (http.ts)', () => {
         handleRequest: mockHandleRequest,
         sessionId: 'existing-session',
       };
-      sessions.set('existing-session', mockTransport as never);
+      sessions.set('existing-session', {
+        transport: mockTransport,
+        lastActivity: Date.now(),
+      } as never);
 
       mockHandleRequest.mockImplementation(
         (_req: unknown, res: { writeHead: (code: number) => void; end: () => void }) => {
@@ -304,6 +316,135 @@ describe('HTTP transport (http.ts)', () => {
       if (capturedOnClose) capturedOnClose();
 
       expect(sessions.size).toBe(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Version (M4 — no more hardcoded drift)
+  // ---------------------------------------------------------------------------
+
+  describe('Server version', () => {
+    it('exposes the package.json version, not the stale 1.0.0', () => {
+      expect(VERSION).toMatch(/^\d+\.\d+\.\d+/);
+      expect(VERSION).not.toBe('1.0.0');
+    });
+
+    it('creates each per-session McpServer with the package version', async () => {
+      mockHandleRequest.mockImplementation(
+        (_req: unknown, res: { writeHead: (code: number) => void; end: () => void }) => {
+          res.writeHead(200);
+          res.end();
+        },
+      );
+
+      await request(app).post('/mcp').send({ jsonrpc: '2.0', method: 'initialize', id: 1 });
+
+      expect(McpServer).toHaveBeenCalledWith({ name: 'ris-mcp', version: VERSION });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Proxy / body-size hardening (M3, N7)
+  // ---------------------------------------------------------------------------
+
+  describe('Express hardening', () => {
+    it('trusts exactly one proxy hop (M3)', () => {
+      expect(app.get('trust proxy')).toBe(1);
+    });
+
+    it('rejects request bodies larger than the JSON limit with 413 (N7)', async () => {
+      const oversized = { blob: 'a'.repeat(2 * 1024 * 1024) };
+
+      const res = await request(app).post('/mcp').send(oversized);
+
+      expect(res.status).toBe(413);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Session TTL / eviction (H1 — memory-leak fix)
+  // ---------------------------------------------------------------------------
+
+  describe('Session TTL sweep', () => {
+    const makeEntry = (
+      lastActivity: number,
+    ): { transport: { close: () => void }; lastActivity: number } => ({
+      transport: { close: vi.fn() },
+      lastActivity,
+    });
+
+    it('evicts sessions idle beyond the timeout and keeps fresh ones', () => {
+      const now = 5_000_000;
+      const stale = makeEntry(now - SESSION_IDLE_TIMEOUT_MS - 1);
+      const fresh = makeEntry(now);
+      sessions.set('stale', stale as never);
+      sessions.set('fresh', fresh as never);
+
+      const evicted = sweepIdleSessions(now);
+
+      expect(evicted).toBe(1);
+      expect(sessions.has('stale')).toBe(false);
+      expect(sessions.has('fresh')).toBe(true);
+      expect(stale.transport.close).toHaveBeenCalledTimes(1);
+      expect(fresh.transport.close).not.toHaveBeenCalled();
+    });
+
+    it('keeps a session exactly at the timeout boundary', () => {
+      const now = 5_000_000;
+      sessions.set('boundary', makeEntry(now - SESSION_IDLE_TIMEOUT_MS) as never);
+
+      const evicted = sweepIdleSessions(now);
+
+      expect(evicted).toBe(0);
+      expect(sessions.has('boundary')).toBe(true);
+    });
+
+    it('uses the current clock by default (vi.useFakeTimers)', () => {
+      vi.useFakeTimers();
+      try {
+        const entry = makeEntry(Date.now());
+        sessions.set('stale', entry as never);
+
+        vi.advanceTimersByTime(SESSION_IDLE_TIMEOUT_MS + 1);
+        sweepIdleSessions();
+
+        expect(sessions.has('stale')).toBe(false);
+        expect(entry.transport.close).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Session cap (H1 — hard upper bound)
+  // ---------------------------------------------------------------------------
+
+  describe('Session cap', () => {
+    it('evicts the oldest session once MAX_SESSIONS is reached', () => {
+      for (let i = 0; i < MAX_SESSIONS; i++) {
+        // lastActivity ascending → s0 is the oldest
+        sessions.set(`s${i}`, { transport: { close: vi.fn() }, lastActivity: 1000 + i } as never);
+      }
+      expect(sessions.size).toBe(MAX_SESSIONS);
+
+      const incoming = { close: vi.fn(), sessionId: 'incoming' };
+      registerSession('incoming', incoming as never);
+
+      expect(sessions.size).toBe(MAX_SESSIONS);
+      expect(sessions.has('s0')).toBe(false);
+      expect(sessions.has('incoming')).toBe(true);
+    });
+
+    it('does not evict when re-registering an existing session id at the cap', () => {
+      for (let i = 0; i < MAX_SESSIONS; i++) {
+        sessions.set(`s${i}`, { transport: { close: vi.fn() }, lastActivity: 1000 + i } as never);
+      }
+
+      registerSession('s0', { close: vi.fn(), sessionId: 's0' } as never);
+
+      expect(sessions.size).toBe(MAX_SESSIONS);
+      expect(sessions.has('s0')).toBe(true);
     });
   });
 });

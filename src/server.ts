@@ -10,10 +10,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { registerAllTools } from './tools/index.js';
+import { VERSION } from './version.js';
 
 export const server = new McpServer({
   name: 'ris-mcp',
-  version: '1.0.0',
+  version: VERSION,
 });
 
 registerAllTools(server);

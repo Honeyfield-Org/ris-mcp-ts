@@ -310,6 +310,43 @@ describe('formatCitation', () => {
       const citation = formatCitation(doc);
       expect(citation).toBeTruthy();
     });
+
+    // N1: previously only Justiz/Vfgh/Vwgh/Bvwg/Lvwg/Dsk were treated as court
+    // decisions; every other Judikatur applikation was wrongly formatted as a law.
+    describe('routes ALL judikatur applikationen to court formatter (N1)', () => {
+      const courtApps = [
+        'Gbk',
+        'Pvak',
+        'Dok',
+        'AsylGH',
+        'Normenliste',
+        'Verg',
+        'Uvs',
+        'Ubas',
+        'Umse',
+        'Bks',
+      ];
+
+      for (const app of courtApps) {
+        it(`should route ${app} to court formatter, not law formatter`, () => {
+          const doc = createMockDocument({
+            applikation: app,
+            titel: 'Fallzahl 12/24',
+            kurztitel: 'LawKurztitel',
+            citation: {
+              paragraph: '§ 5',
+              kurztitel: 'LawKurztitel',
+              kundmachungsorgan: 'BGBl. I Nr. 1/2024',
+            },
+          });
+          const citation = formatCitation(doc);
+          // A law citation would contain the paragraph and kurztitel; a court
+          // citation is built from the title / Geschaeftszahl instead.
+          expect(citation).not.toContain('§ 5');
+          expect(citation).not.toContain('LawKurztitel');
+        });
+      }
+    });
   });
 });
 

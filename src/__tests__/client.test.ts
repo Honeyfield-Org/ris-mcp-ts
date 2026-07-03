@@ -20,6 +20,7 @@ import {
   getDocumentContent,
   constructDocumentUrl,
   getDocumentByNumber,
+  getDocumentRoute,
   isValidDokumentnummer,
 } from '../client.js';
 
@@ -612,6 +613,76 @@ describe('searchHistory', () => {
 });
 
 // =============================================================================
+// Transient Retry Tests (N2)
+// =============================================================================
+
+describe('request retry on transient errors', () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+
+  const okResponse = {
+    ok: true,
+    text: () =>
+      Promise.resolve(JSON.stringify({ OgdSearchResult: { OgdDocumentResults: { Hits: 0 } } })),
+  };
+
+  beforeEach(() => {
+    mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('should retry once on HTTP 503 and then succeed', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 503, text: () => Promise.resolve('unavailable') })
+      .mockResolvedValueOnce(okResponse);
+
+    const result = await searchBundesrecht({ Suchworte: 'test' });
+
+    expect(result.hits).toBe(0);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('should retry once on timeout and then succeed', async () => {
+    mockFetch
+      .mockImplementationOnce(() => {
+        const error = new Error('Aborted');
+        error.name = 'AbortError';
+        return Promise.reject(error);
+      })
+      .mockResolvedValueOnce(okResponse);
+
+    const result = await searchBundesrecht({ Suchworte: 'test' }, 100);
+
+    expect(result.hits).toBe(0);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('should NOT retry on HTTP 404 (non-transient)', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 404, text: () => Promise.resolve('nope') });
+
+    await expect(searchBundesrecht({ Suchworte: 'test' })).rejects.toThrow(RISAPIError);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should retry only once and then propagate a persistent 503', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 503, text: () => Promise.resolve('down') });
+
+    await expect(searchBundesrecht({ Suchworte: 'test' })).rejects.toThrow(RISAPIError);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('should NOT retry on parsing error', async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('not json') });
+
+    await expect(searchBundesrecht({ Suchworte: 'test' })).rejects.toThrow(RISParsingError);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+// =============================================================================
 // getDocumentContent Tests
 // =============================================================================
 
@@ -891,14 +962,45 @@ describe('constructDocumentUrl', () => {
     expect(url).toBe('https://ris.bka.gv.at/Dokumente/Vfgh/JFR12345678/JFR12345678.html');
   });
 
-  it('should construct URL for Justiz (JWT prefix)', () => {
+  it('should construct URL for VwGH Volltext (JWT prefix)', () => {
+    // JWT = Verwaltungsgerichtshof Entscheidungstext (verified live: /Vwgh/ 200, /Justiz/ 404).
     const url = constructDocumentUrl('JWT12345678');
-    expect(url).toBe('https://ris.bka.gv.at/Dokumente/Justiz/JWT12345678/JWT12345678.html');
+    expect(url).toBe('https://ris.bka.gv.at/Dokumente/Vwgh/JWT12345678/JWT12345678.html');
   });
 
-  it('should construct URL for Justiz (JJR prefix)', () => {
+  it('should construct URL for Justiz Rechtssatz (JJR prefix)', () => {
     const url = constructDocumentUrl('JJR12345678');
     expect(url).toBe('https://ris.bka.gv.at/Dokumente/Justiz/JJR12345678/JJR12345678.html');
+  });
+
+  it('should construct URL for Justiz Volltext (JJT prefix)', () => {
+    const url = constructDocumentUrl('JJT12345678');
+    expect(url).toBe('https://ris.bka.gv.at/Dokumente/Justiz/JJT12345678/JJT12345678.html');
+  });
+
+  it('should construct URL for historical Verg (VERG prefix)', () => {
+    const url = constructDocumentUrl('VERGT12345678');
+    expect(url).toBe('https://ris.bka.gv.at/Dokumente/Verg/VERGT12345678/VERGT12345678.html');
+  });
+
+  it('should construct URL for historical Uvs (JUT prefix)', () => {
+    const url = constructDocumentUrl('JUT12345678');
+    expect(url).toBe('https://ris.bka.gv.at/Dokumente/Uvs/JUT12345678/JUT12345678.html');
+  });
+
+  it('should construct URL for historical Ubas (UBAS prefix)', () => {
+    const url = constructDocumentUrl('UBAST12345678');
+    expect(url).toBe('https://ris.bka.gv.at/Dokumente/Ubas/UBAST12345678/UBAST12345678.html');
+  });
+
+  it('should construct URL for historical Umse (UMSE prefix)', () => {
+    const url = constructDocumentUrl('UMSET12345678');
+    expect(url).toBe('https://ris.bka.gv.at/Dokumente/Umse/UMSET12345678/UMSET12345678.html');
+  });
+
+  it('should construct URL for historical Bks (BKS prefix)', () => {
+    const url = constructDocumentUrl('BKST12345678');
+    expect(url).toBe('https://ris.bka.gv.at/Dokumente/Bks/BKST12345678/BKST12345678.html');
   });
 
   it('should construct URL for Bezirke (BVB prefix)', () => {
@@ -957,6 +1059,62 @@ describe('constructDocumentUrl', () => {
     expect(url).toBe(
       'https://ris.bka.gv.at/Dokumente/Bvwg/BVWG_W123_2000000_1_00/BVWG_W123_2000000_1_00.html',
     );
+  });
+});
+
+// =============================================================================
+// getDocumentRoute Tests (single routing registry for URL + fallback search)
+// =============================================================================
+
+describe('getDocumentRoute', () => {
+  it('should route NOR to Bundesrecht/BrKons', () => {
+    expect(getDocumentRoute('NOR40052761')).toEqual({
+      urlFolder: 'Bundesnormen',
+      endpoint: 'Bundesrecht',
+      applikation: 'BrKons',
+    });
+  });
+
+  it('should route Vorarlberg LVB to Landesrecht/LrKons', () => {
+    expect(getDocumentRoute('LVB40006754')).toEqual({
+      urlFolder: 'LrVbg',
+      endpoint: 'Landesrecht',
+      applikation: 'LrKons',
+    });
+  });
+
+  it('should route JWT (VwGH Volltext) to Judikatur/Vwgh, not Justiz', () => {
+    const route = getDocumentRoute('JWT_2026190142_20260610L00');
+    expect(route?.endpoint).toBe('Judikatur');
+    expect(route?.applikation).toBe('Vwgh');
+    expect(route?.urlFolder).toBe('Vwgh');
+  });
+
+  it('should route JJT (Justiz Volltext) to Judikatur/Justiz', () => {
+    expect(getDocumentRoute('JJT_20261205_OLG0459')?.applikation).toBe('Justiz');
+  });
+
+  it('should route historical courts to their Judikatur applikation', () => {
+    expect(getDocumentRoute('VERGT_20131230_961040_13_00')?.applikation).toBe('Verg');
+    expect(getDocumentRoute('JUT_VO_20010425_03202_00_00')?.applikation).toBe('Uvs');
+    expect(getDocumentRoute('JUR_VO_20010425_03202_00_00')?.applikation).toBe('Uvs');
+    expect(getDocumentRoute('UBAST_20071126_227_475')?.applikation).toBe('Ubas');
+    expect(getDocumentRoute('UMSET_20131218_US_8B')?.applikation).toBe('Umse');
+    expect(getDocumentRoute('BKST_20131211_611001')?.applikation).toBe('Bks');
+  });
+
+  it('should route Sonstige and Bezirke prefixes to their endpoints', () => {
+    expect(getDocumentRoute('MRP12345678')?.endpoint).toBe('Sonstige');
+    expect(getDocumentRoute('BVB12345678')?.endpoint).toBe('Bezirke');
+  });
+
+  it('should not confuse BVWG with BVB (longest prefix wins)', () => {
+    expect(getDocumentRoute('BVWG_W123_2000000_1_00')?.applikation).toBe('Bvwg');
+    expect(getDocumentRoute('BVB12345678')?.applikation).toBe('Bvb');
+  });
+
+  it('should return null for unknown prefix', () => {
+    expect(getDocumentRoute('XYZ12345678')).toBeNull();
   });
 });
 

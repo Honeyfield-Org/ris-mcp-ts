@@ -127,6 +127,57 @@ export const PRUEFGEWO_TYP_VALUES = [
 ] as const;
 
 /**
+ * Subject areas (Fachgebiet) for Justiz (OGH) case law searches.
+ *
+ * These categorize full decision texts, so they only match when
+ * Entscheidungstexte are included in the search (dokumenttyp
+ * "entscheidungstext" or "beide"). All values below were verified against a
+ * live API call; the documented value "Standes- und Disziplinarrecht für
+ * Anwälte" is intentionally omitted because no working spelling could be
+ * confirmed (it returned 0 hits for every variant tried).
+ */
+export const JUDIKATUR_FACHGEBIETE = [
+  'Amtsdelikte/Korruption',
+  'Amtshaftung inkl. StEG',
+  'Anfechtungsrecht',
+  'Arbeitsrecht',
+  'Bestandrecht',
+  'Datenschutzrecht',
+  'Erbrecht und Verlassenschaftsverfahren',
+  'Erwachsenenschutzrecht',
+  'Exekutionsrecht',
+  'Familienrecht (ohne Unterhalt)',
+  'Finanzstrafsachen',
+  'Gewerblicher Rechtsschutz',
+  'Grundbuchsrecht',
+  'Grundrechte',
+  'Insolvenzrecht',
+  'Internationales Privat- und Zivilverfahrensrecht',
+  'Jugendstrafsachen',
+  'Kartellrecht',
+  'Klauselentscheidungen',
+  'Konsumentenschutz und Produkthaftung',
+  'Medienrecht',
+  'Persönlichkeitsschutzrecht',
+  'Schadenersatz nach Verkehrsunfall',
+  'Schlepperei/FPG',
+  'Schiedsverfahrensrecht',
+  'Sexualdelikte',
+  'Sozialrecht',
+  'Suchtgiftdelikte',
+  'Transportrecht',
+  'Unionsrecht',
+  'Unterbringungs- und Heimaufenthaltsrecht',
+  'Unterhaltsrecht inkl. UVG',
+  'Unternehmens-, Gesellschafts- und Wertpapierrecht',
+  'Urheberrecht',
+  'Versicherungsvertragsrecht',
+  'Wirtschaftsstrafsachen',
+  'Wohnungseigentumsrecht',
+  'Zivilverfahrensrecht',
+] as const;
+
+/**
  * Valid application names for the History API endpoint.
  * The History API uses "Anwendung" parameter with specific application names.
  */
@@ -161,6 +212,13 @@ export const VALID_HISTORY_APPLICATIONS = [
   'Pvak',
   'Normenliste',
   'AsylGH',
+  // Historical jurisdictions dissolved on 2014-01-01, still tracked by History.
+  'Verg', // Federal Procurement Office
+  'Upts', // Party Transparency Senate (search collection: ris_sonstige, NOT Judikatur)
+  'Uvs', // Independent Administrative Senates
+  'Ubas', // Independent Federal Asylum Senate
+  'Umse', // Environmental Senate
+  'Bks', // Federal Communications Board
 ] as const;
 
 /**

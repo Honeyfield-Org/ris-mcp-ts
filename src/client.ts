@@ -62,6 +62,32 @@ export class RISParsingError extends RISAPIError {
 const BASE_URL = 'https://data.bka.gv.at/ris/api/v2.6/';
 const DEFAULT_TIMEOUT = 30000; // 30 seconds in milliseconds
 
+/** HTTP status codes treated as transient and worth a single retry. */
+const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
+/** Delay before the single retry of a transient failure. */
+const RETRY_DELAY_MS = 500;
+
+/**
+ * Resolve after the given number of milliseconds.
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Determine whether an error is transient (a gateway error or timeout) and
+ * therefore worth retrying once.
+ */
+function isTransientError(error: unknown): boolean {
+  if (error instanceof RISTimeoutError) {
+    return true;
+  }
+  if (error instanceof RISAPIError && error.statusCode !== undefined) {
+    return TRANSIENT_STATUS_CODES.has(error.statusCode);
+  }
+  return false;
+}
+
 /**
  * Allowed hostnames for document content fetching (SSRF protection).
  */
@@ -149,21 +175,18 @@ function extractSearchResults(parsedResponse: RawApiResponse): NormalizedSearchR
 }
 
 /**
- * Make a request to the RIS API.
+ * Perform a single request attempt against the RIS API.
  */
-async function request(
+async function requestOnce(
+  url: string,
   endpoint: string,
-  params: Record<string, unknown>,
-  timeout = DEFAULT_TIMEOUT,
+  timeout: number,
 ): Promise<NormalizedSearchResults> {
-  const url = new URL(endpoint, BASE_URL);
-  url.search = buildParams(params).toString();
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url.toString(), {
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
@@ -199,6 +222,30 @@ async function request(
     }
 
     throw new RISAPIError(`Request failed for ${endpoint}: ${String(e)}`);
+  }
+}
+
+/**
+ * Make a request to the RIS API, retrying once on transient failures
+ * (HTTP 502/503/504 and timeouts) after a short delay.
+ */
+async function request(
+  endpoint: string,
+  params: Record<string, unknown>,
+  timeout = DEFAULT_TIMEOUT,
+): Promise<NormalizedSearchResults> {
+  const url = new URL(endpoint, BASE_URL);
+  url.search = buildParams(params).toString();
+  const urlString = url.toString();
+
+  try {
+    return await requestOnce(urlString, endpoint, timeout);
+  } catch (e) {
+    if (isTransientError(e)) {
+      await delay(RETRY_DELAY_MS);
+      return requestOnce(urlString, endpoint, timeout);
+    }
+    throw e;
   }
 }
 
@@ -339,59 +386,106 @@ export function isValidDokumentnummer(dokumentnummer: string): boolean {
 }
 
 /**
- * URL patterns for different document types based on Dokumentnummer prefix.
- * The {dokumentnummer} placeholder will be replaced with the actual document number.
+ * RIS search endpoint used for the fallback search when direct URL fetch fails.
  */
-const DOCUMENT_URL_PATTERNS: Record<string, string> = {
-  // Bundesrecht (Federal Law)
-  NOR: 'https://ris.bka.gv.at/Dokumente/Bundesnormen/{dokumentnummer}/{dokumentnummer}.html',
+export type DocumentEndpoint = 'Bundesrecht' | 'Landesrecht' | 'Judikatur' | 'Sonstige' | 'Bezirke';
 
-  // Landesrecht (State Law) - one prefix per state
-  LBG: 'https://ris.bka.gv.at/Dokumente/LrBgld/{dokumentnummer}/{dokumentnummer}.html',
-  LKT: 'https://ris.bka.gv.at/Dokumente/LrK/{dokumentnummer}/{dokumentnummer}.html',
-  LNO: 'https://ris.bka.gv.at/Dokumente/LrNO/{dokumentnummer}/{dokumentnummer}.html',
-  LOO: 'https://ris.bka.gv.at/Dokumente/LrOO/{dokumentnummer}/{dokumentnummer}.html',
-  LSB: 'https://ris.bka.gv.at/Dokumente/LrSbg/{dokumentnummer}/{dokumentnummer}.html',
-  LST: 'https://ris.bka.gv.at/Dokumente/LrStmk/{dokumentnummer}/{dokumentnummer}.html',
-  LTI: 'https://ris.bka.gv.at/Dokumente/LrT/{dokumentnummer}/{dokumentnummer}.html',
-  LVB: 'https://ris.bka.gv.at/Dokumente/LrVbg/{dokumentnummer}/{dokumentnummer}.html',
-  LWI: 'https://ris.bka.gv.at/Dokumente/LrW/{dokumentnummer}/{dokumentnummer}.html',
+/**
+ * Routing information for a Dokumentnummer prefix.
+ */
+export interface DocumentRoute {
+  /** Folder segment in the ris.bka.gv.at/Dokumente/<folder>/ direct URL. */
+  urlFolder: string;
+  /** Search endpoint used for the fallback search. */
+  endpoint: DocumentEndpoint;
+  /** `Applikation` API parameter for the fallback search. */
+  applikation: string;
+}
 
-  // Judikatur (Case Law)
-  JWR: 'https://ris.bka.gv.at/Dokumente/Vwgh/{dokumentnummer}/{dokumentnummer}.html',
-  JFR: 'https://ris.bka.gv.at/Dokumente/Vfgh/{dokumentnummer}/{dokumentnummer}.html',
-  JFT: 'https://ris.bka.gv.at/Dokumente/Vfgh/{dokumentnummer}/{dokumentnummer}.html',
-  JWT: 'https://ris.bka.gv.at/Dokumente/Justiz/{dokumentnummer}/{dokumentnummer}.html',
-  JJR: 'https://ris.bka.gv.at/Dokumente/Justiz/{dokumentnummer}/{dokumentnummer}.html',
-  BVWG: 'https://ris.bka.gv.at/Dokumente/Bvwg/{dokumentnummer}/{dokumentnummer}.html',
-  LVWG: 'https://ris.bka.gv.at/Dokumente/Lvwg/{dokumentnummer}/{dokumentnummer}.html',
-  DSB: 'https://ris.bka.gv.at/Dokumente/Dsk/{dokumentnummer}/{dokumentnummer}.html',
-  GBK: 'https://ris.bka.gv.at/Dokumente/Gbk/{dokumentnummer}/{dokumentnummer}.html',
-  PVAK: 'https://ris.bka.gv.at/Dokumente/Pvak/{dokumentnummer}/{dokumentnummer}.html',
-  ASYLGH: 'https://ris.bka.gv.at/Dokumente/AsylGH/{dokumentnummer}/{dokumentnummer}.html',
+/**
+ * Single source of truth mapping Dokumentnummer prefixes to their direct-URL
+ * folder and fallback-search routing. Used by both {@link constructDocumentUrl}
+ * (direct URL) and the ris_dokument fallback search (via {@link getDocumentRoute}).
+ * Prefixes are matched longest-first.
+ *
+ * The Judikatur document-ID scheme is `J<court><R|T>` where R = Rechtssatz and
+ * T = Entscheidungstext: JJ = Justiz, JW = VwGH, JF = VfGH, JU = UVS.
+ *
+ * Folder segments and endpoints verified against RIS API v2.6
+ * (data.bka.gv.at / ris.bka.gv.at) on 2026-07-03.
+ */
+const DOCUMENT_ROUTES: Record<string, DocumentRoute> = {
+  // --- Bundesrecht (Federal Law) ---
+  NOR: { urlFolder: 'Bundesnormen', endpoint: 'Bundesrecht', applikation: 'BrKons' },
+  BGBLPDF: { urlFolder: 'BgblPdf', endpoint: 'Bundesrecht', applikation: 'BgblPdf' },
+  BGBLA: { urlFolder: 'BgblAuth', endpoint: 'Bundesrecht', applikation: 'BgblAuth' },
+  BGBL: { urlFolder: 'BgblAlt', endpoint: 'Bundesrecht', applikation: 'BgblAlt' },
+  REGV: { urlFolder: 'RegV', endpoint: 'Bundesrecht', applikation: 'RegV' },
 
-  // Bundesgesetzblätter (Federal Law Gazettes)
-  BGBLA: 'https://ris.bka.gv.at/Dokumente/BgblAuth/{dokumentnummer}/{dokumentnummer}.html',
-  BGBL: 'https://ris.bka.gv.at/Dokumente/BgblAlt/{dokumentnummer}/{dokumentnummer}.html',
-  BGBLPDF: 'https://ris.bka.gv.at/Dokumente/BgblPdf/{dokumentnummer}/{dokumentnummer}.html',
+  // --- Landesrecht (State Law) — one prefix per state ---
+  LBG: { urlFolder: 'LrBgld', endpoint: 'Landesrecht', applikation: 'LrKons' },
+  LKT: { urlFolder: 'LrK', endpoint: 'Landesrecht', applikation: 'LrKons' },
+  LNO: { urlFolder: 'LrNO', endpoint: 'Landesrecht', applikation: 'LrKons' },
+  LOO: { urlFolder: 'LrOO', endpoint: 'Landesrecht', applikation: 'LrKons' },
+  LSB: { urlFolder: 'LrSbg', endpoint: 'Landesrecht', applikation: 'LrKons' },
+  LST: { urlFolder: 'LrStmk', endpoint: 'Landesrecht', applikation: 'LrKons' },
+  LTI: { urlFolder: 'LrT', endpoint: 'Landesrecht', applikation: 'LrKons' },
+  LVB: { urlFolder: 'LrVbg', endpoint: 'Landesrecht', applikation: 'LrKons' },
+  LWI: { urlFolder: 'LrW', endpoint: 'Landesrecht', applikation: 'LrKons' },
+  VBL: { urlFolder: 'Vbl', endpoint: 'Landesrecht', applikation: 'Vbl' },
 
-  // Regierungsvorlagen (Government Bills)
-  REGV: 'https://ris.bka.gv.at/Dokumente/RegV/{dokumentnummer}/{dokumentnummer}.html',
+  // --- Judikatur (Case Law) ---
+  JWR: { urlFolder: 'Vwgh', endpoint: 'Judikatur', applikation: 'Vwgh' },
+  JWT: { urlFolder: 'Vwgh', endpoint: 'Judikatur', applikation: 'Vwgh' },
+  JFR: { urlFolder: 'Vfgh', endpoint: 'Judikatur', applikation: 'Vfgh' },
+  JFT: { urlFolder: 'Vfgh', endpoint: 'Judikatur', applikation: 'Vfgh' },
+  JJR: { urlFolder: 'Justiz', endpoint: 'Judikatur', applikation: 'Justiz' },
+  JJT: { urlFolder: 'Justiz', endpoint: 'Judikatur', applikation: 'Justiz' },
+  BVWG: { urlFolder: 'Bvwg', endpoint: 'Judikatur', applikation: 'Bvwg' },
+  LVWG: { urlFolder: 'Lvwg', endpoint: 'Judikatur', applikation: 'Lvwg' },
+  DSB: { urlFolder: 'Dsk', endpoint: 'Judikatur', applikation: 'Dsk' },
+  PDK: { urlFolder: 'Dsk', endpoint: 'Judikatur', applikation: 'Dsk' },
+  GBK: { urlFolder: 'Gbk', endpoint: 'Judikatur', applikation: 'Gbk' },
+  PVAB: { urlFolder: 'Pvak', endpoint: 'Judikatur', applikation: 'Pvak' },
+  DKT: { urlFolder: 'Dok', endpoint: 'Judikatur', applikation: 'Dok' },
+  VERG: { urlFolder: 'Verg', endpoint: 'Judikatur', applikation: 'Verg' },
+  JUR: { urlFolder: 'Uvs', endpoint: 'Judikatur', applikation: 'Uvs' },
+  JUT: { urlFolder: 'Uvs', endpoint: 'Judikatur', applikation: 'Uvs' },
+  UBAS: { urlFolder: 'Ubas', endpoint: 'Judikatur', applikation: 'Ubas' },
+  UMSE: { urlFolder: 'Umse', endpoint: 'Judikatur', applikation: 'Umse' },
+  BKS: { urlFolder: 'Bks', endpoint: 'Judikatur', applikation: 'Bks' },
+  ASYLGH: { urlFolder: 'AsylGH', endpoint: 'Judikatur', applikation: 'AsylGH' },
+  NL: { urlFolder: 'Normenliste', endpoint: 'Judikatur', applikation: 'Normenliste' },
 
-  // Bezirke (District Administrative Authorities)
-  BVB: 'https://ris.bka.gv.at/Dokumente/Bvb/{dokumentnummer}/{dokumentnummer}.html',
+  // --- Sonstige (Miscellaneous) ---
+  MRP: { urlFolder: 'Mrp', endpoint: 'Sonstige', applikation: 'Mrp' },
+  ERL: { urlFolder: 'Erlaesse', endpoint: 'Sonstige', applikation: 'Erlaesse' },
+  PRUEF: { urlFolder: 'PruefGewO', endpoint: 'Sonstige', applikation: 'PruefGewO' },
+  AVSV: { urlFolder: 'Avsv', endpoint: 'Sonstige', applikation: 'Avsv' },
+  SPG: { urlFolder: 'Spg', endpoint: 'Sonstige', applikation: 'Spg' },
+  KMGER: { urlFolder: 'KmGer', endpoint: 'Sonstige', applikation: 'KmGer' },
 
-  // Verordnungsblätter (State Ordinance Gazettes)
-  VBL: 'https://ris.bka.gv.at/Dokumente/Vbl/{dokumentnummer}/{dokumentnummer}.html',
-
-  // Sonstige (Miscellaneous)
-  MRP: 'https://ris.bka.gv.at/Dokumente/Mrp/{dokumentnummer}/{dokumentnummer}.html',
-  ERL: 'https://ris.bka.gv.at/Dokumente/Erlaesse/{dokumentnummer}/{dokumentnummer}.html',
-  PRUEF: 'https://ris.bka.gv.at/Dokumente/PruefGewO/{dokumentnummer}/{dokumentnummer}.html',
-  AVSV: 'https://ris.bka.gv.at/Dokumente/Avsv/{dokumentnummer}/{dokumentnummer}.html',
-  SPG: 'https://ris.bka.gv.at/Dokumente/Spg/{dokumentnummer}/{dokumentnummer}.html',
-  KMGER: 'https://ris.bka.gv.at/Dokumente/KmGer/{dokumentnummer}/{dokumentnummer}.html',
+  // --- Bezirke (District Administrative Authorities) ---
+  BVB: { urlFolder: 'Bvb', endpoint: 'Bezirke', applikation: 'Bvb' },
 };
+
+/** Prefixes sorted longest-first so specific prefixes win over shorter ones. */
+const DOCUMENT_ROUTE_PREFIXES = Object.keys(DOCUMENT_ROUTES).sort((a, b) => b.length - a.length);
+
+/**
+ * Look up the routing information for a Dokumentnummer by its prefix.
+ *
+ * @param dokumentnummer - The RIS document number (e.g., "NOR12019037")
+ * @returns The matching route, or null if the prefix is unknown
+ */
+export function getDocumentRoute(dokumentnummer: string): DocumentRoute | null {
+  for (const prefix of DOCUMENT_ROUTE_PREFIXES) {
+    if (dokumentnummer.startsWith(prefix)) {
+      return DOCUMENT_ROUTES[prefix];
+    }
+  }
+  return null;
+}
 
 /**
  * Construct a direct document URL based on the Dokumentnummer prefix.
@@ -405,17 +499,12 @@ export function constructDocumentUrl(dokumentnummer: string): string | null {
     return null;
   }
 
-  // Find matching prefix (check longer prefixes first to avoid false matches)
-  const prefixes = Object.keys(DOCUMENT_URL_PATTERNS).sort((a, b) => b.length - a.length);
-
-  for (const prefix of prefixes) {
-    if (dokumentnummer.startsWith(prefix)) {
-      const pattern = DOCUMENT_URL_PATTERNS[prefix];
-      return pattern.replace(/{dokumentnummer}/g, dokumentnummer);
-    }
+  const route = getDocumentRoute(dokumentnummer);
+  if (!route) {
+    return null;
   }
 
-  return null;
+  return `https://ris.bka.gv.at/Dokumente/${route.urlFolder}/${dokumentnummer}/${dokumentnummer}.html`;
 }
 
 /**
