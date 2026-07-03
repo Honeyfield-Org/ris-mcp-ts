@@ -13,12 +13,14 @@ import {
   executeSearchTool,
   hasAnyParam,
 } from '../helpers.js';
-import { DateSchema } from '../types.js';
+import { DateSchema, LimitSchema, SeiteSchema } from '../types.js';
 
 export function registerRegierungsvorlagenTool(server: McpServer): void {
-  server.tool(
+  server.registerTool(
     'ris_regierungsvorlagen',
-    `Search Austrian Government Bills (Regierungsvorlagen).
+    {
+      title: 'Regierungsvorlagen durchsuchen',
+      description: `Search Austrian Government Bills (Regierungsvorlagen).
 
 Use this tool for legislative history and parliamentary materials.
 Contains government proposals submitted to parliament.
@@ -27,55 +29,57 @@ Example queries:
   - suchworte="Klimaschutz" -> Full-text search in bills
   - einbringende_stelle="BMF (Bundesministerium für Finanzen)" -> Bills from Finance Ministry
   - beschlussdatum_von="2024-01-01", beschlussdatum_bis="2024-12-31" -> Bills from 2024`,
-    {
-      suchworte: z.string().max(1000).optional().describe('Full-text search terms'),
-      titel: z.string().max(500).optional().describe('Search in bill titles'),
-      beschlussdatum_von: DateSchema.optional().describe('Decision date from (YYYY-MM-DD)'),
-      beschlussdatum_bis: DateSchema.optional().describe('Decision date to (YYYY-MM-DD)'),
-      einbringende_stelle: z
-        .enum([
-          'BKA (Bundeskanzleramt)',
-          'BMFFIM (Bundesministerin für Frauen, Familie, Integration und Medien im Bundeskanzleramt)',
-          'BMEUV (Bundesministerin für EU und Verfassung im Bundeskanzleramt)',
-          'BMKOES (Bundesministerium für Kunst, Kultur, öffentlichen Dienst und Sport)',
-          'BMEIA (Bundesministerium für europäische und internationale Angelegenheiten)',
-          'BMAW (Bundesministerium für Arbeit und Wirtschaft)',
-          'BMBWF (Bundesministerium für Bildung, Wissenschaft und Forschung)',
-          'BMF (Bundesministerium für Finanzen)',
-          'BMI (Bundesministerium für Inneres)',
-          'BMJ (Bundesministerium für Justiz)',
-          'BMK (Bundesministerium für Klimaschutz, Umwelt, Energie, Mobilität, Innovation und Technologie)',
-          'BMLV (Bundesministerium für Landesverteidigung)',
-          'BML (Bundesministerium für Land- und Forstwirtschaft, Regionen und Wasserwirtschaft)',
-          'BMSGPK (Bundesministerium für Soziales, Gesundheit, Pflege und Konsumentenschutz)',
-        ])
-        .optional()
-        .describe('Filter by submitting ministry'),
-      im_ris_seit: z
-        .enum([
-          'EinerWoche',
-          'ZweiWochen',
-          'EinemMonat',
-          'DreiMonaten',
-          'SechsMonaten',
-          'EinemJahr',
-        ])
-        .optional()
-        .describe('Filter by time in RIS'),
-      sortierung_richtung: z
-        .enum(['Ascending', 'Descending'])
-        .optional()
-        .describe('Sort direction'),
-      sortierung_spalte: z
-        .enum(['Kurztitel', 'EinbringendeStelle', 'Beschlussdatum'])
-        .optional()
-        .describe('Sort by column'),
-      seite: z.number().default(1).describe('Page number (default: 1)'),
-      limit: z.number().default(20).describe('Results per page 10/20/50/100 (default: 20)'),
-      response_format: z
-        .enum(['markdown', 'json'])
-        .default('markdown')
-        .describe('"markdown" (default) or "json"'),
+      inputSchema: {
+        suchworte: z.string().max(1000).optional().describe('Full-text search terms'),
+        titel: z.string().max(500).optional().describe('Search in bill titles'),
+        beschlussdatum_von: DateSchema.optional().describe('Decision date from (YYYY-MM-DD)'),
+        beschlussdatum_bis: DateSchema.optional().describe('Decision date to (YYYY-MM-DD)'),
+        einbringende_stelle: z
+          .enum([
+            'BKA (Bundeskanzleramt)',
+            'BMFFIM (Bundesministerin für Frauen, Familie, Integration und Medien im Bundeskanzleramt)',
+            'BMEUV (Bundesministerin für EU und Verfassung im Bundeskanzleramt)',
+            'BMKOES (Bundesministerium für Kunst, Kultur, öffentlichen Dienst und Sport)',
+            'BMEIA (Bundesministerium für europäische und internationale Angelegenheiten)',
+            'BMAW (Bundesministerium für Arbeit und Wirtschaft)',
+            'BMBWF (Bundesministerium für Bildung, Wissenschaft und Forschung)',
+            'BMF (Bundesministerium für Finanzen)',
+            'BMI (Bundesministerium für Inneres)',
+            'BMJ (Bundesministerium für Justiz)',
+            'BMK (Bundesministerium für Klimaschutz, Umwelt, Energie, Mobilität, Innovation und Technologie)',
+            'BMLV (Bundesministerium für Landesverteidigung)',
+            'BML (Bundesministerium für Land- und Forstwirtschaft, Regionen und Wasserwirtschaft)',
+            'BMSGPK (Bundesministerium für Soziales, Gesundheit, Pflege und Konsumentenschutz)',
+          ])
+          .optional()
+          .describe('Filter by submitting ministry'),
+        im_ris_seit: z
+          .enum([
+            'EinerWoche',
+            'ZweiWochen',
+            'EinemMonat',
+            'DreiMonaten',
+            'SechsMonaten',
+            'EinemJahr',
+          ])
+          .optional()
+          .describe('Filter by time in RIS'),
+        sortierung_richtung: z
+          .enum(['Ascending', 'Descending'])
+          .optional()
+          .describe('Sort direction'),
+        sortierung_spalte: z
+          .enum(['Kurztitel', 'EinbringendeStelle', 'Beschlussdatum'])
+          .optional()
+          .describe('Sort by column'),
+        seite: SeiteSchema.describe('Page number (default: 1)'),
+        limit: LimitSchema.describe('Results per page: 10, 20, 50, or 100 (default: 20)'),
+        response_format: z
+          .enum(['markdown', 'json'])
+          .default('markdown')
+          .describe('"markdown" (default) or "json"'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {
       const {

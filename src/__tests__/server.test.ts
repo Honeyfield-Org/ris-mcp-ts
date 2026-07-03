@@ -9,6 +9,9 @@ import { describe, it, expect } from 'vitest';
 
 import { RISAPIError, RISTimeoutError, RISParsingError } from '../client.js';
 import { server } from '../server.js';
+import { buildBundesrechtParams as buildBundesrechtParamsReal } from '../tools/bundesrecht.js';
+import { buildJudikaturParams as buildJudikaturParamsReal } from '../tools/judikatur.js';
+import { buildLandesrechtParams as buildLandesrechtParamsReal } from '../tools/landesrecht.js';
 
 // =============================================================================
 // Server Instance Tests
@@ -21,6 +24,64 @@ describe('server export', () => {
 
   it('should be an MCP server instance', () => {
     expect(server).toHaveProperty('connect');
+  });
+});
+
+// =============================================================================
+// Registered Tool Metadata Tests
+// =============================================================================
+
+describe('registered tool metadata', () => {
+  // The MCP SDK stores registered tools in a private `_registeredTools` map
+  // keyed by tool name; each entry carries the title/description/annotations
+  // passed to registerTool(). Reaching into it lets us assert the metadata
+  // without wiring up a full transport + tools/list round-trip.
+  interface RegisteredToolMeta {
+    title?: string;
+    description?: string;
+    annotations?: { readOnlyHint?: boolean; openWorldHint?: boolean };
+  }
+
+  const registeredTools = (
+    server as unknown as { _registeredTools: Record<string, RegisteredToolMeta> }
+  )._registeredTools;
+
+  const expectedToolNames = [
+    'ris_bundesrecht',
+    'ris_landesrecht',
+    'ris_judikatur',
+    'ris_bundesgesetzblatt',
+    'ris_landesgesetzblatt',
+    'ris_regierungsvorlagen',
+    'ris_dokument',
+    'ris_bezirke',
+    'ris_gemeinden',
+    'ris_sonstige',
+    'ris_history',
+    'ris_verordnungen',
+  ];
+
+  it('should register all 12 RIS tools', () => {
+    expect(Object.keys(registeredTools)).toHaveLength(12);
+    for (const name of expectedToolNames) {
+      expect(registeredTools).toHaveProperty(name);
+    }
+  });
+
+  it.each(expectedToolNames)('tool %s should expose a human-readable title', (name) => {
+    const tool = registeredTools[name];
+    expect(typeof tool.title).toBe('string');
+    expect(tool.title).toBeTruthy();
+  });
+
+  it.each(expectedToolNames)('tool %s should be annotated readOnlyHint=true', (name) => {
+    const tool = registeredTools[name];
+    expect(tool.annotations?.readOnlyHint).toBe(true);
+  });
+
+  it.each(expectedToolNames)('tool %s should be annotated openWorldHint=true', (name) => {
+    const tool = registeredTools[name];
+    expect(tool.annotations?.openWorldHint).toBe(true);
   });
 });
 
@@ -169,7 +230,7 @@ describe('Parameter validation patterns', () => {
     });
   });
 
-  describe('Judikatur gericht parameter values', () => {
+  describe('Judikatur gerichtsbarkeit parameter values', () => {
     const supportedGerichte = [
       'Justiz',
       'Vfgh',
@@ -182,27 +243,27 @@ describe('Parameter validation patterns', () => {
       'Pvak',
       'Gbk',
       'Dok',
+      'Verg',
+      'Uvs',
+      'Ubas',
+      'Umse',
+      'Bks',
     ];
 
     it('should include all expected court types', () => {
-      expect(supportedGerichte).toHaveLength(11);
+      expect(supportedGerichte).toHaveLength(16);
     });
 
-    it('should map gericht directly to Applikation parameter', () => {
-      function buildJudikaturParams(args: { gericht?: string; suchworte?: string }) {
-        const { suchworte, gericht = 'Justiz' } = args;
-        const params: Record<string, unknown> = {
-          Applikation: gericht,
-          DokumenteProSeite: 'Twenty',
-          Seitennummer: 1,
-        };
-        if (suchworte) params['Suchworte'] = suchworte;
-        return params;
-      }
-
-      for (const gericht of supportedGerichte) {
-        const params = buildJudikaturParams({ gericht, suchworte: 'test' });
-        expect(params['Applikation']).toBe(gericht);
+    it('should map gerichtsbarkeit to the Applikation parameter', () => {
+      for (const gerichtsbarkeit of supportedGerichte) {
+        const params = buildJudikaturParamsReal({
+          gerichtsbarkeit,
+          dokumenttyp: 'beide',
+          suchworte: 'test',
+          seite: 1,
+          limit: 20,
+        });
+        expect(params['Applikation']).toBe(gerichtsbarkeit);
       }
     });
   });
@@ -326,52 +387,25 @@ describe('Dokumentnummer prefix routing', () => {
 // =============================================================================
 
 describe('Bundesrecht API parameter mapping', () => {
-  // Re-implement the mapping logic for testing
+  // Delegate to the real builder, applying the Zod-level defaults the handler
+  // would supply, so these tests exercise the production mapping logic.
   function buildBundesrechtParams(args: {
     suchworte?: string;
     titel?: string;
     paragraph?: string;
+    abschnitt_typ?: 'Paragraph' | 'Artikel' | 'Anlage';
     applikation?: string;
     fassung_vom?: string;
     seite?: number;
     limit?: number;
   }): Record<string, unknown> {
-    const {
-      suchworte,
-      titel,
-      paragraph,
-      applikation = 'BrKons',
-      fassung_vom,
-      seite = 1,
-      limit = 20,
-    } = args;
-
-    const limitToDokumenteProSeite = (l: number): string => {
-      const mapping: Record<number, string> = {
-        10: 'Ten',
-        20: 'Twenty',
-        50: 'Fifty',
-        100: 'OneHundred',
-      };
-      return mapping[l] ?? 'Twenty';
-    };
-
-    const params: Record<string, unknown> = {
-      Applikation: applikation,
-      DokumenteProSeite: limitToDokumenteProSeite(limit),
-      Seitennummer: seite,
-    };
-
-    if (suchworte) params['Suchworte'] = suchworte;
-    if (titel) params['Titel'] = titel;
-    if (paragraph) {
-      params['Abschnitt.Von'] = paragraph;
-      params['Abschnitt.Bis'] = paragraph;
-      params['Abschnitt.Typ'] = 'Paragraph';
-    }
-    if (fassung_vom) params['FassungVom'] = fassung_vom;
-
-    return params;
+    return buildBundesrechtParamsReal({
+      applikation: 'BrKons',
+      abschnitt_typ: 'Paragraph',
+      seite: 1,
+      limit: 20,
+      ...args,
+    });
   }
 
   describe('titel parameter', () => {
@@ -439,6 +473,66 @@ describe('Bundesrecht API parameter mapping', () => {
       expect(params['DokumenteProSeite']).toBe('Fifty');
     });
   });
+
+  describe('abschnitt_typ parameter', () => {
+    it('should map abschnitt_typ="Artikel" to Abschnitt.Typ (for article-based laws like B-VG)', () => {
+      const params = buildBundesrechtParams({
+        titel: 'B-VG',
+        paragraph: '7',
+        abschnitt_typ: 'Artikel',
+      });
+
+      expect(params['Abschnitt.Von']).toBe('7');
+      expect(params['Abschnitt.Bis']).toBe('7');
+      expect(params['Abschnitt.Typ']).toBe('Artikel');
+    });
+
+    it('should map abschnitt_typ="Anlage" to Abschnitt.Typ', () => {
+      const params = buildBundesrechtParams({
+        titel: 'ASVG',
+        paragraph: '1',
+        abschnitt_typ: 'Anlage',
+      });
+
+      expect(params['Abschnitt.Typ']).toBe('Anlage');
+    });
+  });
+
+  describe('Erv (English translations) parameter mapping', () => {
+    it('should map suchworte to SearchTerms (not Suchworte) for Erv', () => {
+      const params = buildBundesrechtParams({ applikation: 'Erv', suchworte: 'data protection' });
+
+      expect(params['SearchTerms']).toBe('data protection');
+      expect(params['Suchworte']).toBeUndefined();
+    });
+
+    it('should map titel to Title (not Titel) for Erv', () => {
+      const params = buildBundesrechtParams({ applikation: 'Erv', titel: 'Civil Code' });
+
+      expect(params['Title']).toBe('Civil Code');
+      expect(params['Titel']).toBeUndefined();
+    });
+
+    it('should not send Abschnitt or FassungVom for Erv (unsupported)', () => {
+      const params = buildBundesrechtParams({
+        applikation: 'Erv',
+        suchworte: 'data',
+        paragraph: '1',
+        fassung_vom: '2020-01-01',
+      });
+
+      expect(params['Abschnitt.Von']).toBeUndefined();
+      expect(params['Abschnitt.Typ']).toBeUndefined();
+      expect(params['FassungVom']).toBeUndefined();
+    });
+
+    it('should still use Suchworte/Titel for the default BrKons application', () => {
+      const params = buildBundesrechtParams({ applikation: 'BrKons', suchworte: 'Mietrecht' });
+
+      expect(params['Suchworte']).toBe('Mietrecht');
+      expect(params['SearchTerms']).toBeUndefined();
+    });
+  });
 });
 
 // =============================================================================
@@ -450,56 +544,27 @@ describe('Bundesrecht API parameter mapping', () => {
 // =============================================================================
 
 describe('Landesrecht API parameter mapping', () => {
-  // Bundesland mapping constant (mirrors server.ts)
-  const BUNDESLAND_MAPPING: Record<string, string> = {
-    Wien: 'SucheInWien',
-    Niederoesterreich: 'SucheInNiederoesterreich',
-    Oberoesterreich: 'SucheInOberoesterreich',
-    Salzburg: 'SucheInSalzburg',
-    Tirol: 'SucheInTirol',
-    Vorarlberg: 'SucheInVorarlberg',
-    Kaernten: 'SucheInKaernten',
-    Steiermark: 'SucheInSteiermark',
-    Burgenland: 'SucheInBurgenland',
-  };
-
-  // Re-implement the mapping logic for testing
+  // Delegate to the real builder, applying the Zod-level defaults the handler
+  // would supply, so these tests exercise the production mapping logic.
   function buildLandesrechtParams(args: {
     suchworte?: string;
     titel?: string;
     bundesland?: string;
+    paragraph?: string;
+    abschnitt_typ?: 'Paragraph' | 'Artikel' | 'Anlage';
+    fassung_vom?: string;
+    gesetzesnummer?: string;
     applikation?: string;
     seite?: number;
     limit?: number;
   }): Record<string, unknown> {
-    const { suchworte, titel, bundesland, applikation = 'LrKons', seite = 1, limit = 20 } = args;
-
-    const limitToDokumenteProSeite = (l: number): string => {
-      const mapping: Record<number, string> = {
-        10: 'Ten',
-        20: 'Twenty',
-        50: 'Fifty',
-        100: 'OneHundred',
-      };
-      return mapping[l] ?? 'Twenty';
-    };
-
-    const params: Record<string, unknown> = {
-      Applikation: applikation,
-      DokumenteProSeite: limitToDokumenteProSeite(limit),
-      Seitennummer: seite,
-    };
-
-    if (suchworte) params['Suchworte'] = suchworte;
-    if (titel) params['Titel'] = titel;
-    if (bundesland) {
-      const apiKey = BUNDESLAND_MAPPING[bundesland];
-      if (apiKey) {
-        params[`Bundesland.${apiKey}`] = 'true';
-      }
-    }
-
-    return params;
+    return buildLandesrechtParamsReal({
+      applikation: 'LrKons',
+      abschnitt_typ: 'Paragraph',
+      seite: 1,
+      limit: 20,
+      ...args,
+    });
   }
 
   describe('titel parameter', () => {
@@ -601,6 +666,176 @@ describe('Landesrecht API parameter mapping', () => {
       expect(params['Applikation']).toBe('LrKons');
       expect(params['Seitennummer']).toBe(2);
       expect(params['DokumenteProSeite']).toBe('Fifty');
+    });
+  });
+
+  describe('parity parameters (same set as BrKons)', () => {
+    it('should map paragraph to Abschnitt.Von/Bis/Typ', () => {
+      const params = buildLandesrechtParams({
+        titel: 'Bauordnung',
+        bundesland: 'Wien',
+        paragraph: '1',
+      });
+
+      expect(params['Abschnitt.Von']).toBe('1');
+      expect(params['Abschnitt.Bis']).toBe('1');
+      expect(params['Abschnitt.Typ']).toBe('Paragraph');
+    });
+
+    it('should honor abschnitt_typ="Artikel"', () => {
+      const params = buildLandesrechtParams({
+        titel: 'Landesverfassung',
+        paragraph: '5',
+        abschnitt_typ: 'Artikel',
+      });
+
+      expect(params['Abschnitt.Typ']).toBe('Artikel');
+    });
+
+    it('should map fassung_vom to FassungVom', () => {
+      const params = buildLandesrechtParams({
+        suchworte: 'Naturschutz',
+        bundesland: 'Tirol',
+        fassung_vom: '2020-01-01',
+      });
+
+      expect(params['FassungVom']).toBe('2020-01-01');
+    });
+
+    it('should map gesetzesnummer to Gesetzesnummer', () => {
+      const params = buildLandesrechtParams({ gesetzesnummer: '20000006' });
+
+      expect(params['Gesetzesnummer']).toBe('20000006');
+    });
+  });
+});
+
+// =============================================================================
+// Judikatur API Parameter Mapping Tests
+// =============================================================================
+
+describe('Judikatur API parameter mapping', () => {
+  // Delegate to the real builder, applying the Zod-level defaults the handler
+  // would supply, so these tests exercise the production mapping logic.
+  function buildJudikaturParams(args: {
+    gerichtsbarkeit?: string;
+    dokumenttyp?: 'rechtssatz' | 'entscheidungstext' | 'beide';
+    suchworte?: string;
+    norm?: string;
+    geschaeftszahl?: string;
+    gericht?: string;
+    rechtsgebiet?: string;
+    fachgebiet?: string;
+    entscheidungsart?: string;
+    sammlungsnummer?: string;
+    sortierung?: 'datum_auf' | 'datum_ab';
+    entscheidungsdatum_von?: string;
+    entscheidungsdatum_bis?: string;
+    seite?: number;
+    limit?: number;
+  }): Record<string, unknown> {
+    return buildJudikaturParamsReal({
+      gerichtsbarkeit: 'Justiz',
+      dokumenttyp: 'beide',
+      seite: 1,
+      limit: 20,
+      ...args,
+    });
+  }
+
+  describe('dokumenttyp parameter', () => {
+    it('should default to "beide" -> both Rechtssaetze and Entscheidungstexte enabled', () => {
+      const params = buildJudikaturParams({ suchworte: 'Schadenersatz' });
+
+      expect(params['Dokumenttyp.SucheInRechtssaetzen']).toBe('true');
+      expect(params['Dokumenttyp.SucheInEntscheidungstexten']).toBe('true');
+    });
+
+    it('should map "rechtssatz" to only SucheInRechtssaetzen', () => {
+      const params = buildJudikaturParams({ suchworte: 'x', dokumenttyp: 'rechtssatz' });
+
+      expect(params['Dokumenttyp.SucheInRechtssaetzen']).toBe('true');
+      expect(params['Dokumenttyp.SucheInEntscheidungstexten']).toBeUndefined();
+    });
+
+    it('should map "entscheidungstext" to only SucheInEntscheidungstexten', () => {
+      const params = buildJudikaturParams({ suchworte: 'x', dokumenttyp: 'entscheidungstext' });
+
+      expect(params['Dokumenttyp.SucheInEntscheidungstexten']).toBe('true');
+      expect(params['Dokumenttyp.SucheInRechtssaetzen']).toBeUndefined();
+    });
+  });
+
+  describe('court and subject filters', () => {
+    it('should map gericht to the Gericht parameter (actual court)', () => {
+      const params = buildJudikaturParams({ suchworte: 'Schadenersatz', gericht: 'OGH' });
+
+      expect(params['Gericht']).toBe('OGH');
+    });
+
+    it('should map rechtsgebiet to Rechtsgebiet', () => {
+      const params = buildJudikaturParams({ suchworte: 'x', rechtsgebiet: 'Zivilrecht' });
+
+      expect(params['Rechtsgebiet']).toBe('Zivilrecht');
+    });
+
+    it('should map fachgebiet to Fachgebiet', () => {
+      const params = buildJudikaturParams({ suchworte: 'x', fachgebiet: 'Arbeitsrecht' });
+
+      expect(params['Fachgebiet']).toBe('Arbeitsrecht');
+    });
+
+    it('should map entscheidungsart to Entscheidungsart', () => {
+      const params = buildJudikaturParams({ suchworte: 'x', entscheidungsart: 'Erkenntnis' });
+
+      expect(params['Entscheidungsart']).toBe('Erkenntnis');
+    });
+
+    it('should map sammlungsnummer to Sammlungsnummer', () => {
+      const params = buildJudikaturParams({
+        gerichtsbarkeit: 'Vfgh',
+        suchworte: 'x',
+        sammlungsnummer: '17000',
+      });
+
+      expect(params['Sammlungsnummer']).toBe('17000');
+    });
+  });
+
+  describe('sortierung parameter', () => {
+    it('should map "datum_ab" to Descending sort by Datum', () => {
+      const params = buildJudikaturParams({ suchworte: 'x', sortierung: 'datum_ab' });
+
+      expect(params['Sortierung.SortDirection']).toBe('Descending');
+      expect(params['Sortierung.SortedByColumn']).toBe('Datum');
+    });
+
+    it('should map "datum_auf" to Ascending sort by Datum', () => {
+      const params = buildJudikaturParams({ suchworte: 'x', sortierung: 'datum_auf' });
+
+      expect(params['Sortierung.SortDirection']).toBe('Ascending');
+      expect(params['Sortierung.SortedByColumn']).toBe('Datum');
+    });
+
+    it('should not add sort parameters when sortierung is not provided', () => {
+      const params = buildJudikaturParams({ suchworte: 'x' });
+
+      expect(params['Sortierung.SortDirection']).toBeUndefined();
+      expect(params['Sortierung.SortedByColumn']).toBeUndefined();
+    });
+  });
+
+  describe('base search parameters', () => {
+    it('should map norm to Norm (for citation searches)', () => {
+      const params = buildJudikaturParams({ norm: '1295 ABGB' });
+
+      expect(params['Norm']).toBe('1295 ABGB');
+    });
+
+    it('should map geschaeftszahl to Geschaeftszahl', () => {
+      const params = buildJudikaturParams({ geschaeftszahl: '5Ob234/20b' });
+
+      expect(params['Geschaeftszahl']).toBe('5Ob234/20b');
     });
   });
 });

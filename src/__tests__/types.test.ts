@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { limitToDokumenteProSeite, JudikaturGerichtSchema } from '../types.js';
+import { limitToDokumenteProSeite, JudikaturGerichtSchema, LimitSchema } from '../types.js';
 
 describe('limitToDokumenteProSeite', () => {
   it("returns 'Ten' for limit 10", () => {
@@ -49,11 +49,16 @@ describe('JudikaturGerichtSchema', () => {
     'Pvak',
     'Gbk',
     'Dok',
+    'Verg',
+    'Uvs',
+    'Ubas',
+    'Umse',
+    'Bks',
   ];
 
-  it('should accept all 11 court types', () => {
+  it('should accept all 16 court/jurisdiction types', () => {
     const schemaValues = JudikaturGerichtSchema.options;
-    expect(schemaValues).toHaveLength(11);
+    expect(schemaValues).toHaveLength(16);
   });
 
   it.each(expectedGerichte)("should validate '%s' as a valid court type", (gericht) => {
@@ -73,5 +78,31 @@ describe('JudikaturGerichtSchema', () => {
     for (const court of phase2Courts) {
       expect(schemaValues).toContain(court);
     }
+  });
+
+  it('should include the 5 historical jurisdictions dissolved in 2014', () => {
+    const historicalCourts = ['Verg', 'Uvs', 'Ubas', 'Umse', 'Bks'];
+    const schemaValues = JudikaturGerichtSchema.options;
+
+    for (const court of historicalCourts) {
+      expect(schemaValues).toContain(court);
+    }
+  });
+});
+
+describe('LimitSchema', () => {
+  it.each([10, 20, 50, 100])('should accept allowed page size %i', (limit) => {
+    const result = LimitSchema.safeParse(limit);
+    expect(result.success).toBe(true);
+  });
+
+  it.each([25, 0, -1, 5, 200, 15])('should reject disallowed page size %i', (limit) => {
+    const result = LimitSchema.safeParse(limit);
+    expect(result.success).toBe(false);
+  });
+
+  it('should default to 20 when no value is provided', () => {
+    const result = LimitSchema.parse(undefined);
+    expect(result).toBe(20);
   });
 });

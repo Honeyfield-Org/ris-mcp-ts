@@ -18,6 +18,11 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 COPY --from=builder /app/dist/ ./dist/
 
+# Runtime environment. Set AFTER the --prod install so it does not interfere
+# with dependency resolution. Enables production behaviour in http.ts (the
+# NODE_ENV !== 'test' gate still passes, so app.listen/sweep/shutdown run).
+ENV NODE_ENV=production
+
 EXPOSE 3000
 USER node
 

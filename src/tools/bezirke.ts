@@ -14,12 +14,14 @@ import {
   executeSearchTool,
   hasAnyParam,
 } from '../helpers.js';
-import { BundeslandSchema, DateSchema } from '../types.js';
+import { BundeslandSchema, DateSchema, LimitSchema, SeiteSchema } from '../types.js';
 
 export function registerBezirkeTool(server: McpServer): void {
-  server.tool(
+  server.registerTool(
     'ris_bezirke',
-    `Search Austrian district administrative authority announcements (Kundmachungen der Bezirksverwaltungsbehörden).
+    {
+      title: 'Bezirksverwaltungsbehörden durchsuchen',
+      description: `Search Austrian district administrative authority announcements (Kundmachungen der Bezirksverwaltungsbehörden).
 
 Use this tool to find announcements and ordinances from district administrative authorities.
 
@@ -28,29 +30,33 @@ Note: Only certain states publish here: Niederösterreich, Oberösterreich, Tiro
 Example queries:
   - bundesland="Niederösterreich", suchworte="Bauordnung"
   - bezirksverwaltungsbehoerde="Bezirkshauptmannschaft Innsbruck"`,
-    {
-      suchworte: z.string().max(1000).optional().describe('Full-text search terms'),
-      titel: z.string().max(500).optional().describe('Search in titles'),
-      bundesland: BundeslandSchema.optional().describe(
-        'Filter by state - Burgenland, Kärnten, Niederösterreich, Oberösterreich, Salzburg, Steiermark, Tirol, Vorarlberg, Wien',
-      ),
-      bezirksverwaltungsbehoerde: z
-        .string()
-        .max(200)
-        .optional()
-        .describe(
-          'District authority name (e.g., "Bezirkshauptmannschaft Innsbruck", "Bezirkshauptmannschaft Amstetten")',
+      inputSchema: {
+        suchworte: z.string().max(1000).optional().describe('Full-text search terms'),
+        titel: z.string().max(500).optional().describe('Search in titles'),
+        bundesland: BundeslandSchema.optional().describe(
+          'Filter by state - Burgenland, Kärnten, Niederösterreich, Oberösterreich, Salzburg, Steiermark, Tirol, Vorarlberg, Wien',
         ),
-      kundmachungsnummer: z.string().max(100).optional().describe('Announcement number'),
-      kundmachungsdatum_von: DateSchema.optional().describe('Announcement date from (YYYY-MM-DD)'),
-      kundmachungsdatum_bis: DateSchema.optional().describe('Announcement date to (YYYY-MM-DD)'),
-      im_ris_seit: z.enum(IM_RIS_SEIT_VALUES).optional().describe('Filter by time in RIS'),
-      seite: z.number().default(1).describe('Page number (default: 1)'),
-      limit: z.number().default(20).describe('Results per page 10/20/50/100 (default: 20)'),
-      response_format: z
-        .enum(['markdown', 'json'])
-        .default('markdown')
-        .describe('"markdown" (default) or "json"'),
+        bezirksverwaltungsbehoerde: z
+          .string()
+          .max(200)
+          .optional()
+          .describe(
+            'District authority name (e.g., "Bezirkshauptmannschaft Innsbruck", "Bezirkshauptmannschaft Amstetten")',
+          ),
+        kundmachungsnummer: z.string().max(100).optional().describe('Announcement number'),
+        kundmachungsdatum_von: DateSchema.optional().describe(
+          'Announcement date from (YYYY-MM-DD)',
+        ),
+        kundmachungsdatum_bis: DateSchema.optional().describe('Announcement date to (YYYY-MM-DD)'),
+        im_ris_seit: z.enum(IM_RIS_SEIT_VALUES).optional().describe('Filter by time in RIS'),
+        seite: SeiteSchema.describe('Page number (default: 1)'),
+        limit: LimitSchema.describe('Results per page: 10, 20, 50, or 100 (default: 20)'),
+        response_format: z
+          .enum(['markdown', 'json'])
+          .default('markdown')
+          .describe('"markdown" (default) or "json"'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {
       const {

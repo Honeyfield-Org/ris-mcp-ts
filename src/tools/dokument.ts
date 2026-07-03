@@ -8,7 +8,9 @@ import { z } from 'zod';
 import {
   getDocumentByNumber,
   getDocumentContent,
+  getDocumentRoute,
   isAllowedUrl,
+  searchBezirke,
   searchBundesrecht,
   searchJudikatur,
   searchLandesrecht,
@@ -17,25 +19,30 @@ import {
 import { formatDocument, truncateResponse, type DocumentMetadata } from '../formatting.js';
 import { createMcpResponse, formatErrorResponse } from '../helpers.js';
 import { findDocumentByDokumentnummer } from '../parser.js';
+import type { NormalizedSearchResults } from '../types.js';
 
 export function registerDokumentTool(server: McpServer): void {
-  server.tool(
+  server.registerTool(
     'ris_dokument',
-    `Retrieve full text of a legal document.
+    {
+      title: 'Dokument abrufen',
+      description: `Retrieve full text of a legal document.
 
 Use this after searching to load the complete text of a specific law or decision.
 
 Note: For long documents, content may be truncated. Use specific searches to narrow down.`,
-    {
-      dokumentnummer: z
-        .string()
-        .optional()
-        .describe('RIS document number (e.g., "NOR40052761") - from search results'),
-      url: z.string().optional().describe('Direct URL to document content'),
-      response_format: z
-        .enum(['markdown', 'json'])
-        .default('markdown')
-        .describe('"markdown" (default) or "json"'),
+      inputSchema: {
+        dokumentnummer: z
+          .string()
+          .optional()
+          .describe('RIS document number (e.g., "NOR40052761") - from search results'),
+        url: z.string().optional().describe('Direct URL to document content'),
+        response_format: z
+          .enum(['markdown', 'json'])
+          .default('markdown')
+          .describe('"markdown" (default) or "json"'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {
       const { dokumentnummer, url: inputUrl, response_format } = args;
@@ -79,108 +86,35 @@ Note: For long documents, content may be truncated. Use specific searches to nar
               dokument_url: directResult.url,
             };
           } else {
-            // Direct fetch failed - fallback to search API
-            let apiResponse;
+            // Direct fetch failed - fallback to search API. Routing (endpoint +
+            // Applikation) comes from the shared registry in client.ts so it stays
+            // consistent with the direct-URL construction. Unknown prefixes default
+            // to a Justiz search.
+            const route = getDocumentRoute(dokumentnummer);
+            const searchParams = {
+              Applikation: route?.applikation ?? 'Justiz',
+              Dokumentnummer: dokumentnummer,
+              DokumenteProSeite: 'Ten',
+            };
 
-            if (dokumentnummer.startsWith('NOR')) {
-              apiResponse = await searchBundesrecht({
-                Applikation: 'BrKons',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (
-              dokumentnummer.startsWith('LBG') ||
-              dokumentnummer.startsWith('LNO') ||
-              dokumentnummer.startsWith('LST') ||
-              dokumentnummer.startsWith('LTI') ||
-              dokumentnummer.startsWith('LVO') ||
-              dokumentnummer.startsWith('LWI') ||
-              dokumentnummer.startsWith('LSB') ||
-              dokumentnummer.startsWith('LOO') ||
-              dokumentnummer.startsWith('LKT')
-            ) {
-              apiResponse = await searchLandesrecht({
-                Applikation: 'LrKons',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('JFR') || dokumentnummer.startsWith('JFT')) {
-              apiResponse = await searchJudikatur({
-                Applikation: 'Vfgh',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('JWR') || dokumentnummer.startsWith('JWT')) {
-              apiResponse = await searchJudikatur({
-                Applikation: 'Vwgh',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('BVWG')) {
-              apiResponse = await searchJudikatur({
-                Applikation: 'Bvwg',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('LVWG')) {
-              apiResponse = await searchJudikatur({
-                Applikation: 'Lvwg',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('DSB')) {
-              apiResponse = await searchJudikatur({
-                Applikation: 'Dsk',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('GBK')) {
-              apiResponse = await searchJudikatur({
-                Applikation: 'Gbk',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('PVAK')) {
-              apiResponse = await searchJudikatur({
-                Applikation: 'Pvak',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('ASYLGH')) {
-              apiResponse = await searchJudikatur({
-                Applikation: 'AsylGH',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('BGBLA') || dokumentnummer.startsWith('BGBL')) {
-              // Bundesgesetzblätter - use Bundesrecht endpoint
-              const applikation = dokumentnummer.startsWith('BGBLA') ? 'BgblAuth' : 'BgblAlt';
-              apiResponse = await searchBundesrecht({
-                Applikation: applikation,
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('REGV')) {
-              // Regierungsvorlagen - use Bundesrecht endpoint
-              apiResponse = await searchBundesrecht({
-                Applikation: 'RegV',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else if (dokumentnummer.startsWith('MRP') || dokumentnummer.startsWith('ERL')) {
-              // Sonstige Sammlungen - use Sonstige endpoint
-              apiResponse = await searchSonstige({
-                Applikation: dokumentnummer.startsWith('MRP') ? 'Mrp' : 'Erlaesse',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
-            } else {
-              // Default to Justiz for unknown prefixes
-              apiResponse = await searchJudikatur({
-                Applikation: 'Justiz',
-                Dokumentnummer: dokumentnummer,
-                DokumenteProSeite: 'Ten',
-              });
+            let apiResponse: NormalizedSearchResults;
+            switch (route?.endpoint) {
+              case 'Bundesrecht':
+                apiResponse = await searchBundesrecht(searchParams);
+                break;
+              case 'Landesrecht':
+                apiResponse = await searchLandesrecht(searchParams);
+                break;
+              case 'Sonstige':
+                apiResponse = await searchSonstige(searchParams);
+                break;
+              case 'Bezirke':
+                apiResponse = await searchBezirke(searchParams);
+                break;
+              case 'Judikatur':
+              default:
+                apiResponse = await searchJudikatur(searchParams);
+                break;
             }
 
             // Find the document with matching dokumentnummer (don't blindly take first result)
@@ -214,6 +148,17 @@ Note: For long documents, content may be truncated. Use specific searches to nar
               return createMcpResponse(
                 `**Fehler:** Keine Inhalts-URL fuer Dokument \`${dokumentnummer}\` verfuegbar.\n\n` +
                   'Das Dokument hat moeglicherweise keinen abrufbaren Volltext.',
+              );
+            }
+
+            // SSRF protection: this URL comes straight from the search API response
+            // and would otherwise be fetched unchecked. Validate it against the same
+            // domain allowlist used for user-supplied URLs.
+            if (!isAllowedUrl(contentUrl)) {
+              return createMcpResponse(
+                '**Fehler:** Die Inhalts-URL des Dokuments ist nicht erlaubt.\n\n' +
+                  'Nur HTTPS-URLs zu offiziellen RIS-Domains sind zulaessig ' +
+                  '(data.bka.gv.at, www.ris.bka.gv.at, ris.bka.gv.at).',
               );
             }
 

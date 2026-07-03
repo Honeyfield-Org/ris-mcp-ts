@@ -9,7 +9,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 
 import { server } from '../server.js';
 
@@ -126,6 +126,85 @@ describe('SSRF protection on ris_dokument', () => {
     const text = getResponseText(result);
     expect(text).toContain('dokumentnummer');
     expect(text).toContain('url');
+  });
+});
+
+// =============================================================================
+// 1b. SSRF Protection on Search-Derived Content URL (N6)
+// =============================================================================
+
+describe('SSRF protection on search-derived content URL', () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    // Route by URL: fail the direct-URL construction so the tool falls back to
+    // the search API, then have the search API return a document whose HTML
+    // content URL points to an off-domain (attacker-controlled) host.
+    mockFetch = vi.fn((input: string | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+
+      if (url.includes('/Dokumente/')) {
+        return Promise.resolve({
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve('not found'),
+        });
+      }
+
+      if (url.includes('/Bundesrecht')) {
+        const body = {
+          OgdSearchResult: {
+            OgdDocumentResults: {
+              Hits: { '#text': '1', '@pageNumber': '1', '@pageSize': '10' },
+              OgdDocumentReference: {
+                Data: {
+                  Metadaten: { Technisch: { ID: 'NOR40052761', Applikation: 'BrKons' } },
+                  Dokumentliste: {
+                    ContentReference: {
+                      ContentType: 'MainDocument',
+                      Urls: {
+                        ContentUrl: [
+                          { DataType: 'Html', Url: 'https://evil.example.com/steal.html' },
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        };
+        return Promise.resolve({ ok: true, text: () => Promise.resolve(JSON.stringify(body)) });
+      }
+
+      // Any other fetch (e.g. the evil URL) would return this sentinel.
+      return Promise.resolve({ ok: true, text: () => Promise.resolve('SHOULD_NOT_BE_FETCHED') });
+    });
+    vi.stubGlobal('fetch', mockFetch);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('should reject an off-domain content URL returned by the search API', async () => {
+    const result = await client.callTool({
+      name: 'ris_dokument',
+      arguments: { dokumentnummer: 'NOR40052761' },
+    });
+
+    const text = getResponseText(result);
+    expect(text).toContain('nicht erlaubt');
+  });
+
+  it('should never fetch the off-domain content URL', async () => {
+    await client.callTool({
+      name: 'ris_dokument',
+      arguments: { dokumentnummer: 'NOR40052761' },
+    });
+
+    const fetchedHosts = mockFetch.mock.calls.map(([u]) => new URL(String(u)).hostname);
+    expect(fetchedHosts).not.toContain('evil.example.com');
   });
 });
 
@@ -252,10 +331,11 @@ describe('Enum restrictions on applikation and gericht', () => {
     expect(result.isError).not.toBe(true);
   });
 
-  it('should reject invalid gericht on ris_judikatur', async () => {
+  it('should reject invalid gerichtsbarkeit on ris_judikatur', async () => {
+    // The court-system enum is now the `gerichtsbarkeit` parameter (was `gericht`).
     const result = await client.callTool({
       name: 'ris_judikatur',
-      arguments: { suchworte: 'test', gericht: 'FakeCourt' },
+      arguments: { suchworte: 'test', gerichtsbarkeit: 'FakeCourt' },
     });
 
     expect(result.isError).toBe(true);

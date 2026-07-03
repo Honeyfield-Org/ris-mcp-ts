@@ -13,12 +13,14 @@ import {
   executeSearchTool,
   hasAnyParam,
 } from '../helpers.js';
-import { DateSchema, limitToDokumenteProSeite } from '../types.js';
+import { DateSchema, LimitSchema, limitToDokumenteProSeite, SeiteSchema } from '../types.js';
 
 export function registerHistoryTool(server: McpServer): void {
-  server.tool(
+  server.registerTool(
     'ris_history',
-    `Search document change history (Aenderungshistorie).
+    {
+      title: 'Änderungshistorie durchsuchen',
+      description: `Search document change history (Aenderungshistorie).
 
 Use this tool to track changes to legal documents over time.
 Shows when documents were created, modified, or deleted.
@@ -32,27 +34,29 @@ Available applications (30 total):
 Example queries:
   - applikation="Bundesnormen", aenderungen_von="2024-01-01", aenderungen_bis="2024-01-31"
   - applikation="Justiz", aenderungen_von="2024-06-01"`,
-    {
-      applikation: z
-        .enum(VALID_HISTORY_APPLICATIONS)
-        .describe(
-          'Application to search history for - categories: Bundesrecht (Bundesnormen, BgblAuth, BgblAlt, BgblPdf, RegV), ' +
-            'Landesrecht (Landesnormen, LgblAuth, Lgbl, LgblNO, Vbl, Gemeinderecht), ' +
-            'Judikatur (Justiz, Vfgh, Vwgh, Bvwg, Lvwg, Dsk, Gbk, Pvak, AsylGH), ' +
-            'Sonstige (Bvb, Mrp, Erlaesse, PruefGewO, Avsv, Spg, KmGer, Dok, Normenliste)',
-        ),
-      aenderungen_von: DateSchema.optional().describe('Changes from date (YYYY-MM-DD)'),
-      aenderungen_bis: DateSchema.optional().describe('Changes to date (YYYY-MM-DD)'),
-      include_deleted: z
-        .boolean()
-        .default(false)
-        .describe('Include deleted documents in results (default: false)'),
-      seite: z.number().default(1).describe('Page number (default: 1)'),
-      limit: z.number().default(20).describe('Results per page 10/20/50/100 (default: 20)'),
-      response_format: z
-        .enum(['markdown', 'json'])
-        .default('markdown')
-        .describe('"markdown" (default) or "json"'),
+      inputSchema: {
+        applikation: z
+          .enum(VALID_HISTORY_APPLICATIONS)
+          .describe(
+            'Application to search history for - categories: Bundesrecht (Bundesnormen, BgblAuth, BgblAlt, BgblPdf, RegV), ' +
+              'Landesrecht (Landesnormen, LgblAuth, Lgbl, LgblNO, Vbl, Gemeinderecht), ' +
+              'Judikatur (Justiz, Vfgh, Vwgh, Bvwg, Lvwg, Dsk, Gbk, Pvak, AsylGH), ' +
+              'Sonstige (Bvb, Mrp, Erlaesse, PruefGewO, Avsv, Spg, KmGer, Dok, Normenliste)',
+          ),
+        aenderungen_von: DateSchema.optional().describe('Changes from date (YYYY-MM-DD)'),
+        aenderungen_bis: DateSchema.optional().describe('Changes to date (YYYY-MM-DD)'),
+        include_deleted: z
+          .boolean()
+          .default(false)
+          .describe('Include deleted documents in results (default: false)'),
+        seite: SeiteSchema.describe('Page number (default: 1)'),
+        limit: LimitSchema.describe('Results per page: 10, 20, 50, or 100 (default: 20)'),
+        response_format: z
+          .enum(['markdown', 'json'])
+          .default('markdown')
+          .describe('"markdown" (default) or "json"'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {
       const {

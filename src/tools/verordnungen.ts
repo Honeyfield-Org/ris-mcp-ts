@@ -14,12 +14,14 @@ import {
   executeSearchTool,
   hasAnyParam,
 } from '../helpers.js';
-import { DateSchema } from '../types.js';
+import { DateSchema, LimitSchema, SeiteSchema } from '../types.js';
 
 export function registerVerordnungenTool(server: McpServer): void {
-  server.tool(
+  server.registerTool(
     'ris_verordnungen',
-    `Search Austrian state ordinance gazettes (Verordnungsblaetter der Laender).
+    {
+      title: 'Verordnungsblätter durchsuchen',
+      description: `Search Austrian state ordinance gazettes (Verordnungsblaetter der Laender).
 
 Use this tool to find official publications of state/provincial ordinances.
 NOTE: Currently only Tirol data is available (since January 1, 2022).
@@ -31,22 +33,24 @@ Example queries:
   - bundesland="Tirol" -> Filter by state (currently only Tirol has data)
   - kundmachungsnummer="25" -> Search by publication number
   - kundmachungsdatum_von="2024-01-01", kundmachungsdatum_bis="2024-12-31" -> Date range`,
-    {
-      suchworte: z.string().max(1000).optional().describe('Full-text search terms'),
-      titel: z.string().max(500).optional().describe('Search in title'),
-      bundesland: z
-        .enum(VALID_VBL_BUNDESLAENDER)
-        .optional()
-        .describe('Filter by state (currently only Tirol has data)'),
-      kundmachungsnummer: z.string().max(100).optional().describe('Publication number'),
-      kundmachungsdatum_von: DateSchema.optional().describe('Publication date from (YYYY-MM-DD)'),
-      kundmachungsdatum_bis: DateSchema.optional().describe('Publication date to (YYYY-MM-DD)'),
-      seite: z.number().default(1).describe('Page number (default: 1)'),
-      limit: z.number().default(20).describe('Results per page 10/20/50/100 (default: 20)'),
-      response_format: z
-        .enum(['markdown', 'json'])
-        .default('markdown')
-        .describe('"markdown" (default) or "json"'),
+      inputSchema: {
+        suchworte: z.string().max(1000).optional().describe('Full-text search terms'),
+        titel: z.string().max(500).optional().describe('Search in title'),
+        bundesland: z
+          .enum(VALID_VBL_BUNDESLAENDER)
+          .optional()
+          .describe('Filter by state (currently only Tirol has data)'),
+        kundmachungsnummer: z.string().max(100).optional().describe('Publication number'),
+        kundmachungsdatum_von: DateSchema.optional().describe('Publication date from (YYYY-MM-DD)'),
+        kundmachungsdatum_bis: DateSchema.optional().describe('Publication date to (YYYY-MM-DD)'),
+        seite: SeiteSchema.describe('Page number (default: 1)'),
+        limit: LimitSchema.describe('Results per page: 10, 20, 50, or 100 (default: 20)'),
+        response_format: z
+          .enum(['markdown', 'json'])
+          .default('markdown')
+          .describe('"markdown" (default) or "json"'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {
       const {
