@@ -94,11 +94,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/philrox/ris-mcp-ts.git"
+    "url": "git+https://github.com/Honeyfield-Org/ris-mcp-ts.git"
   },
-  "homepage": "https://github.com/philrox/ris-mcp-ts#readme",
+  "homepage": "https://github.com/Honeyfield-Org/ris-mcp-ts#readme",
   "bugs": {
-    "url": "https://github.com/philrox/ris-mcp-ts/issues"
+    "url": "https://github.com/Honeyfield-Org/ris-mcp-ts/issues"
   },
   "files": [
     "dist/",
