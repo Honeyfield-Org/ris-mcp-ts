@@ -1,6 +1,6 @@
 {
   "name": "ris-mcp-ts",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "mcpName": "io.github.philrox/ris",
   "description": "MCP Server for Austrian Legal Information System (RIS) - TypeScript",
   "type": "module",
