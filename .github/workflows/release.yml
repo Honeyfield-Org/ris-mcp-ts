@@ -131,3 +131,52 @@ jobs:
       # prepublishOnly runs check + build via pnpm.
       - name: Publish to npm
         run: npm publish --provenance --access public
+
+  build-image:
+    name: Build and push image
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: eu-central-1
+      ECR_REGISTRY: 102478765441.dkr.ecr.eu-central-1.amazonaws.com
+      ECR_REPO: honeyfield/ris-mcp
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Compute version from tag
+        id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" | \
+            docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
+      - name: Build and push
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          docker build \
+            -t "$ECR_REGISTRY/$ECR_REPO:$VERSION" \
+            -t "$ECR_REGISTRY/$ECR_REPO:latest" .
+          docker push "$ECR_REGISTRY/$ECR_REPO:$VERSION"
+          docker push "$ECR_REGISTRY/$ECR_REPO:latest"
+
+  deploy-gateway:
+    name: Deploy
+    needs: build-image
+    uses: ./.github/workflows/deploy.yml
+    with:
+      image_tag: ${{ needs.build-image.outputs.version }}
+    secrets: inherit
