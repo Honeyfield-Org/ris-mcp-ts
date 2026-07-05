@@ -153,29 +153,23 @@ Direct pushes to main are blocked — version-bump commits go through a PR as we
 
 ### Deployment
 
-Production runs behind the `mcp.honeyfield.at` gateway: Lightsail **instance**
-`honeyfield-mcp-gateway-v2` (eu-central-1, Ubuntu, Caddy + Docker Compose at
-`/opt/honeyfield-mcp-gateway/`, multiple MCPs under path prefixes). The ris-mcp
-container runs the ECR image `…/honeyfield/ris-mcp:latest`.
-
-- **Automatic**: every `v*` tag builds the image, pushes it to ECR
-  (`:x.y.z` + `:latest`) and switches the container via temporary Lightsail
-  SSH access (`.github/workflows/deploy.yml`, called from release.yml). A
+- **Automatic**: every `v*` tag builds the Docker image, pushes it to a
+  private ECR registry (`:x.y.z` + `:latest`) and switches the production
+  container (`.github/workflows/deploy.yml`, called from release.yml). A
   verify step fails the run if the live `initialize` version does not match.
 - **Rollback**: run the "Deploy Gateway" workflow manually (workflow_dispatch)
   with any existing ECR tag (e.g. `1.2.3`) — no rebuild, just a switch.
-- The former Lightsail *container service* `ris-mcp` was decommissioned; do
-  not confuse it with the instance.
+- Deploy targets (registry, host) are configured as GitHub repo **Variables**
+  (Settings → Secrets and variables → Actions), not in the YAML — this repo
+  is public.
 
 ## Hosting
 
 | Property | Value |
 |----------|-------|
-| **Gateway** | `mcp.honeyfield.at` (Caddy, AWS eu-central-1) |
 | **Transport** | Streamable HTTP (MCP Spec v2025-03-26) |
-| **Port (container route)** | 3000 |
-| **Public MCP Endpoint** | `POST https://mcp.honeyfield.at/ris/mcp` (container route: `POST /mcp`) |
-| **Public Health Check** | `GET https://mcp.honeyfield.at/ris/health` (container route: `GET /health`) |
+| **Container routes** | `POST /mcp` (MCP), `GET /health` (health check), port 3000 |
+| **Public endpoint** | Behind a reverse-proxy gateway; URL intentionally not documented here (public repo) |
 
 ### Architecture: Two Transports
 
