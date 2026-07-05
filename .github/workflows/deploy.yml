@@ -1,0 +1,105 @@
+name: Deploy Gateway
+
+# Switches the ris-mcp container on the honeyfield-mcp-gateway-v2 Lightsail
+# instance to a given ECR image tag. Called by release.yml after a tag push,
+# or manually (workflow_dispatch) — the manual path doubles as the rollback
+# button: enter any existing ECR tag (e.g. "1.2.3") and production switches.
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        description: "ECR image tag to deploy (e.g. 1.2.4)"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "ECR image tag to deploy (e.g. 1.2.4)"
+        required: true
+        type: string
+
+env:
+  AWS_REGION: eu-central-1
+  ECR_REPO: honeyfield/ris-mcp
+  ECR_REGISTRY: 102478765441.dkr.ecr.eu-central-1.amazonaws.com
+  INSTANCE_NAME: honeyfield-mcp-gateway-v2
+  INSTANCE_IP: 3.127.99.199
+  MCP_URL: https://mcp.honeyfield.at/ris/mcp
+
+jobs:
+  deploy:
+    name: Deploy to Gateway
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # The compose file on the instance pins :latest, so deploying a tag
+      # means re-pointing :latest at that tag's manifest (idempotent when
+      # they already match, e.g. right after a release build).
+      - name: Point :latest at the requested tag
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          MANIFEST=$(aws ecr batch-get-image \
+            --repository-name "$ECR_REPO" --region "$AWS_REGION" \
+            --image-ids imageTag="$IMAGE_TAG" \
+            --query 'images[0].imageManifest' --output text)
+          if [ -z "$MANIFEST" ] || [ "$MANIFEST" = "None" ]; then
+            echo "::error::ECR tag '$IMAGE_TAG' not found in $ECR_REPO"
+            exit 1
+          fi
+          aws ecr put-image \
+            --repository-name "$ECR_REPO" --region "$AWS_REGION" \
+            --image-tag latest --image-manifest "$MANIFEST" \
+            --query 'image.imageId.imageDigest' --output text || {
+              # put-image fails with ImageAlreadyExistsException when :latest
+              # already points at this manifest — that is fine.
+              echo ":latest already points at $IMAGE_TAG"
+            }
+
+      - name: Switch container on instance
+        run: |
+          DETAILS=$(aws lightsail get-instance-access-details \
+            --instance-name "$INSTANCE_NAME" --region "$AWS_REGION" --output json)
+          echo "$DETAILS" | jq -r '.accessDetails.privateKey' > ls_key
+          echo "$DETAILS" | jq -r '.accessDetails.certKey' > ls_key-cert.pub
+          chmod 600 ls_key ls_key-cert.pub
+          aws ecr get-login-password --region "$AWS_REGION" | \
+            ssh -i ls_key -o CertificateFile=ls_key-cert.pub \
+                -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+                -o ConnectTimeout=20 ubuntu@"$INSTANCE_IP" \
+              "docker login --username AWS --password-stdin $ECR_REGISTRY \
+               && cd /opt/honeyfield-mcp-gateway \
+               && docker compose pull ris-mcp \
+               && docker compose up -d ris-mcp"
+          rm -f ls_key ls_key-cert.pub
+
+      - name: Verify live version
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          for i in $(seq 1 10); do
+            sleep 6
+            BODY=$(curl -sS -m 15 -X POST "$MCP_URL" \
+              -H 'Content-Type: application/json' \
+              -H 'Accept: application/json, text/event-stream' \
+              -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"ci-verify","version":"1.0.0"}}}' || true)
+            LIVE=$(echo "$BODY" | grep -o '"version":"[^"]*"' | tail -1 | cut -d'"' -f4)
+            echo "attempt $i: live version = '$LIVE'"
+            # Semver tags must match exactly; non-semver tags (e.g. rollback
+            # anchors) only need a responsive server.
+            if echo "$IMAGE_TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              [ "$LIVE" = "$IMAGE_TAG" ] && exit 0
+            else
+              [ -n "$LIVE" ] && exit 0
+            fi
+          done
+          echo "::error::Live version '$LIVE' does not match deployed tag '$IMAGE_TAG'"
+          exit 1

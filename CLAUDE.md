@@ -145,17 +145,27 @@ GitHub Actions runs on push/PR to main:
 ### Release Flow
 
 ```
-feature branch → PR → merge to main → git tag v1.x.x → push tag → GitHub Release + npm publish
+feature branch → PR → merge to main → git tag v1.x.x → push tag
+  → GitHub Release + npm publish (OIDC) + Docker build → ECR → gateway deploy
 ```
 
 Direct pushes to main are blocked — version-bump commits go through a PR as well.
 
 ### Deployment
 
-Production is NOT deployed by CI. The service runs behind the `mcp.honeyfield.at`
-gateway (single AWS host in eu-central-1, Caddy reverse proxy, multiple MCPs under
-path prefixes) and is updated server-side. The former Lightsail container service
-`ris-mcp` was decommissioned; the CI deploy job that targeted it has been removed.
+Production runs behind the `mcp.honeyfield.at` gateway: Lightsail **instance**
+`honeyfield-mcp-gateway-v2` (eu-central-1, Ubuntu, Caddy + Docker Compose at
+`/opt/honeyfield-mcp-gateway/`, multiple MCPs under path prefixes). The ris-mcp
+container runs the ECR image `…/honeyfield/ris-mcp:latest`.
+
+- **Automatic**: every `v*` tag builds the image, pushes it to ECR
+  (`:x.y.z` + `:latest`) and switches the container via temporary Lightsail
+  SSH access (`.github/workflows/deploy.yml`, called from release.yml). A
+  verify step fails the run if the live `initialize` version does not match.
+- **Rollback**: run the "Deploy Gateway" workflow manually (workflow_dispatch)
+  with any existing ECR tag (e.g. `1.2.3`) — no rebuild, just a switch.
+- The former Lightsail *container service* `ris-mcp` was decommissioned; do
+  not confuse it with the instance.
 
 ## Hosting
 
