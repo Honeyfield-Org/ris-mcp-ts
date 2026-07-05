@@ -138,7 +138,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: eu-central-1
-      ECR_REGISTRY: 102478765441.dkr.ecr.eu-central-1.amazonaws.com
+      ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
       ECR_REPO: honeyfield/ris-mcp
     outputs:
       version: ${{ steps.v.outputs.version }}

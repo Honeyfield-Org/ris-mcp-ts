@@ -1,9 +1,12 @@
 name: Deploy Gateway
 
-# Switches the ris-mcp container on the honeyfield-mcp-gateway-v2 Lightsail
-# instance to a given ECR image tag. Called by release.yml after a tag push,
-# or manually (workflow_dispatch) — the manual path doubles as the rollback
-# button: enter any existing ECR tag (e.g. "1.2.3") and production switches.
+# Switches the ris-mcp container on the gateway instance to a given ECR image
+# tag. Called by release.yml after a tag push, or manually (workflow_dispatch)
+# — the manual path doubles as the rollback button: enter any existing ECR tag
+# (e.g. "1.2.3") and production switches.
+#
+# Deploy targets (registry, instance, verify URL) live in GitHub repo
+# variables — the repo is public, so they are kept out of the YAML.
 
 on:
   workflow_call:
@@ -22,10 +25,11 @@ on:
 env:
   AWS_REGION: eu-central-1
   ECR_REPO: honeyfield/ris-mcp
-  ECR_REGISTRY: 102478765441.dkr.ecr.eu-central-1.amazonaws.com
-  INSTANCE_NAME: honeyfield-mcp-gateway-v2
-  INSTANCE_IP: 3.127.99.199
-  MCP_URL: https://mcp.honeyfield.at/ris/mcp
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+  INSTANCE_NAME: ${{ vars.GATEWAY_INSTANCE }}
+  INSTANCE_IP: ${{ vars.GATEWAY_IP }}
+  MCP_URL: ${{ vars.MCP_VERIFY_URL }}
+  COMPOSE_DIR: ${{ vars.GATEWAY_COMPOSE_DIR }}
 
 jobs:
   deploy:
@@ -33,6 +37,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check deploy variables
+        run: |
+          for v in ECR_REGISTRY INSTANCE_NAME INSTANCE_IP MCP_URL COMPOSE_DIR; do
+            if [ -z "$(eval echo \$$v)" ]; then
+              echo "::error::Repo variable for $v is not set (Settings → Secrets and variables → Actions → Variables)"
+              exit 1
+            fi
+          done
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -64,6 +77,7 @@ jobs:
               echo ":latest already points at $IMAGE_TAG"
             }
 
+      # LogLevel=ERROR keeps host details out of the public Actions log.
       - name: Switch container on instance
         run: |
           DETAILS=$(aws lightsail get-instance-access-details \
@@ -74,10 +88,10 @@ jobs:
           aws ecr get-login-password --region "$AWS_REGION" | \
             ssh -i ls_key -o CertificateFile=ls_key-cert.pub \
                 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-                -o ConnectTimeout=20 ubuntu@"$INSTANCE_IP" \
-              "docker login --username AWS --password-stdin $ECR_REGISTRY \
-               && cd /opt/honeyfield-mcp-gateway \
-               && docker compose pull ris-mcp \
+                -o LogLevel=ERROR -o ConnectTimeout=20 ubuntu@"$INSTANCE_IP" \
+              "docker login --username AWS --password-stdin $ECR_REGISTRY 2>/dev/null \
+               && cd $COMPOSE_DIR \
+               && docker compose pull -q ris-mcp \
                && docker compose up -d ris-mcp"
           rm -f ls_key ls_key-cert.pub
 
