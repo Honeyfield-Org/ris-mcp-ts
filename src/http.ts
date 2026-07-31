@@ -9,7 +9,7 @@ import crypto from 'node:crypto';
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import type { Express, Request, Response } from 'express';
+import type { Express, NextFunction, Request, Response } from 'express';
 import express from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
@@ -41,6 +41,43 @@ app.set('trust proxy', 1);
 
 // Explicit body-size limit (N7) — reject oversized payloads early.
 app.use(express.json({ limit: '1mb' }));
+
+// Browser origins permitted to talk to /mcp, comma-separated. Read once at
+// module load, same as PORT below. Unset or empty means: no browser origin is
+// allowed, which is the correct default for a server-to-server MCP endpoint.
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0),
+);
+
+/**
+ * Origin validation — protects the unauthenticated /mcp endpoint against
+ * cross-site requests and DNS rebinding. The SDK's own `allowedOrigins` /
+ * `enableDnsRebindingProtection` transport options are deprecated in favour of
+ * exactly this: external middleware.
+ *
+ * A missing Origin header passes: only browsers send one, and every non-browser
+ * MCP client (stdio bridge, curl, server-to-server) would otherwise break. This
+ * is not a hole — an attacker's page cannot suppress the header, the browser
+ * sets it. A present Origin must match the allowlist exactly.
+ */
+export function validateOrigin(req: Request, res: Response, next: NextFunction): void {
+  const origin = req.headers.origin;
+
+  if (origin === undefined || ALLOWED_ORIGINS.has(origin)) {
+    next();
+    return;
+  }
+
+  res.status(403).json({ error: 'Origin nicht erlaubt.' });
+}
+
+// Ordered before the rate limiter: a cross-origin request is rejected on a
+// header check alone, so it should neither consume the limiter's budget for the
+// client IP nor create an entry in its store.
+app.use('/mcp', validateOrigin);
 
 // Rate limiting: MCP-specific (each request triggers upstream RIS API calls)
 export const mcpLimiter = rateLimit({

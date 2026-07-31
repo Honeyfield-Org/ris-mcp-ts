@@ -23,7 +23,7 @@ pnpm run check           # Run typecheck + lint + format:check + tests
 ## Testing
 
 ```bash
-pnpm test                # Run all unit tests (777 tests, 12 files)
+pnpm test                # Run all unit tests (792 tests, 13 files)
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
@@ -181,6 +181,7 @@ Direct pushes to main are blocked — version-bump commits go through a PR as we
 - `express.json()` parses body → must pass `req.body` as 3rd arg to `transport.handleRequest()`
 - `sessionIdGenerator: () => crypto.randomUUID()` for stateful sessions
 - `sessions.set()` called AFTER `handleRequest()` (SDK generates sessionId during initialize)
+- Origin validation middleware on `/mcp`: requests without an Origin header pass (non-browser MCP clients); a present Origin must be in the `ALLOWED_ORIGINS` env var (comma-separated, exact match) or the request gets 403. Unset = no browser origin allowed (server-to-server default). Configured in the compose file on the host, not in this repo.
 - Dockerfile uses `HUSKY=0` env + `--frozen-lockfile` for production pnpm install
 
 ## MCP Tools (12)
