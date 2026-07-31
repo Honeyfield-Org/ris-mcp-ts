@@ -10,7 +10,7 @@ import crypto from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import request from 'supertest';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   app,
@@ -265,6 +265,140 @@ describe('HTTP transport (http.ts)', () => {
       expect(res.body).toEqual({
         error: 'Interner Serverfehler. Bitte später erneut versuchen.',
       });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Origin validation (cross-origin / DNS-rebinding protection)
+  // ---------------------------------------------------------------------------
+
+  describe('Origin validation on /mcp', () => {
+    const forbidden = { error: 'Origin nicht erlaubt.' };
+
+    const respondOk = (): void => {
+      mockHandleRequest.mockImplementation(
+        (_req: unknown, res: { writeHead: (code: number) => void; end: () => void }) => {
+          res.writeHead(200);
+          res.end();
+        },
+      );
+    };
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
+
+    it('rejects POST /mcp with an Origin that is not allowlisted', async () => {
+      respondOk();
+
+      const res = await request(app)
+        .post('/mcp')
+        .set('Origin', 'https://evil.example')
+        .send({ jsonrpc: '2.0', method: 'initialize', id: 1 });
+
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual(forbidden);
+      // The request must be rejected before any session work happens.
+      expect(McpServer).not.toHaveBeenCalled();
+      expect(sessions.size).toBe(0);
+    });
+
+    it('rejects GET /mcp with an Origin that is not allowlisted', async () => {
+      const res = await request(app).get('/mcp').set('Origin', 'https://evil.example');
+
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual(forbidden);
+    });
+
+    it('rejects DELETE /mcp with an Origin that is not allowlisted', async () => {
+      const res = await request(app).delete('/mcp').set('Origin', 'https://evil.example');
+
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual(forbidden);
+    });
+
+    it('rejects an established session when the Origin is not allowlisted', async () => {
+      sessions.set('origin-session', {
+        transport: { handleRequest: mockHandleRequest },
+        lastActivity: Date.now(),
+      } as never);
+
+      const res = await request(app)
+        .post('/mcp')
+        .set('mcp-session-id', 'origin-session')
+        .set('Origin', 'https://evil.example')
+        .send({ jsonrpc: '2.0', method: 'ping', id: 1 });
+
+      expect(res.status).toBe(403);
+      expect(mockHandleRequest).not.toHaveBeenCalled();
+    });
+
+    it('allows requests without an Origin header (non-browser MCP clients)', async () => {
+      respondOk();
+
+      const res = await request(app)
+        .post('/mcp')
+        .send({ jsonrpc: '2.0', method: 'initialize', id: 1 });
+
+      expect(res.status).toBe(200);
+      expect(sessions.size).toBe(1);
+    });
+
+    it('keeps /health reachable from any Origin', async () => {
+      const res = await request(app).get('/health').set('Origin', 'https://evil.example');
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('ok');
+    });
+
+    it('allows an Origin listed in ALLOWED_ORIGINS and still rejects others', async () => {
+      // ALLOWED_ORIGINS is read once at module load (like PORT), so the module
+      // has to be re-imported with the env var in place.
+      vi.stubEnv('ALLOWED_ORIGINS', ' https://app.example.com , https://second.example.com ');
+      vi.resetModules();
+      const fresh = await import('../http.js');
+      respondOk();
+
+      try {
+        for (const origin of ['https://app.example.com', 'https://second.example.com']) {
+          const res = await request(fresh.app)
+            .post('/mcp')
+            .set('Origin', origin)
+            .set('mcp-session-id', 'test-session-id')
+            .send({ jsonrpc: '2.0', method: 'ping', id: 1 });
+
+          expect(res.status).not.toBe(403);
+        }
+
+        const rejected = await request(fresh.app)
+          .post('/mcp')
+          .set('Origin', 'https://app.example.com.evil.test')
+          .send({ jsonrpc: '2.0', method: 'initialize', id: 2 });
+
+        expect(rejected.status).toBe(403);
+        expect(rejected.body).toEqual(forbidden);
+      } finally {
+        fresh.sessions.clear();
+      }
+    });
+
+    it('treats an empty ALLOWED_ORIGINS as an empty allowlist', async () => {
+      vi.stubEnv('ALLOWED_ORIGINS', '  ,  ');
+      vi.resetModules();
+      const fresh = await import('../http.js');
+      respondOk();
+
+      try {
+        const res = await request(fresh.app)
+          .post('/mcp')
+          .set('Origin', 'https://app.example.com')
+          .send({ jsonrpc: '2.0', method: 'initialize', id: 1 });
+
+        expect(res.status).toBe(403);
+      } finally {
+        fresh.sessions.clear();
+      }
     });
   });
 
