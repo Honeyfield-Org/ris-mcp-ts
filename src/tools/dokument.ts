@@ -17,9 +17,27 @@ import {
   searchSonstige,
 } from '../client.js';
 import { formatDocument, truncateResponse, type DocumentMetadata } from '../formatting.js';
-import { createErrorResponse, createMcpResponse, formatErrorResponse } from '../helpers.js';
+import { createErrorResponse, formatErrorResponse } from '../helpers.js';
 import { findDocumentByDokumentnummer } from '../parser.js';
 import type { NormalizedSearchResults } from '../types.js';
+
+/**
+ * Structured metadata about the retrieved document.
+ *
+ * Deliberately metadata only: the document text is large and stays in the text
+ * content block instead of being duplicated into the structured payload.
+ */
+const DokumentOutputShape = {
+  dokumentnummer: z
+    .string()
+    .optional()
+    .describe('RIS document number, if the document was requested by number'),
+  quelle_url: z.string().describe('Canonical RIS URL the document text was retrieved from'),
+  laenge: z.number().describe('Length in characters of the returned text'),
+  gekuerzt: z
+    .boolean()
+    .describe('Whether the returned text was truncated to stay within the size limit'),
+};
 
 export function registerDokumentTool(server: McpServer): void {
   server.registerTool(
@@ -42,6 +60,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
           .default('markdown')
           .describe('"markdown" (default) or "json"'),
       },
+      outputSchema: DokumentOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {
@@ -206,7 +225,25 @@ Note: For long documents, content may be truncated. Use specific searches to nar
         const formatted = formatDocument(htmlContent, metadata, response_format);
         const result = truncateResponse(formatted);
 
-        return createMcpResponse(result);
+        // The text stays the payload; the resource_link lets a client open the
+        // untruncated original, which matters most when `gekuerzt` is true.
+        return {
+          content: [
+            { type: 'text' as const, text: result },
+            {
+              type: 'resource_link' as const,
+              uri: contentUrl,
+              name: dokumentnummer ?? metadata.titel ?? contentUrl,
+              mimeType: 'text/html',
+            },
+          ],
+          structuredContent: {
+            dokumentnummer,
+            quelle_url: contentUrl,
+            laenge: result.length,
+            gekuerzt: result !== formatted,
+          },
+        };
       } catch (e) {
         return createErrorResponse(formatErrorResponse(e));
       }

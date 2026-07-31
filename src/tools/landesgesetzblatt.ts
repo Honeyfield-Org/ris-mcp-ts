@@ -14,7 +14,12 @@ import {
   executeSearchTool,
   hasAnyParam,
 } from '../helpers.js';
-import { LandesrechtBundeslandSchema, LimitSchema, SeiteSchema } from '../types.js';
+import {
+  LandesrechtBundeslandSchema,
+  LimitSchema,
+  SearchResultOutputShape,
+  SeiteSchema,
+} from '../types.js';
 
 export function registerLandesgesetzblattTool(server: McpServer): void {
   server.registerTool(
@@ -48,6 +53,7 @@ Example queries:
           .default('markdown')
           .describe('"markdown" (default) or "json"'),
       },
+      outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {

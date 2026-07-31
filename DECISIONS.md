@@ -6,6 +6,8 @@
 - Öffentliche Endpoint-URL wird im Repo nicht dokumentiert (auch nicht in `server.json`) — Repo ist public, Gateway-URL bleibt unveröffentlicht.
 - Tool-Fehler tragen `isError: true` (spec-konform); die deutsche Fehler-Prosa bleibt als Text erhalten — Clients/LLMs können Fehler programmatisch erkennen. Leere Suchergebnisse sind keine Fehler.
 - Completions (`completion/complete`) werden nicht angeboten — die Spec erlaubt sie nur für Prompts/Resource-Templates, nicht für Tool-Argumente; unsere Enum-Werte stehen bereits im `inputSchema`.
+- `structuredContent` spiegelt das vollständige geparste Suchergebnis und unterliegt nicht dem 25k-Zeichen-Limit des Text-Blocks — Synchronität mit `total_hits`/`page_size` geht vor Payload-Größe; die Größe steuert der Client über `limit` (max. 100 ist Opt-in). Volltexte (`ris_dokument`) bleiben nur im Text-Block, strukturiert gibt es Metadaten + `resource_link` aufs Original.
+- Das `outputSchema` der Suchtools übernimmt die Pagination-Werte ohne Zod-Bounds — fehlerhafte Upstream-Werte bleiben inspizierbare Daten statt zum harten Protokollfehler zu werden.
 
 ## Offen
 
