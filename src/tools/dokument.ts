@@ -21,24 +21,6 @@ import { createErrorResponse, formatErrorResponse } from '../helpers.js';
 import { findDocumentByDokumentnummer } from '../parser.js';
 import type { NormalizedSearchResults } from '../types.js';
 
-/**
- * Structured metadata about the retrieved document.
- *
- * Deliberately metadata only: the document text is large and stays in the text
- * content block instead of being duplicated into the structured payload.
- */
-const DokumentOutputShape = {
-  dokumentnummer: z
-    .string()
-    .optional()
-    .describe('RIS document number, if the document was requested by number'),
-  quelle_url: z.string().describe('Canonical RIS URL the document text was retrieved from'),
-  laenge: z.number().describe('Length in characters of the returned text'),
-  gekuerzt: z
-    .boolean()
-    .describe('Whether the returned text was truncated to stay within the size limit'),
-};
-
 export function registerDokumentTool(server: McpServer): void {
   server.registerTool(
     'ris_dokument',
@@ -60,7 +42,11 @@ Note: For long documents, content may be truncated. Use specific searches to nar
           .default('markdown')
           .describe('"markdown" (default) or "json"'),
       },
-      outputSchema: DokumentOutputShape,
+      // Deliberately no outputSchema: the spec lets a client treat the text block
+      // as a mere serialization of structuredContent and render only the latter.
+      // For this tool the text block IS the payload, so any structured metadata
+      // would replace the document text with a handful of fields and the model
+      // would never see the document.
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args, extra) => {
@@ -226,7 +212,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
         const result = truncateResponse(formatted);
 
         // The text stays the payload; the resource_link lets a client open the
-        // untruncated original, which matters most when `gekuerzt` is true.
+        // untruncated original, which matters most for a truncated document.
         return {
           content: [
             { type: 'text' as const, text: result },
@@ -237,12 +223,6 @@ Note: For long documents, content may be truncated. Use specific searches to nar
               mimeType: 'text/html',
             },
           ],
-          structuredContent: {
-            dokumentnummer,
-            quelle_url: contentUrl,
-            laenge: result.length,
-            gekuerzt: result !== formatted,
-          },
         };
       } catch (e) {
         // A cancelled call has no reader left for a German error message; let the

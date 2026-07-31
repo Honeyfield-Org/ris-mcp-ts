@@ -1,14 +1,17 @@
 /**
  * E2E tests for structured tool output over the MCP protocol.
  *
- * Every tool declares an `outputSchema`, so the SDK validates the result on both
- * ends: the server refuses to answer a non-error call without `structuredContent`,
- * and the client re-validates it against the schema advertised in `tools/list`.
- * A successful `client.callTool()` here therefore proves the payload round-trips
- * and matches the declaration — a mismatch surfaces as a thrown McpError.
+ * The 11 search tools declare an `outputSchema`, so the SDK validates the result
+ * on both ends: the server refuses to answer a non-error call without
+ * `structuredContent`, and the client re-validates it against the schema
+ * advertised in `tools/list`. A successful `client.callTool()` here therefore
+ * proves the payload round-trips and matches the declaration — a mismatch
+ * surfaces as a thrown McpError.
  *
- * `ris_dokument` additionally returns a `resource_link` block so clients can open
- * the canonical RIS document instead of re-parsing the text.
+ * `ris_dokument` deliberately declares neither: a client is free to render
+ * `structuredContent` in place of the text block, which for that tool would hide
+ * the document text behind a few metadata fields. It returns text plus a
+ * `resource_link` to the canonical RIS document instead.
  */
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -101,11 +104,13 @@ const DOCUMENT_HTML_URL = 'https://ris.bka.gv.at/Dokumente/Bundesnormen/x.html';
 // =============================================================================
 
 describe('tool output schema declarations', () => {
-  it('should declare an outputSchema on every registered tool', async () => {
+  it('should declare an outputSchema on every search tool', async () => {
     const { tools } = await client.listTools();
 
     expect(tools).toHaveLength(12);
-    for (const tool of tools) {
+    const searchTools = tools.filter((tool) => tool.name !== 'ris_dokument');
+    expect(searchTools).toHaveLength(11);
+    for (const tool of searchTools) {
       expect(tool.outputSchema, `${tool.name} is missing an outputSchema`).toBeDefined();
     }
   });
@@ -120,15 +125,12 @@ describe('tool output schema declarations', () => {
     );
   });
 
-  it('should declare document metadata — not the document text — on ris_dokument', async () => {
+  it('should declare no outputSchema on ris_dokument', async () => {
     const { tools } = await client.listTools();
     const dokument = tools.find((tool) => tool.name === 'ris_dokument');
 
-    const properties = dokument?.outputSchema?.properties as Record<string, unknown>;
-    expect(Object.keys(properties)).toEqual(
-      expect.arrayContaining(['dokumentnummer', 'quelle_url', 'laenge', 'gekuerzt']),
-    );
-    expect(properties).not.toHaveProperty('inhalt');
+    expect(dokument).toBeDefined();
+    expect(dokument?.outputSchema).toBeUndefined();
   });
 });
 
@@ -219,10 +221,10 @@ describe('search tool structured content', () => {
 });
 
 // =============================================================================
-// 3. ris_dokument: Metadata + Resource Link
+// 3. ris_dokument: Text + Resource Link
 // =============================================================================
 
-describe('ris_dokument structured content and resource link', () => {
+describe('ris_dokument text and resource link', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -234,7 +236,19 @@ describe('ris_dokument structured content and resource link', () => {
     );
   }
 
-  it('should return metadata about the document', async () => {
+  it('should return no structuredContent on a successful retrieval', async () => {
+    stubDocument('<html><body><p>Kurzer Text</p></body></html>');
+
+    const result = await client.callTool({
+      name: 'ris_dokument',
+      arguments: { dokumentnummer: 'NOR40052761' },
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toBeUndefined();
+  });
+
+  it('should deliver the document text itself in the text block', async () => {
     stubDocument(
       '<html><body><p>Der Eigentuemer darf mit seiner Sache verfahren.</p></body></html>',
     );
@@ -245,32 +259,9 @@ describe('ris_dokument structured content and resource link', () => {
     });
 
     expect(result.isError).not.toBe(true);
-    expect(result.structuredContent).toMatchObject({
-      dokumentnummer: 'NOR40052761',
-      gekuerzt: false,
-    });
-
-    const { quelle_url, laenge } = result.structuredContent as {
-      quelle_url: string;
-      laenge: number;
-    };
-    expect(quelle_url).toContain('NOR40052761');
-    expect(quelle_url.startsWith('https://')).toBe(true);
-    expect(laenge).toBe(getContent(result)[0].text?.length);
-  });
-
-  it('should not duplicate the document text into structuredContent', async () => {
-    stubDocument(
-      '<html><body><p>Der Eigentuemer darf mit seiner Sache verfahren.</p></body></html>',
+    expect(getContent(result)[0].text).toContain(
+      'Der Eigentuemer darf mit seiner Sache verfahren.',
     );
-
-    const result = await client.callTool({
-      name: 'ris_dokument',
-      arguments: { dokumentnummer: 'NOR40052761' },
-    });
-
-    expect(JSON.stringify(result.structuredContent)).not.toContain('Eigentuemer');
-    expect(getContent(result)[0].text).toContain('Eigentuemer');
   });
 
   it('should emit a resource_link pointing at the canonical document URL', async () => {
@@ -283,7 +274,8 @@ describe('ris_dokument structured content and resource link', () => {
 
     const link = getResourceLink(result);
     expect(link).toBeDefined();
-    expect(link?.uri).toBe((result.structuredContent as { quelle_url: string }).quelle_url);
+    expect(link?.uri).toContain('NOR40052761');
+    expect(link?.uri?.startsWith('https://')).toBe(true);
     expect(link?.name).toBe('NOR40052761');
     expect(link?.mimeType).toBe('text/html');
   });
@@ -300,21 +292,18 @@ describe('ris_dokument structured content and resource link', () => {
     expect(getContent(result)[0].text).toContain('## Inhalt');
   });
 
-  it('should omit dokumentnummer when the document was requested by URL', async () => {
+  it('should link to the requested URL when the document was requested by URL', async () => {
     stubDocument('<html><body><p>Kurzer Text</p></body></html>');
     const url = 'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12345678/inhalt.html';
 
     const result = await client.callTool({ name: 'ris_dokument', arguments: { url } });
 
     expect(result.isError).not.toBe(true);
-    expect(result.structuredContent).toMatchObject({ quelle_url: url, gekuerzt: false });
-    expect(
-      (result.structuredContent as { dokumentnummer?: string }).dokumentnummer,
-    ).toBeUndefined();
     expect(getResourceLink(result)?.uri).toBe(url);
+    expect(getResourceLink(result)?.name).toBe(url);
   });
 
-  it('should report gekuerzt: true for a truncated document', async () => {
+  it('should still link to the full document when the text was truncated', async () => {
     stubDocument(`<html><body><p>${'Paragraf. '.repeat(4000)}</p></body></html>`);
 
     const result = await client.callTool({
@@ -323,15 +312,14 @@ describe('ris_dokument structured content and resource link', () => {
     });
 
     expect(result.isError).not.toBe(true);
-    expect(result.structuredContent).toMatchObject({ gekuerzt: true });
     expect(getContent(result)[0].text).toContain('Antwort gekuerzt');
+    expect(getResourceLink(result)?.uri).toContain('NOR40052761');
   });
 
-  it('should return text only — no link, no structuredContent — on an error', async () => {
+  it('should return text only — no link — on an error', async () => {
     const result = await client.callTool({ name: 'ris_dokument', arguments: {} });
 
     expect(result.isError).toBe(true);
-    expect(result.structuredContent).toBeUndefined();
     expect(getResourceLink(result)).toBeUndefined();
     expect(getContent(result).every((block) => block.type === 'text')).toBe(true);
   });
@@ -343,7 +331,6 @@ describe('ris_dokument structured content and resource link', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.structuredContent).toBeUndefined();
     expect(getResourceLink(result)).toBeUndefined();
   });
 });

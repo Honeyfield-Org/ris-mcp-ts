@@ -6,7 +6,8 @@
 - Öffentliche Endpoint-URL wird im Repo nicht dokumentiert (auch nicht in `server.json`) — Repo ist public, Gateway-URL bleibt unveröffentlicht.
 - Tool-Fehler tragen `isError: true` (spec-konform); die deutsche Fehler-Prosa bleibt als Text erhalten — Clients/LLMs können Fehler programmatisch erkennen. Leere Suchergebnisse sind keine Fehler.
 - Completions (`completion/complete`) werden nicht angeboten — die Spec erlaubt sie nur für Prompts/Resource-Templates, nicht für Tool-Argumente; unsere Enum-Werte stehen bereits im `inputSchema`.
-- `structuredContent` spiegelt das vollständige geparste Suchergebnis und unterliegt nicht dem 25k-Zeichen-Limit des Text-Blocks — Synchronität mit `total_hits`/`page_size` geht vor Payload-Größe; die Größe steuert der Client über `limit` (max. 100 ist Opt-in). Volltexte (`ris_dokument`) bleiben nur im Text-Block, strukturiert gibt es Metadaten + `resource_link` aufs Original.
+- `structuredContent` spiegelt das vollständige geparste Suchergebnis und unterliegt nicht dem 25k-Zeichen-Limit des Text-Blocks — Synchronität mit `total_hits`/`page_size` geht vor Payload-Größe; die Größe steuert der Client über `limit` (max. 100 ist Opt-in).
+- `ris_dokument` deklariert bewusst KEIN `outputSchema`/`structuredContent` (nur Text + `resource_link`) — Clients dürfen laut Spec annehmen, dass der Text-Block nur eine Serialisierung des `structuredContent` ist, und rendern dann nur Letzteres; der Volltext darf nie hinter Metadaten verschwinden (Live-Befund v1.3.0).
 - Das `outputSchema` der Suchtools übernimmt die Pagination-Werte ohne Zod-Bounds — fehlerhafte Upstream-Werte bleiben inspizierbare Daten statt zum harten Protokollfehler zu werden.
 - MCP-Cancellation (`extra.signal`) wird bis zum RIS-Fetch durchgereicht (`AbortSignal.any` mit dem 30s-Timeout); ein Caller-Abort propagiert als Abort (SDK verwirft die Response), nur echte Upstream-Fehler werden zur `isError`-Response. Dafür `engines` auf Node ≥ 20.3 angehoben (`AbortSignal.any`).
 
@@ -17,3 +18,4 @@
 ## Verworfen
 
 - Sofortige Migration auf SDK v2 (Stand 2026-07-31) — vier Tage nach GA ohne Patch-Releases, kein heutiger Client spricht die 2026er-Ära, kein benötigtes Feature.
+- Metadaten-`structuredContent` auf `ris_dokument` (v1.3.0, Slice 3) — Clients, die `structuredContent` bevorzugen, verwarfen den Text-Block und damit den Dokumenttext; als Hotfix zurückgebaut.
