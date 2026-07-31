@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { z } from 'zod';
 
 import { RISAPIError, RISParsingError, RISTimeoutError } from '../client.js';
 import {
@@ -16,7 +17,7 @@ import {
   executeSearchTool,
   formatErrorResponse,
 } from '../helpers.js';
-import type { NormalizedSearchResults } from '../types.js';
+import { SearchResultOutputShape, type Document, type NormalizedSearchResults } from '../types.js';
 
 // =============================================================================
 // Test Helpers
@@ -145,5 +146,104 @@ describe('executeSearchTool success handling', () => {
     const response = await executeSearchTool(searchFn, {}, 'json');
 
     expect(response.isError).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// Search Execution: Structured Content
+// =============================================================================
+
+const SearchResultOutputSchema = z.object(SearchResultOutputShape);
+
+/** Read structuredContent as the search payload it is declared to be. */
+function structuredSearchResult(structuredContent: unknown) {
+  return structuredContent as { documents: Document[] } & Record<string, unknown>;
+}
+
+describe('executeSearchTool structured content', () => {
+  it('should mirror the parsed search result in structuredContent', async () => {
+    const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(2));
+
+    const response = await executeSearchTool(searchFn, {}, 'markdown');
+
+    expect(response.structuredContent).toMatchObject({
+      total_hits: 2,
+      page: 1,
+      page_size: 20,
+      has_more: false,
+    });
+    expect(structuredSearchResult(response.structuredContent).documents).toHaveLength(2);
+  });
+
+  it('should carry the parsed document fields, not the formatted text', async () => {
+    const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(1));
+
+    const response = await executeSearchTool(searchFn, {}, 'markdown');
+
+    const [document] = structuredSearchResult(response.structuredContent).documents;
+    expect(document.dokumentnummer).toBe('NOR40052760');
+    expect(document.kurztitel).toBe('ABGB');
+    expect(document.content_urls.html).toBe('https://www.ris.bka.gv.at/Dokumente/x.html');
+  });
+
+  it('should satisfy the declared output schema', async () => {
+    const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(3));
+
+    const response = await executeSearchTool(searchFn, {}, 'markdown');
+
+    expect(SearchResultOutputSchema.safeParse(response.structuredContent).success).toBe(true);
+  });
+
+  it('should emit structuredContent for a zero-hit search', async () => {
+    const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(0));
+
+    const response = await executeSearchTool(searchFn, {}, 'markdown');
+
+    expect(response.structuredContent).toMatchObject({ total_hits: 0, has_more: false });
+    expect(structuredSearchResult(response.structuredContent).documents).toHaveLength(0);
+  });
+
+  it('should emit the same structuredContent for the json response format', async () => {
+    const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(2));
+
+    const markdown = await executeSearchTool(searchFn, {}, 'markdown');
+    const json = await executeSearchTool(searchFn, {}, 'json');
+
+    expect(json.structuredContent).toEqual(markdown.structuredContent);
+  });
+
+  it('should keep the text content unchanged for backwards compatibility', async () => {
+    const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(2));
+
+    const response = await executeSearchTool(searchFn, {}, 'markdown');
+
+    expect(response.content[0].text).toContain('**Gefunden: 2 Treffer**');
+    expect(response.content[0].text).toContain('Dokumentnummer: NOR40052760');
+  });
+
+  it('should not attach structuredContent to an error result', async () => {
+    const searchFn = vi.fn().mockRejectedValue(new RISTimeoutError());
+
+    const response = await executeSearchTool(searchFn, {}, 'markdown');
+
+    expect(response.isError).toBe(true);
+    expect(response.structuredContent).toBeUndefined();
+  });
+
+  it('should accept pagination values the RIS API reports outside the expected range', async () => {
+    // The declared output schema must not be stricter than what the upstream API
+    // can actually produce: page_size is read straight from the response and a
+    // schema violation here would turn a usable answer into a protocol error.
+    const searchFn = vi.fn().mockResolvedValue({
+      hits: 0,
+      page_number: 1,
+      page_size: 0,
+      documents: [],
+    } satisfies NormalizedSearchResults);
+
+    const response = await executeSearchTool(searchFn, {}, 'markdown');
+
+    expect(response.isError).toBeUndefined();
+    expect(SearchResultOutputSchema.safeParse(response.structuredContent).success).toBe(true);
   });
 });

@@ -49,18 +49,41 @@ export function formatErrorResponse(error: unknown): string {
 // Helper Functions for Code Deduplication
 // =============================================================================
 
-/** MCP tool response type with index signature for SDK compatibility */
+/** A plain text content block. */
+export interface TextContent {
+  type: 'text';
+  text: string;
+}
+
+/** A pointer to a resource the client can fetch itself instead of re-parsing text. */
+export interface ResourceLinkContent {
+  type: 'resource_link';
+  uri: string;
+  name: string;
+  mimeType?: string;
+}
+
+export type McpContent = TextContent | ResourceLinkContent;
+
+/**
+ * MCP tool response type with index signature for SDK compatibility.
+ *
+ * The content type is a parameter so the text-only helpers keep returning a
+ * single-element tuple — callers can still reach `content[0].text` without
+ * narrowing — while handlers that add further blocks use the default.
+ */
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-export type McpToolResponse = {
+export type McpToolResponse<C extends McpContent[] = McpContent[]> = {
   [x: string]: unknown;
-  content: [{ type: 'text'; text: string }];
+  content: C;
+  structuredContent?: Record<string, unknown>;
   isError?: boolean;
 };
 
 /**
  * Create a standard MCP text response.
  */
-export function createMcpResponse(text: string): McpToolResponse {
+export function createMcpResponse(text: string): McpToolResponse<[TextContent]> {
   return { content: [{ type: 'text' as const, text }] };
 }
 
@@ -71,14 +94,16 @@ export function createMcpResponse(text: string): McpToolResponse {
  * with `isError: true` (not as JSON-RPC protocol errors), so the model sees the
  * message and can self-correct. A search without hits is not an error.
  */
-export function createErrorResponse(text: string): McpToolResponse {
+export function createErrorResponse(text: string): McpToolResponse<[TextContent]> {
   return { content: [{ type: 'text' as const, text }], isError: true };
 }
 
 /**
  * Create a validation error response listing required parameters.
  */
-export function createValidationErrorResponse(requiredParams: string[]): McpToolResponse {
+export function createValidationErrorResponse(
+  requiredParams: string[],
+): McpToolResponse<[TextContent]> {
   const paramList = requiredParams.map((p) => `- \`${p}\``).join('\n');
   return createErrorResponse(
     '**Fehler:** Bitte gib mindestens einen Suchparameter an:\n' + paramList,
@@ -131,18 +156,22 @@ export type SearchFunction = (params: Record<string, unknown>) => Promise<unknow
 /**
  * Execute a search tool and return formatted results.
  * Handles the common try-catch, parsing, formatting, and truncation logic.
+ *
+ * The formatted text stays the primary payload; the parsed result is attached as
+ * `structuredContent` so clients can consume the hits without re-parsing prose.
+ * Error results carry no structured payload — there is no result to describe.
  */
 export async function executeSearchTool(
   searchFn: SearchFunction,
   params: Record<string, unknown>,
   responseFormat: 'markdown' | 'json',
-): Promise<McpToolResponse> {
+): Promise<McpToolResponse<[TextContent]>> {
   try {
     const apiResponse = await searchFn(params);
     const searchResult = parseSearchResults(apiResponse as NormalizedSearchResults);
     const formatted = formatSearchResults(searchResult, responseFormat);
     const result = truncateResponse(formatted);
-    return createMcpResponse(result);
+    return { ...createMcpResponse(result), structuredContent: searchResult };
   } catch (e) {
     return createErrorResponse(formatErrorResponse(e));
   }

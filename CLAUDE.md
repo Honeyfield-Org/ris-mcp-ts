@@ -96,7 +96,7 @@ src/
 
 Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(server)` function. Pattern:
 
-1. Register with `server.registerTool(name, { title, description, inputSchema, annotations }, handler)` — `title` is a German display name, `description`/`inputSchema` are English, `annotations` is `{ readOnlyHint: true, openWorldHint: true }` for these read-only tools. (The deprecated `server.tool(...)` overload is no longer used.)
+1. Register with `server.registerTool(name, { title, description, inputSchema, outputSchema, annotations }, handler)` — `title` is a German display name, `description`/`inputSchema` are English, `annotations` is `{ readOnlyHint: true, openWorldHint: true }` for these read-only tools. (The deprecated `server.tool(...)` overload is no longer used.) Search tools declare `SearchResultOutputShape` (types.ts) as `outputSchema`; successful results carry the parsed result as `structuredContent` (emitted centrally in `executeSearchTool()`), error results (`isError: true`) carry none.
 2. For `limit`/`seite`, reuse `LimitSchema`/`SeiteSchema` from `types.ts` instead of raw `z.number()`
 3. Use `helpers.ts` functions: `hasAnyParam()`, `buildBaseParams()`, `addOptionalParams()`, `executeSearchTool()`
 4. Call client search functions from `client.ts`

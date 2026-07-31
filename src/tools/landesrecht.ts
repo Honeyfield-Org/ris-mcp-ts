@@ -19,6 +19,7 @@ import {
   DateSchema,
   LandesrechtBundeslandSchema,
   LimitSchema,
+  SearchResultOutputShape,
   SeiteSchema,
 } from '../types.js';
 
@@ -127,6 +128,7 @@ Example queries:
           .default('markdown')
           .describe('"markdown" or "json"'),
       },
+      outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {

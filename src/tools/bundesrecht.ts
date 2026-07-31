@@ -18,6 +18,7 @@ import {
   BundesrechtApplikationSchema,
   DateSchema,
   LimitSchema,
+  SearchResultOutputShape,
   SeiteSchema,
 } from '../types.js';
 
@@ -118,6 +119,7 @@ Example queries:
           .default('markdown')
           .describe('"markdown" (default) or "json"'),
       },
+      outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {

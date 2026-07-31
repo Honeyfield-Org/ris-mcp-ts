@@ -215,6 +215,23 @@ export const SearchResultSchema = z.object({
 });
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 
+/**
+ * Shape declared as `outputSchema` by every search tool, describing the
+ * `structuredContent` they return.
+ *
+ * Mirrors {@link SearchResultSchema} but drops its numeric bounds: the pagination
+ * values are taken verbatim from the RIS response, and a value outside the
+ * expected range must stay inspectable data rather than become a schema
+ * violation that fails the whole tool call.
+ */
+export const SearchResultOutputShape = {
+  total_hits: z.number().describe('Total number of documents in RIS matching the search'),
+  page: z.number().describe('Page number of this result set (1-based)'),
+  page_size: z.number().describe('Number of documents per page'),
+  has_more: z.boolean().describe('Whether further result pages are available'),
+  documents: z.array(DocumentSchema).describe('The documents on this page'),
+};
+
 // =============================================================================
 // Raw API Response Types
 // =============================================================================

@@ -24,7 +24,7 @@ import {
   executeSearchTool,
   hasAnyParam,
 } from '../helpers.js';
-import { DateSchema, LimitSchema, SeiteSchema } from '../types.js';
+import { DateSchema, LimitSchema, SearchResultOutputShape, SeiteSchema } from '../types.js';
 
 export function registerSonstigeTool(server: McpServer): void {
   server.registerTool(
@@ -147,6 +147,7 @@ Example queries:
           .default('markdown')
           .describe('"markdown" (default) or "json"'),
       },
+      outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (args) => {
