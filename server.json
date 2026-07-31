@@ -3,15 +3,15 @@
   "name": "io.github.philrox/ris",
   "description": "Access Austrian laws, court decisions & legal documents via the RIS API.",
   "repository": {
-    "url": "https://github.com/philrox/ris-mcp-ts",
+    "url": "https://github.com/Honeyfield-Org/ris-mcp-ts",
     "source": "github"
   },
-  "version": "1.0.2",
+  "version": "1.2.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "ris-mcp-ts",
-      "version": "1.0.2",
+      "version": "1.2.4",
       "transport": {
         "type": "stdio"
       }
