@@ -53,7 +53,7 @@ Example queries:
       outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const {
         bgblnummer,
         teil,
@@ -84,7 +84,7 @@ Example queries:
         [titel, 'Titel'],
       ]);
 
-      return executeSearchTool(searchBundesrecht, params, response_format);
+      return executeSearchTool(searchBundesrecht, params, response_format, extra.signal);
     },
   );
 }

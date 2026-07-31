@@ -150,7 +150,7 @@ Example queries:
       outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const {
         applikation,
         suchworte,
@@ -306,7 +306,7 @@ Example queries:
           break;
       }
 
-      return executeSearchTool(searchSonstige, params, response_format);
+      return executeSearchTool(searchSonstige, params, response_format, extra.signal);
     },
   );
 }

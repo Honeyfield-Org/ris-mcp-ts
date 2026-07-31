@@ -65,7 +65,7 @@ Example queries:
       outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const {
         suchworte,
         titel,
@@ -110,7 +110,7 @@ Example queries:
         [im_ris_seit, 'ImRisSeit'],
       ]);
 
-      return executeSearchTool(searchBezirke, params, response_format);
+      return executeSearchTool(searchBezirke, params, response_format, extra.signal);
     },
   );
 }

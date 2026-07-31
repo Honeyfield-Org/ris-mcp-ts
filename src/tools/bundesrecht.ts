@@ -122,7 +122,7 @@ Example queries:
       outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const {
         suchworte,
         titel,
@@ -154,7 +154,7 @@ Example queries:
         limit,
       });
 
-      return executeSearchTool(searchBundesrecht, params, response_format);
+      return executeSearchTool(searchBundesrecht, params, response_format, extra.signal);
     },
   );
 }

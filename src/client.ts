@@ -68,10 +68,34 @@ const TRANSIENT_STATUS_CODES = new Set([502, 503, 504]);
 const RETRY_DELAY_MS = 500;
 
 /**
- * Resolve after the given number of milliseconds.
+ * Resolve after the given number of milliseconds, or reject as soon as the
+ * caller cancels — a cancelled request should not sit out the retry backoff.
  */
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
+
+    const timeoutId = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timeoutId);
+        reject(signal.reason);
+      },
+      { once: true },
+    );
+  });
+}
+
+/**
+ * Combine the per-request timeout with the caller's cancellation signal so the
+ * fetch aborts on whichever fires first.
+ */
+function withTimeoutSignal(timeoutSignal: AbortSignal, callerSignal?: AbortSignal): AbortSignal {
+  return callerSignal ? AbortSignal.any([timeoutSignal, callerSignal]) : timeoutSignal;
 }
 
 /**
@@ -181,6 +205,7 @@ async function requestOnce(
   url: string,
   endpoint: string,
   timeout: number,
+  signal?: AbortSignal,
 ): Promise<NormalizedSearchResults> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -191,7 +216,7 @@ async function requestOnce(
       headers: {
         Accept: 'application/json',
       },
-      signal: controller.signal,
+      signal: withTimeoutSignal(controller.signal, signal),
     });
 
     clearTimeout(timeoutId);
@@ -209,6 +234,13 @@ async function requestOnce(
     return extractSearchResults(parsed);
   } catch (e) {
     clearTimeout(timeoutId);
+
+    // The combined signal makes a timeout and a caller cancellation look alike
+    // to fetch, so the signals decide: a cancelled request is not an upstream
+    // failure and must not be dressed up as one.
+    if (signal?.aborted) {
+      throw e;
+    }
 
     if (e instanceof RISAPIError || e instanceof RISParsingError) {
       throw e;
@@ -233,19 +265,23 @@ async function request(
   endpoint: string,
   params: Record<string, unknown>,
   timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<NormalizedSearchResults> {
   const url = new URL(endpoint, BASE_URL);
   url.search = buildParams(params).toString();
   const urlString = url.toString();
 
   try {
-    return await requestOnce(urlString, endpoint, timeout);
+    return await requestOnce(urlString, endpoint, timeout, signal);
   } catch (e) {
-    if (isTransientError(e)) {
-      await delay(RETRY_DELAY_MS);
-      return requestOnce(urlString, endpoint, timeout);
+    if (!isTransientError(e)) {
+      throw e;
     }
-    throw e;
+    // A cancelled request is not a transient upstream error: `delay` rejects
+    // straight away if the caller has cancelled, or as soon as it does, so the
+    // second attempt never starts.
+    await delay(RETRY_DELAY_MS, signal);
+    return requestOnce(urlString, endpoint, timeout, signal);
   }
 }
 
@@ -255,8 +291,9 @@ async function request(
 export async function searchBundesrecht(
   params: Record<string, unknown>,
   timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<NormalizedSearchResults> {
-  return request('Bundesrecht', params, timeout);
+  return request('Bundesrecht', params, timeout, signal);
 }
 
 /**
@@ -265,8 +302,9 @@ export async function searchBundesrecht(
 export async function searchLandesrecht(
   params: Record<string, unknown>,
   timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<NormalizedSearchResults> {
-  return request('Landesrecht', params, timeout);
+  return request('Landesrecht', params, timeout, signal);
 }
 
 /**
@@ -275,8 +313,9 @@ export async function searchLandesrecht(
 export async function searchJudikatur(
   params: Record<string, unknown>,
   timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<NormalizedSearchResults> {
-  return request('Judikatur', params, timeout);
+  return request('Judikatur', params, timeout, signal);
 }
 
 /**
@@ -285,8 +324,9 @@ export async function searchJudikatur(
 export async function searchBezirke(
   params: Record<string, unknown>,
   timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<NormalizedSearchResults> {
-  return request('Bezirke', params, timeout);
+  return request('Bezirke', params, timeout, signal);
 }
 
 /**
@@ -295,8 +335,9 @@ export async function searchBezirke(
 export async function searchGemeinden(
   params: Record<string, unknown>,
   timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<NormalizedSearchResults> {
-  return request('Gemeinden', params, timeout);
+  return request('Gemeinden', params, timeout, signal);
 }
 
 /**
@@ -305,8 +346,9 @@ export async function searchGemeinden(
 export async function searchSonstige(
   params: Record<string, unknown>,
   timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<NormalizedSearchResults> {
-  return request('Sonstige', params, timeout);
+  return request('Sonstige', params, timeout, signal);
 }
 
 /**
@@ -315,21 +357,26 @@ export async function searchSonstige(
 export async function searchHistory(
   params: Record<string, unknown>,
   timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<NormalizedSearchResults> {
-  return request('History', params, timeout);
+  return request('History', params, timeout, signal);
 }
 
 /**
  * Fetch HTML content from a document URL.
  */
-export async function getDocumentContent(url: string, timeout = DEFAULT_TIMEOUT): Promise<string> {
+export async function getDocumentContent(
+  url: string,
+  timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
+): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
     const response = await fetch(url, {
       method: 'GET',
-      signal: controller.signal,
+      signal: withTimeoutSignal(controller.signal, signal),
     });
 
     clearTimeout(timeoutId);
@@ -345,6 +392,11 @@ export async function getDocumentContent(url: string, timeout = DEFAULT_TIMEOUT)
     return await response.text();
   } catch (e) {
     clearTimeout(timeoutId);
+
+    // See requestOnce: only the signals distinguish a cancellation from a timeout.
+    if (signal?.aborted) {
+      throw e;
+    }
 
     if (e instanceof RISAPIError) {
       throw e;
@@ -522,11 +574,14 @@ export type DirectDocumentResult =
  *
  * @param dokumentnummer - The RIS document number (e.g., "NOR12019037")
  * @param timeout - Request timeout in milliseconds
+ * @param signal - Caller's cancellation signal; a cancellation is thrown rather
+ *   than reported as an unsuccessful fetch, so callers do not fall back to a search
  * @returns Result object with HTML content on success, or error details on failure
  */
 export async function getDocumentByNumber(
   dokumentnummer: string,
   timeout = DEFAULT_TIMEOUT,
+  signal?: AbortSignal,
 ): Promise<DirectDocumentResult> {
   // Validate dokumentnummer before any URL operations
   if (!isValidDokumentnummer(dokumentnummer)) {
@@ -546,9 +601,15 @@ export async function getDocumentByNumber(
   }
 
   try {
-    const html = await getDocumentContent(url, timeout);
+    const html = await getDocumentContent(url, timeout, signal);
     return { success: true, html, url };
   } catch (e) {
+    // Reporting a cancellation as a failed direct fetch would send the caller
+    // into its fallback search — a second round-trip nobody is waiting for.
+    if (signal?.aborted) {
+      throw e;
+    }
+
     if (e instanceof RISAPIError) {
       return {
         success: false,

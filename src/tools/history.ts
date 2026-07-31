@@ -65,7 +65,7 @@ Example queries:
       outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const {
         applikation,
         aenderungen_von,
@@ -96,7 +96,7 @@ Example queries:
       ]);
       if (include_deleted) params['IncludeDeletedDocuments'] = 'true';
 
-      return executeSearchTool(searchHistory, params, response_format);
+      return executeSearchTool(searchHistory, params, response_format, extra.signal);
     },
   );
 }

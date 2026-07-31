@@ -63,7 +63,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
       outputSchema: DokumentOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const { dokumentnummer, url: inputUrl, response_format } = args;
 
       if (!dokumentnummer && !inputUrl) {
@@ -90,7 +90,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
 
         if (dokumentnummer && !inputUrl) {
           // Strategy: Try direct URL construction first, fallback to search API
-          const directResult = await getDocumentByNumber(dokumentnummer);
+          const directResult = await getDocumentByNumber(dokumentnummer, undefined, extra.signal);
 
           if (directResult.success) {
             // Direct fetch succeeded - use minimal metadata
@@ -119,20 +119,20 @@ Note: For long documents, content may be truncated. Use specific searches to nar
             let apiResponse: NormalizedSearchResults;
             switch (route?.endpoint) {
               case 'Bundesrecht':
-                apiResponse = await searchBundesrecht(searchParams);
+                apiResponse = await searchBundesrecht(searchParams, undefined, extra.signal);
                 break;
               case 'Landesrecht':
-                apiResponse = await searchLandesrecht(searchParams);
+                apiResponse = await searchLandesrecht(searchParams, undefined, extra.signal);
                 break;
               case 'Sonstige':
-                apiResponse = await searchSonstige(searchParams);
+                apiResponse = await searchSonstige(searchParams, undefined, extra.signal);
                 break;
               case 'Bezirke':
-                apiResponse = await searchBezirke(searchParams);
+                apiResponse = await searchBezirke(searchParams, undefined, extra.signal);
                 break;
               case 'Judikatur':
               default:
-                apiResponse = await searchJudikatur(searchParams);
+                apiResponse = await searchJudikatur(searchParams, undefined, extra.signal);
                 break;
             }
 
@@ -218,7 +218,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
 
         // Fetch document content if not already fetched via direct URL
         if (!htmlContent) {
-          htmlContent = await getDocumentContent(contentUrl);
+          htmlContent = await getDocumentContent(contentUrl, undefined, extra.signal);
         }
 
         // Format the document
@@ -245,6 +245,11 @@ Note: For long documents, content may be truncated. Use specific searches to nar
           },
         };
       } catch (e) {
+        // A cancelled call has no reader left for a German error message; let the
+        // abort propagate so the SDK drops the request.
+        if (extra.signal.aborted) {
+          throw e;
+        }
         return createErrorResponse(formatErrorResponse(e));
       }
     },

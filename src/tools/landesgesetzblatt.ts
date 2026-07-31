@@ -56,7 +56,7 @@ Example queries:
       outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const {
         lgblnummer,
         jahrgang,
@@ -94,7 +94,7 @@ Example queries:
         }
       }
 
-      return executeSearchTool(searchLandesrecht, params, response_format);
+      return executeSearchTool(searchLandesrecht, params, response_format, extra.signal);
     },
   );
 }
