@@ -5,6 +5,8 @@
  * MCP HTTP server. They should FAIL until http.ts is implemented.
  */
 
+import crypto from 'node:crypto';
+
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import request from 'supertest';
@@ -73,6 +75,8 @@ describe('HTTP transport (http.ts)', () => {
     sessions.clear();
     capturedOnClose = undefined;
     mcpLimiter.resetKey('::ffff:127.0.0.1');
+    // ipKeyGenerator normalizes the IPv4-mapped loopback address to plain IPv4
+    mcpLimiter.resetKey('127.0.0.1');
     mcpLimiter.resetKey('unknown');
   });
 
@@ -215,6 +219,56 @@ describe('HTTP transport (http.ts)', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // POST/GET/DELETE /mcp — transport rejects (floating promise regression)
+  // ---------------------------------------------------------------------------
+
+  describe('POST/GET/DELETE /mcp (transport failure)', () => {
+    const registerFailingSession = (sessionId: string): void => {
+      sessions.set(sessionId, {
+        transport: { handleRequest: mockHandleRequest },
+        lastActivity: Date.now(),
+      } as never);
+      mockHandleRequest.mockRejectedValueOnce(new Error('transport exploded'));
+    };
+
+    it('answers 500 with a German error body when the transport rejects on POST', async () => {
+      registerFailingSession('failing-post-session');
+
+      const res = await request(app)
+        .post('/mcp')
+        .set('mcp-session-id', 'failing-post-session')
+        .send({ jsonrpc: '2.0', method: 'ping', id: 1 });
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({
+        error: 'Interner Serverfehler. Bitte später erneut versuchen.',
+      });
+    });
+
+    it('answers 500 with a German error body when the transport rejects on GET', async () => {
+      registerFailingSession('failing-get-session');
+
+      const res = await request(app).get('/mcp').set('mcp-session-id', 'failing-get-session');
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({
+        error: 'Interner Serverfehler. Bitte später erneut versuchen.',
+      });
+    });
+
+    it('answers 500 with a German error body when the transport rejects on DELETE', async () => {
+      registerFailingSession('failing-delete-session');
+
+      const res = await request(app).delete('/mcp').set('mcp-session-id', 'failing-delete-session');
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({
+        error: 'Interner Serverfehler. Bitte später erneut versuchen.',
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Rate Limiting
   // ---------------------------------------------------------------------------
 
@@ -290,6 +344,68 @@ describe('HTTP transport (http.ts)', () => {
       const limited = responses.find((res) => res.status === 429);
       expect(limited).toBeDefined();
       expect(limited?.body).toHaveProperty('error');
+    });
+
+    it('still limits a client that sends a fresh random session id per request', async () => {
+      mockHandleRequest.mockImplementation(
+        (_req: unknown, res: { writeHead: (code: number) => void; end: () => void }) => {
+          res.writeHead(200);
+          res.end();
+        },
+      );
+
+      // A client-supplied session id that was never established must not open a
+      // new bucket — otherwise the limit is trivially bypassed.
+      const results = [];
+      for (let i = 0; i < 65; i++) {
+        results.push(
+          request(app)
+            .post('/mcp')
+            .set('mcp-session-id', crypto.randomUUID())
+            .send({ jsonrpc: '2.0', method: 'initialize', id: i }),
+        );
+      }
+      const responses = await Promise.all(results);
+
+      const rateLimited = responses.some((res) => res.status === 429);
+      expect(rateLimited).toBe(true);
+    });
+
+    it('keeps separate buckets for two established sessions', async () => {
+      mcpLimiter.resetKey('bucket-a');
+      mcpLimiter.resetKey('bucket-b');
+      mockHandleRequest.mockImplementation(
+        (_req: unknown, res: { writeHead: (code: number) => void; end: () => void }) => {
+          res.writeHead(200);
+          res.end();
+        },
+      );
+
+      for (const id of ['bucket-a', 'bucket-b']) {
+        sessions.set(id, {
+          transport: { handleRequest: mockHandleRequest },
+          lastActivity: Date.now(),
+        } as never);
+      }
+
+      const results = [];
+      for (let i = 0; i < 65; i++) {
+        results.push(
+          request(app)
+            .post('/mcp')
+            .set('mcp-session-id', 'bucket-a')
+            .send({ jsonrpc: '2.0', method: 'ping', id: i }),
+        );
+      }
+      const responses = await Promise.all(results);
+      expect(responses.some((res) => res.status === 429)).toBe(true);
+
+      const untouched = await request(app)
+        .post('/mcp')
+        .set('mcp-session-id', 'bucket-b')
+        .send({ jsonrpc: '2.0', method: 'ping', id: 99 });
+
+      expect(untouched.status).toBe(200);
     });
   });
 

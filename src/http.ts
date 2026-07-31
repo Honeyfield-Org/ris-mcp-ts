@@ -11,7 +11,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Express, Request, Response } from 'express';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 import { registerAllTools } from './tools/index.js';
 import { VERSION } from './version.js';
@@ -48,9 +48,18 @@ export const mcpLimiter = rateLimit({
   max: 60,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  keyGenerator: (req) => (req.headers['mcp-session-id'] as string) || req.ip || 'unknown',
+  // Key on the session id only if it belongs to an established session —
+  // otherwise a client would get a fresh bucket per request simply by sending a
+  // random id. Everything else falls back to the client IP; ipKeyGenerator
+  // buckets IPv6 addresses by subnet so those cannot be rotated either.
+  keyGenerator: (req) => {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+    if (sessionId && sessions.has(sessionId)) {
+      return sessionId;
+    }
+    return req.ip ? ipKeyGenerator(req.ip) : 'unknown';
+  },
   message: { error: 'Zu viele Anfragen. Bitte später erneut versuchen.' },
-  validate: { keyGeneratorIpFallback: false },
 });
 app.use('/mcp', mcpLimiter);
 
@@ -111,6 +120,26 @@ export function sweepIdleSessions(now: number = Date.now()): number {
   return evicted;
 }
 
+/**
+ * Hand a request to an established session's transport. The promise has to be
+ * awaited: a rejection escaping a non-async route handler bypasses Express'
+ * async error forwarding entirely and leaves the client waiting forever.
+ */
+async function handleWithTransport(
+  entry: SessionEntry,
+  req: Request,
+  res: Response,
+): Promise<void> {
+  try {
+    await entry.transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error('Fehler bei der Session-Verarbeitung:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Interner Serverfehler. Bitte später erneut versuchen.' });
+    }
+  }
+}
+
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
   res.json({
@@ -129,7 +158,7 @@ app.post('/mcp', async (req: Request, res: Response) => {
     const existing = sessions.get(sessionId);
     if (existing) {
       existing.lastActivity = Date.now();
-      await existing.transport.handleRequest(req, res, req.body);
+      await handleWithTransport(existing, req, res);
       return;
     }
     // Session expired or server restarted — client must reinitialize
@@ -161,14 +190,14 @@ app.post('/mcp', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/mcp', (req: Request, res: Response) => {
+app.get('/mcp', async (req: Request, res: Response) => {
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
   if (sessionId) {
     const entry = sessions.get(sessionId);
     if (entry) {
       entry.lastActivity = Date.now();
-      entry.transport.handleRequest(req, res, req.body);
+      await handleWithTransport(entry, req, res);
       return;
     }
   }
@@ -176,14 +205,14 @@ app.get('/mcp', (req: Request, res: Response) => {
   res.status(400).json({ error: 'Keine gültige Session. Starte mit POST /mcp.' });
 });
 
-app.delete('/mcp', (req: Request, res: Response) => {
+app.delete('/mcp', async (req: Request, res: Response) => {
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
   if (sessionId) {
     const entry = sessions.get(sessionId);
     if (entry) {
       entry.lastActivity = Date.now();
-      entry.transport.handleRequest(req, res, req.body);
+      await handleWithTransport(entry, req, res);
       return;
     }
   }
