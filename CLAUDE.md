@@ -23,7 +23,7 @@ pnpm run check           # Run typecheck + lint + format:check + tests
 ## Testing
 
 ```bash
-pnpm test                # Run all unit tests (792 tests, 13 files)
+pnpm test                # Run all unit tests (844 tests, 16 files)
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)

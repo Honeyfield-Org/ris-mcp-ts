@@ -53,7 +53,7 @@ Example queries:
       outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const {
         suchworte,
         titel,
@@ -96,7 +96,7 @@ Example queries:
         [kundmachungsdatum_bis, 'Kundmachungsdatum.Bis'],
       ]);
 
-      return executeSearchTool(searchLandesrecht, params, response_format);
+      return executeSearchTool(searchLandesrecht, params, response_format, extra.signal);
     },
   );
 }

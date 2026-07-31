@@ -111,7 +111,7 @@ Example queries:
       outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const {
         suchworte,
         titel,
@@ -189,7 +189,7 @@ Example queries:
         ]);
       }
 
-      return executeSearchTool(searchGemeinden, params, response_format);
+      return executeSearchTool(searchGemeinden, params, response_format, extra.signal);
     },
   );
 }

@@ -151,7 +151,11 @@ export function addOptionalParams(
 }
 
 /** Search function type for API calls */
-export type SearchFunction = (params: Record<string, unknown>) => Promise<unknown>;
+export type SearchFunction = (
+  params: Record<string, unknown>,
+  timeout?: number,
+  signal?: AbortSignal,
+) => Promise<unknown>;
 
 /**
  * Execute a search tool and return formatted results.
@@ -160,19 +164,28 @@ export type SearchFunction = (params: Record<string, unknown>) => Promise<unknow
  * The formatted text stays the primary payload; the parsed result is attached as
  * `structuredContent` so clients can consume the hits without re-parsing prose.
  * Error results carry no structured payload — there is no result to describe.
+ *
+ * `signal` is the MCP request's cancellation signal (`extra.signal`). It reaches
+ * the outbound RIS request so an abandoned call stops upstream too; a cancelled
+ * request then propagates the abort instead of being reported as a tool error,
+ * since nobody is waiting to read it.
  */
 export async function executeSearchTool(
   searchFn: SearchFunction,
   params: Record<string, unknown>,
   responseFormat: 'markdown' | 'json',
+  signal?: AbortSignal,
 ): Promise<McpToolResponse<[TextContent]>> {
   try {
-    const apiResponse = await searchFn(params);
+    const apiResponse = await searchFn(params, undefined, signal);
     const searchResult = parseSearchResults(apiResponse as NormalizedSearchResults);
     const formatted = formatSearchResults(searchResult, responseFormat);
     const result = truncateResponse(formatted);
     return { ...createMcpResponse(result), structuredContent: searchResult };
   } catch (e) {
+    if (signal?.aborted) {
+      throw e;
+    }
     return createErrorResponse(formatErrorResponse(e));
   }
 }

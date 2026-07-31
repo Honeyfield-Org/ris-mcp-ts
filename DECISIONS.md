@@ -8,6 +8,7 @@
 - Completions (`completion/complete`) werden nicht angeboten — die Spec erlaubt sie nur für Prompts/Resource-Templates, nicht für Tool-Argumente; unsere Enum-Werte stehen bereits im `inputSchema`.
 - `structuredContent` spiegelt das vollständige geparste Suchergebnis und unterliegt nicht dem 25k-Zeichen-Limit des Text-Blocks — Synchronität mit `total_hits`/`page_size` geht vor Payload-Größe; die Größe steuert der Client über `limit` (max. 100 ist Opt-in). Volltexte (`ris_dokument`) bleiben nur im Text-Block, strukturiert gibt es Metadaten + `resource_link` aufs Original.
 - Das `outputSchema` der Suchtools übernimmt die Pagination-Werte ohne Zod-Bounds — fehlerhafte Upstream-Werte bleiben inspizierbare Daten statt zum harten Protokollfehler zu werden.
+- MCP-Cancellation (`extra.signal`) wird bis zum RIS-Fetch durchgereicht (`AbortSignal.any` mit dem 30s-Timeout); ein Caller-Abort propagiert als Abort (SDK verwirft die Response), nur echte Upstream-Fehler werden zur `isError`-Response. Dafür `engines` auf Node ≥ 20.3 angehoben (`AbortSignal.any`).
 
 ## Offen
 

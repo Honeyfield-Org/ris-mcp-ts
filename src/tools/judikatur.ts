@@ -177,7 +177,7 @@ Example queries:
       outputSchema: SearchResultOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (args) => {
+    async (args, extra) => {
       const {
         suchworte,
         gerichtsbarkeit,
@@ -223,7 +223,7 @@ Example queries:
         limit,
       });
 
-      return executeSearchTool(searchJudikatur, params, response_format);
+      return executeSearchTool(searchJudikatur, params, response_format, extra.signal);
     },
   );
 }
