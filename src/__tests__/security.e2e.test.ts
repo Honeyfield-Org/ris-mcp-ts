@@ -52,6 +52,7 @@ describe('SSRF protection on ris_dokument', () => {
       arguments: { url: 'http://ris.bka.gv.at/Dokumente/test.html' },
     });
 
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('nicht erlaubt');
     expect(text).toContain('HTTPS');
@@ -63,6 +64,7 @@ describe('SSRF protection on ris_dokument', () => {
       arguments: { url: 'http://169.254.169.254/latest/meta-data/' },
     });
 
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('nicht erlaubt');
   });
@@ -73,6 +75,7 @@ describe('SSRF protection on ris_dokument', () => {
       arguments: { url: 'http://localhost:8080/admin' },
     });
 
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('nicht erlaubt');
   });
@@ -83,6 +86,7 @@ describe('SSRF protection on ris_dokument', () => {
       arguments: { url: 'https://evil.com/steal-data' },
     });
 
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('nicht erlaubt');
   });
@@ -93,6 +97,7 @@ describe('SSRF protection on ris_dokument', () => {
       arguments: { url: 'file:///etc/passwd' },
     });
 
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('nicht erlaubt');
   });
@@ -103,6 +108,7 @@ describe('SSRF protection on ris_dokument', () => {
       arguments: { url: 'https://evil.com/ris.bka.gv.at' },
     });
 
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('nicht erlaubt');
   });
@@ -113,6 +119,7 @@ describe('SSRF protection on ris_dokument', () => {
       arguments: { url: 'https://google.com' },
     });
 
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('nicht erlaubt');
   });
@@ -123,6 +130,7 @@ describe('SSRF protection on ris_dokument', () => {
       arguments: {},
     });
 
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('dokumentnummer');
     expect(text).toContain('url');
@@ -193,6 +201,7 @@ describe('SSRF protection on search-derived content URL', () => {
       arguments: { dokumentnummer: 'NOR40052761' },
     });
 
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('nicht erlaubt');
   });
@@ -387,6 +396,7 @@ describe('Combined validation edge cases', () => {
     });
 
     // When both are provided, URL is used but should be validated
+    expect(result.isError).toBe(true);
     const text = getResponseText(result);
     expect(text).toContain('nicht erlaubt');
   });

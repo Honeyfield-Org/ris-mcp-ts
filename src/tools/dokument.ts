@@ -17,7 +17,7 @@ import {
   searchSonstige,
 } from '../client.js';
 import { formatDocument, truncateResponse, type DocumentMetadata } from '../formatting.js';
-import { createMcpResponse, formatErrorResponse } from '../helpers.js';
+import { createErrorResponse, createMcpResponse, formatErrorResponse } from '../helpers.js';
 import { findDocumentByDokumentnummer } from '../parser.js';
 import type { NormalizedSearchResults } from '../types.js';
 
@@ -48,7 +48,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
       const { dokumentnummer, url: inputUrl, response_format } = args;
 
       if (!dokumentnummer && !inputUrl) {
-        return createMcpResponse(
+        return createErrorResponse(
           '**Fehler:** Bitte gib entweder eine `dokumentnummer` oder eine `url` an.\n\n' +
             'Die Dokumentnummer findest du in den Suchergebnissen von `ris_bundesrecht`, ' +
             '`ris_landesrecht` oder `ris_judikatur`.',
@@ -57,7 +57,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
 
       // SSRF protection: validate user-supplied URLs against domain allowlist
       if (inputUrl && !isAllowedUrl(inputUrl)) {
-        return createMcpResponse(
+        return createErrorResponse(
           '**Fehler:** Die angegebene URL ist nicht erlaubt.\n\n' +
             'Nur HTTPS-URLs zu offiziellen RIS-Domains sind zulaessig ' +
             '(data.bka.gv.at, www.ris.bka.gv.at, ris.bka.gv.at).',
@@ -124,7 +124,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
               // Both direct fetch and search failed - provide helpful error
               const directError = directResult.error;
               if (findResult.error === 'no_documents') {
-                return createMcpResponse(
+                return createErrorResponse(
                   `**Fehler:** Kein Dokument mit der Nummer \`${dokumentnummer}\` gefunden.\n\n` +
                     `Direkter Abruf: ${directError}\n` +
                     `Suche: Keine Ergebnisse.\n\n` +
@@ -132,7 +132,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
                     'um das gewuenschte Dokument zu finden.',
                 );
               } else {
-                return createMcpResponse(
+                return createErrorResponse(
                   `**Fehler:** Dokument \`${dokumentnummer}\` nicht gefunden.\n\n` +
                     `Direkter Abruf: ${directError}\n` +
                     `Suche: ${findResult.totalResults} Ergebnisse, aber keines mit dieser Dokumentnummer.\n\n` +
@@ -145,7 +145,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
             contentUrl = doc.content_urls.html ?? undefined;
 
             if (!contentUrl) {
-              return createMcpResponse(
+              return createErrorResponse(
                 `**Fehler:** Keine Inhalts-URL fuer Dokument \`${dokumentnummer}\` verfuegbar.\n\n` +
                   'Das Dokument hat moeglicherweise keinen abrufbaren Volltext.',
               );
@@ -155,7 +155,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
             // and would otherwise be fetched unchecked. Validate it against the same
             // domain allowlist used for user-supplied URLs.
             if (!isAllowedUrl(contentUrl)) {
-              return createMcpResponse(
+              return createErrorResponse(
                 '**Fehler:** Die Inhalts-URL des Dokuments ist nicht erlaubt.\n\n' +
                   'Nur HTTPS-URLs zu offiziellen RIS-Domains sind zulaessig ' +
                   '(data.bka.gv.at, www.ris.bka.gv.at, ris.bka.gv.at).',
@@ -194,7 +194,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
         }
 
         if (!contentUrl) {
-          return createMcpResponse('**Fehler:** Keine gueltige URL zum Abrufen des Dokuments.');
+          return createErrorResponse('**Fehler:** Keine gueltige URL zum Abrufen des Dokuments.');
         }
 
         // Fetch document content if not already fetched via direct URL
@@ -208,7 +208,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
 
         return createMcpResponse(result);
       } catch (e) {
-        return createMcpResponse(formatErrorResponse(e));
+        return createErrorResponse(formatErrorResponse(e));
       }
     },
   );

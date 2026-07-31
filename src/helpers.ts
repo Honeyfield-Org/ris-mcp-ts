@@ -54,6 +54,7 @@ export function formatErrorResponse(error: unknown): string {
 export type McpToolResponse = {
   [x: string]: unknown;
   content: [{ type: 'text'; text: string }];
+  isError?: boolean;
 };
 
 /**
@@ -64,11 +65,22 @@ export function createMcpResponse(text: string): McpToolResponse {
 }
 
 /**
+ * Create an MCP error response.
+ *
+ * Per the MCP spec, errors during tool execution are reported inside the result
+ * with `isError: true` (not as JSON-RPC protocol errors), so the model sees the
+ * message and can self-correct. A search without hits is not an error.
+ */
+export function createErrorResponse(text: string): McpToolResponse {
+  return { content: [{ type: 'text' as const, text }], isError: true };
+}
+
+/**
  * Create a validation error response listing required parameters.
  */
 export function createValidationErrorResponse(requiredParams: string[]): McpToolResponse {
   const paramList = requiredParams.map((p) => `- \`${p}\``).join('\n');
-  return createMcpResponse(
+  return createErrorResponse(
     '**Fehler:** Bitte gib mindestens einen Suchparameter an:\n' + paramList,
   );
 }
@@ -132,6 +144,6 @@ export async function executeSearchTool(
     const result = truncateResponse(formatted);
     return createMcpResponse(result);
   } catch (e) {
-    return createMcpResponse(formatErrorResponse(e));
+    return createErrorResponse(formatErrorResponse(e));
   }
 }
