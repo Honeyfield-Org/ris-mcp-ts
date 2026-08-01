@@ -38,7 +38,7 @@ export const SEARCH_WIDGET_META = {
  * "CSP off" instead of treating it as "needs nothing".
  */
 const SEARCH_WIDGET_RESOURCE_CONFIG: McpUiAppResourceConfig = {
-  description: 'Interaktive Trefferliste fuer RIS-Suchergebnisse',
+  description: 'Interactive result list for RIS search results',
   _meta: {
     ui: {
       csp: {

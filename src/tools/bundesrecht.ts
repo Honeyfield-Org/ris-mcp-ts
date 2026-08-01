@@ -124,6 +124,9 @@ Example queries:
           .describe('"markdown" (default) or "json"'),
       },
       outputSchema: SearchResultOutputShape,
+      // `destructiveHint` is redundant per spec once `readOnlyHint` is true, but
+      // OpenAI lists it as a required annotation for app submissions — all 12
+      // tools carry it deliberately; do not drop it as noise.
       annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
       _meta: SEARCH_WIDGET_META,
     },

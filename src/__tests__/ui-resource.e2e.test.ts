@@ -93,6 +93,16 @@ describe('widget resource', () => {
     expect(widget).toBeDefined();
   });
 
+  it('should advertise the MCP Apps MIME type on the listing entry', async () => {
+    // Hosts decide from `resources/list` alone whether an entry is a renderable
+    // app, so the listing MIME type has to match the one `resources/read`
+    // returns — `registerAppResource` defaults it, which is worth pinning.
+    const { resources } = await client.listResources();
+    const widget = resources.find((resource) => resource.uri === WIDGET_URI);
+
+    expect(widget?.mimeType).toBe(RESOURCE_MIME_TYPE);
+  });
+
   it('should serve the generated single-file document under the MCP Apps MIME type', async () => {
     const content = await client.readResource({ uri: WIDGET_URI });
 
