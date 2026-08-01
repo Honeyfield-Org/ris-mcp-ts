@@ -9,28 +9,39 @@
     "ris-mcp-ts": "dist/index.js"
   },
   "scripts": {
+    "gen:ui": "vite build --config vite.ui.config.ts && node scripts/gen-ui.mjs",
+    "prebuild": "pnpm run typecheck",
     "build": "tsc",
+    "predev": "pnpm run gen:ui",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "start:http": "node dist/http.js",
+    "predev:http": "pnpm run gen:ui",
     "dev:http": "tsx src/http.ts",
     "inspect": "pnpm dlx @modelcontextprotocol/inspector node dist/index.js",
+    "pretest": "pnpm run gen:ui",
     "test": "vitest run",
+    "pretest:coverage": "pnpm run gen:ui",
     "test:coverage": "vitest run --coverage",
+    "pretest:watch": "pnpm run gen:ui",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "pretypecheck": "pnpm run gen:ui",
+    "typecheck": "tsc --noEmit && tsc -p ui/tsconfig.json --noEmit",
+    "lint": "eslint src ui",
+    "lint:fix": "eslint src ui --fix",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run test",
-    "format": "prettier --write src/",
-    "format:check": "prettier --check src/",
-    "prebuild": "pnpm run typecheck",
+    "format": "prettier --write src/ ui/ scripts/ vite.ui.config.ts",
+    "format:check": "prettier --check src/ ui/ scripts/ vite.ui.config.ts",
     "prepublishOnly": "pnpm run check && pnpm run build",
     "prepare": "husky"
   },
   "lint-staged": {
     "src/**/*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "ui/**/*.ts": [
       "prettier --write",
       "eslint --fix"
     ]
@@ -62,6 +73,8 @@
     "tsx": "^4.7.0",
     "typescript": "^5.4.0",
     "typescript-eslint": "^8.56.1",
+    "vite": "^7.3.1",
+    "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^4.0.18"
   },
   "pnpm": {

@@ -51,7 +51,15 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "*.js", "*.mjs"],
+    // src/generated/** is emitted by `pnpm run gen:ui` and never hand-edited.
+    ignores: [
+      "dist/**",
+      "dist-ui/**",
+      "src/generated/**",
+      "node_modules/**",
+      "*.js",
+      "*.mjs",
+    ],
   },
   eslintConfigPrettier,
 );
