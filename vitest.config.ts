@@ -2,7 +2,14 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    exclude: ["dist/**", "node_modules/**", "src/__tests__/integration/**"],
+    // ui/** belongs to vitest.ui.config.ts — it needs a DOM environment, which
+    // this project deliberately does not provide.
+    exclude: [
+      "dist/**",
+      "node_modules/**",
+      "src/__tests__/integration/**",
+      "ui/**",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
