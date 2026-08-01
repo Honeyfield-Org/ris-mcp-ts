@@ -58,11 +58,12 @@ jobs:
           test -s src/generated/trefferliste-html.ts
           node --input-type=module -e '
             const { TREFFERLISTE_HTML } = await import("./dist/generated/trefferliste-html.js");
-            if (TREFFERLISTE_HTML.length < 500) {
-              console.error("widget template too small: " + TREFFERLISTE_HTML.length + " chars");
-              process.exit(1);
-            }
-            console.log("widget template ok: " + TREFFERLISTE_HTML.length + " chars");
+            const fail = (why) => { console.error("widget template " + why); process.exit(1); };
+            if (TREFFERLISTE_HTML.length < 500) fail("too small: " + TREFFERLISTE_HTML.length + " chars");
+            if (/<script[^>]+\bsrc\s*=/i.test(TREFFERLISTE_HTML)) fail("has a non-inlined script");
+            if (/<link[^>]+rel\s*=\s*["\x27]?stylesheet/i.test(TREFFERLISTE_HTML)) fail("has a non-inlined stylesheet");
+            if (/<link[^>]+rel\s*=\s*["\x27]?modulepreload/i.test(TREFFERLISTE_HTML)) fail("has a modulepreload link");
+            console.log("widget template ok: " + TREFFERLISTE_HTML.length + " chars, fully inlined");
           '
 
       - name: Upload coverage artifacts
