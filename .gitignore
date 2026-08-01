@@ -13,3 +13,5 @@ specs/
 .mcpregistry_*
 package-lock.json
 
+dist-ui/
+src/generated/

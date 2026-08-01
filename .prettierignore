@@ -2,3 +2,5 @@ dist/
 node_modules/
 docs/*.pdf
 coverage/
+dist-ui/
+src/generated/

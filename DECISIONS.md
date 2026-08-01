@@ -10,6 +10,9 @@
 - `ris_dokument` deklariert bewusst KEIN `outputSchema`/`structuredContent` (nur Text + `resource_link`) — Clients dürfen laut Spec annehmen, dass der Text-Block nur eine Serialisierung des `structuredContent` ist, und rendern dann nur Letzteres; der Volltext darf nie hinter Metadaten verschwinden (Live-Befund v1.3.0).
 - Das `outputSchema` der Suchtools übernimmt die Pagination-Werte ohne Zod-Bounds — fehlerhafte Upstream-Werte bleiben inspizierbare Daten statt zum harten Protokollfehler zu werden.
 - MCP-Cancellation (`extra.signal`) wird bis zum RIS-Fetch durchgereicht (`AbortSignal.any` mit dem 30s-Timeout); ein Caller-Abort propagiert als Abort (SDK verwirft die Response), nur echte Upstream-Fehler werden zur `isError`-Response. Dafür `engines` auf Node ≥ 20.3 angehoben (`AbortSignal.any`).
+- MCP Apps werden umgesetzt — Trefferlisten-Widget (v1.4.0), dann Dokument-Viewer (v1.5.0) — über die offizielle `@modelcontextprotocol/ext-apps`-Extension auf der SDK-v1-Linie, komplett geplant und gestuft released, mit Rendering-Spike als hartem Gate und vollständigem Text-Fallback als Pflichtpfad — weil claude-ai-mcp#165 (Custom-Connector-Rendering flaky) offen ist und ein nicht-renderndes Widget nie Datenverlust bedeuten darf (Stand 2026-08-01).
+- `_meta.ui.domain` wird nicht gesetzt — Weglassen ist verifiziert sicher, ein falsch berechneter Wert killt das Rendering zu 100 %, und die RIS-API ist CORS-offen.
+- Widget-HTML wird als generierte String-Konstante ausgeliefert (Vite singlefile → `src/generated/`, gitignored, via `pre`-Scripts) statt per Laufzeit-`readFileSync` — eliminiert Pfadauflösung über npm/Docker/Dev als Fehlerquelle.
 
 ## Offen
 
@@ -19,3 +22,5 @@
 
 - Sofortige Migration auf SDK v2 (Stand 2026-07-31) — vier Tage nach GA ohne Patch-Releases, kein heutiger Client spricht die 2026er-Ära, kein benötigtes Feature.
 - Metadaten-`structuredContent` auf `ris_dokument` (v1.3.0, Slice 3) — Clients, die `structuredContent` bevorzugen, verwarfen den Text-Block und damit den Dokumenttext; als Hotfix zurückgebaut.
+- mcp-ui (`@mcp-ui/server`) als UI-SDK (Stand 2026-08-01) — nur noch ein veralteter Wrapper um `ext-apps` (kein Release seit Feb 2026, Remote-DOM entfernt), die Maintainer empfehlen selbst den Direktweg über die offizielle Extension.
+- History-Timeline als Widget-Use-Case (Stand 2026-08-01) — `ris_history` ist ein Change-Feed pro Applikation ohne Dokumentnummer-Parameter; die Daten für eine Norm-Fassungs-Timeline existieren in der RIS-History-API nicht.
