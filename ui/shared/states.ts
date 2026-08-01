@@ -6,21 +6,33 @@
  * would read as "the search found nothing".
  */
 
-/** User-facing copy, collected so the wording is reviewable in one place. */
+/**
+ * User-facing copy, collected so the wording is reviewable in one place.
+ *
+ * Written for someone reading a legal search result, not for someone who knows
+ * how MCP works: no "Host", no "structuredContent", no "Payload".
+ */
 export const COPY = {
   loading: 'Suche läuft …',
   emptyTitle: 'Keine Treffer',
   emptyDetail: 'Die Suche hat keine Dokumente geliefert. Andere Suchworte könnten helfen.',
-  degradedTitle: 'Keine strukturierten Daten vom Host erhalten.',
-  degradedDetail: 'Die vollständige Antwort steht im Chat.',
-  connectFailedTitle: 'Trefferliste konnte nicht geladen werden.',
-  connectFailedDetail: 'Die vollständige Antwort steht im Chat.',
+  degradedTitle: 'Keine strukturierten Daten erhalten.',
+  invalidPayloadTitle: 'Unerwartete Daten erhalten.',
   toolErrorTitle: 'Die Suche ist fehlgeschlagen.',
+  connectFailedTitle: 'Die Trefferliste konnte nicht geladen werden.',
+  /**
+   * Detail for a failure at mount. True only there: the tool call that opened
+   * the widget always produced a chat answer as well.
+   */
+  answerInChat: 'Die vollständige Antwort steht im Chat.',
+  /**
+   * Detail for a failure while paging. The page the widget asked for has no
+   * chat answer to fall back on — what it does have is the list still on screen.
+   */
+  pageUnchanged: 'Die angezeigte Seite bleibt unverändert.',
   sessionExpired: 'Verbindung abgelaufen — Suche im Chat erneut ausführen.',
-  invalidPayloadTitle: 'Unerwartete Daten vom Host erhalten.',
-  invalidPayloadDetail: 'Die vollständige Antwort steht im Chat.',
-  linkRefused: 'Der Host hat das Öffnen des Links abgelehnt.',
-  promptRefused: 'Der Host hat die Nachricht nicht angenommen.',
+  linkRefused: 'Der Link konnte nicht geöffnet werden.',
+  promptRefused: 'Die Nachricht konnte nicht gesendet werden.',
 } as const;
 
 /** Severity of a notice — decides how screen readers announce it. */
@@ -41,6 +53,9 @@ function element(tag: string, className: string, text?: string): HTMLElement {
  */
 export function createSkeleton(rows = 3): HTMLElement {
   const skeleton = element('div', 'ris-skeleton');
+  // aria-busy alone is only read when a screen reader happens to be on the
+  // element; role="status" makes the label an announcement in its own right.
+  skeleton.setAttribute('role', 'status');
   skeleton.setAttribute('aria-busy', 'true');
   skeleton.append(element('p', 'ris-skeleton-label', COPY.loading));
 

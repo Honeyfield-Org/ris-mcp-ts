@@ -10,7 +10,13 @@
 import { connectBridge, type Bridge, type ToolPayload } from '../shared/bridge.js';
 import { COPY, createNotice, createSkeleton, type NoticeKind } from '../shared/states.js';
 
-import { interpretPayload, renderResults, type Outcome, type ResultHandlers } from './view.js';
+import {
+  focusPagination,
+  interpretPayload,
+  renderResults,
+  type Outcome,
+  type ResultHandlers,
+} from './view.js';
 import { fullTextPrompt, nextQuery, toViewModel, type SearchResultPayload } from './viewmodel.js';
 
 function byId(id: string): HTMLElement {
@@ -29,11 +35,29 @@ let bridge: Bridge | null = null;
 /** Guards against a second page request while one is still running. */
 let pending = false;
 
-function showStatus(kind: NoticeKind, title: string, detail?: string): void {
-  statusArea.replaceChildren(createNotice(kind, title, detail));
+/** Which action a status notice belongs to. */
+type StatusSource = 'pagination' | 'link' | 'prompt';
+
+function showStatus(kind: NoticeKind, source: StatusSource, title: string, detail?: string): void {
+  const notice = createNotice(kind, title, detail);
+  notice.dataset.source = source;
+  statusArea.replaceChildren(notice);
 }
 
-function clearStatus(): void {
+/**
+ * Remove the status notice.
+ *
+ * With `only` set, an action clears just its own message: a link that opened
+ * fine says nothing about the „Verbindung abgelaufen" notice above it, and
+ * wiping that would hide a problem the user still has. Called without an
+ * argument — from a page that actually arrived — everything goes, because a new
+ * page supersedes every complaint about the old one.
+ */
+function clearStatus(only?: StatusSource): void {
+  const current = statusArea.firstElementChild;
+
+  if (only && current instanceof HTMLElement && current.dataset.source !== only) return;
+
   statusArea.replaceChildren();
 }
 
@@ -69,15 +93,15 @@ function show(outcome: Outcome, keepPrevious: boolean): void {
 async function openExternal(url: string | null): Promise<void> {
   if (!url || !bridge) return;
 
-  if (await bridge.openLink(url)) clearStatus();
-  else showStatus('error', COPY.linkRefused);
+  if (await bridge.openLink(url)) clearStatus('link');
+  else showStatus('error', 'link', COPY.linkRefused);
 }
 
 async function requestFullText(dokumentnummer: string): Promise<void> {
   if (!bridge) return;
 
-  if (await bridge.sendPrompt(fullTextPrompt(dokumentnummer))) clearStatus();
-  else showStatus('error', COPY.promptRefused);
+  if (await bridge.sendPrompt(fullTextPrompt(dokumentnummer))) clearStatus('prompt');
+  else showStatus('error', 'prompt', COPY.promptRefused);
 }
 
 /**
@@ -95,12 +119,15 @@ async function goToPage(delta: -1 | 1): Promise<void> {
   view.replaceChildren(createSkeleton(current?.documents.length));
 
   try {
-    show(interpretPayload(await bridge.callTool(call)), true);
+    present(await bridge.callTool(call));
   } catch {
     renderCurrent();
-    showStatus('error', COPY.sessionExpired);
+    showStatus('error', 'pagination', COPY.sessionExpired);
   } finally {
     pending = false;
+    // Whether the page arrived or the old one was put back, the button the user
+    // pressed was replaced along with the rest of the list.
+    focusPagination(view, delta);
   }
 }
 
@@ -111,8 +138,18 @@ const handlers: ResultHandlers = {
   onPage: (delta) => void goToPage(delta),
 };
 
-function onToolResult(payload: ToolPayload): void {
-  show(interpretPayload(payload), false);
+/**
+ * Put a tool result on screen, whichever call it answers.
+ *
+ * Having a list already is what separates the two cases, so both the notice
+ * wording and the decision to keep the list follow from it. In particular a
+ * *second* tool-result notification — a host re-delivering, or a re-run of the
+ * search — must not be able to replace a rendered list with a notice just
+ * because it arrived without structured content.
+ */
+function present(payload: ToolPayload): void {
+  const isFollowUp = current !== null;
+  show(interpretPayload(payload, isFollowUp ? 'follow-up' : 'mount'), isFollowUp);
 }
 
 // The marker only ever answers "did the bundle run at all" — reaching this line
@@ -120,14 +157,14 @@ function onToolResult(payload: ToolPayload): void {
 marker.hidden = true;
 view.replaceChildren(createSkeleton());
 
-connectBridge({ onToolResult })
+connectBridge({ onToolResult: present })
   .then((connected) => {
     bridge = connected;
   })
   .catch(() => {
+    // A handshake that never completed means no tool result ever arrived, so
+    // this is always the mount case.
     if (!current) {
-      view.replaceChildren(
-        createNotice('error', COPY.connectFailedTitle, COPY.connectFailedDetail),
-      );
+      view.replaceChildren(createNotice('error', COPY.connectFailedTitle, COPY.answerInChat));
     }
   });

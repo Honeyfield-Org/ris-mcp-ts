@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COURT_RESULT, EMPTY_RESULT, LAW_RESULT } from '../__fixtures__/search-results.js';
 import { COPY } from '../shared/states.js';
 
-import { interpretPayload, renderResults, type ResultHandlers } from './view.js';
+import { focusPagination, interpretPayload, renderResults, type ResultHandlers } from './view.js';
 import { toViewModel } from './viewmodel.js';
 
 function handlers(): ResultHandlers {
@@ -223,47 +223,44 @@ describe('interpretPayload', () => {
   });
 
   it('passes a well-formed result through', () => {
-    const outcome = interpretPayload({
-      structuredContent: LAW_RESULT,
-      source: 'toolresult',
-      text: '',
-      isError: false,
-    });
+    const outcome = interpretPayload(
+      { structuredContent: LAW_RESULT, source: 'toolresult', text: '', isError: false },
+      'mount',
+    );
 
     expect(outcome).toEqual({ kind: 'result', result: LAW_RESULT });
   });
 
   it('accepts a result the host global supplied', () => {
-    const outcome = interpretPayload({
-      structuredContent: LAW_RESULT,
-      source: 'host-global',
-      text: '',
-      isError: false,
-    });
+    const outcome = interpretPayload(
+      { structuredContent: LAW_RESULT, source: 'host-global', text: '', isError: false },
+      'mount',
+    );
 
     expect(outcome.kind).toBe('result');
   });
 
   it('turns a missing payload into the degradation notice', () => {
-    const outcome = interpretPayload({
-      structuredContent: null,
-      source: 'missing',
-      text: 'Gefunden: 3 Treffer',
-      isError: false,
-    });
+    const outcome = interpretPayload(
+      { structuredContent: null, source: 'missing', text: 'Gefunden: 3 Treffer', isError: false },
+      'mount',
+    );
 
     expect(outcome.kind).toBe('notice');
     expect(outcome.kind === 'notice' && outcome.node.textContent).toContain(COPY.degradedTitle);
-    expect(outcome.kind === 'notice' && outcome.node.textContent).toContain(COPY.degradedDetail);
+    expect(outcome.kind === 'notice' && outcome.node.textContent).toContain(COPY.answerInChat);
   });
 
   it('surfaces the server prose of a failed tool call', () => {
-    const outcome = interpretPayload({
-      structuredContent: null,
-      source: 'missing',
-      text: 'Zeitüberschreitung bei der RIS-Anfrage.',
-      isError: true,
-    });
+    const outcome = interpretPayload(
+      {
+        structuredContent: null,
+        source: 'missing',
+        text: 'Zeitüberschreitung bei der RIS-Anfrage.',
+        isError: true,
+      },
+      'mount',
+    );
 
     expect(outcome.kind === 'notice' && outcome.node.textContent).toContain(
       'Zeitüberschreitung bei der RIS-Anfrage.',
@@ -272,26 +269,88 @@ describe('interpretPayload', () => {
   });
 
   it('still explains an error that arrived without prose', () => {
-    const outcome = interpretPayload({
-      structuredContent: null,
-      source: 'missing',
-      text: '',
-      isError: true,
-    });
+    const outcome = interpretPayload(
+      { structuredContent: null, source: 'missing', text: '', isError: true },
+      'mount',
+    );
 
     expect(outcome.kind === 'notice' && outcome.node.textContent).toContain(COPY.toolErrorTitle);
   });
 
   it('reports a payload that is not a search result at all', () => {
-    const outcome = interpretPayload({
-      structuredContent: { unerwartet: true },
-      source: 'host-global',
-      text: '',
-      isError: false,
-    });
+    const outcome = interpretPayload(
+      { structuredContent: { unerwartet: true }, source: 'host-global', text: '', isError: false },
+      'mount',
+    );
 
     expect(outcome.kind === 'notice' && outcome.node.textContent).toContain(
       COPY.invalidPayloadTitle,
     );
+  });
+
+  it('does not promise a chat answer for a page the widget asked for itself', () => {
+    const missing = {
+      structuredContent: null,
+      source: 'missing' as const,
+      text: '',
+      isError: false,
+    };
+    const outcome = interpretPayload(missing, 'follow-up');
+
+    expect(outcome.kind === 'notice' && outcome.node.textContent).toContain(COPY.degradedTitle);
+    expect(outcome.kind === 'notice' && outcome.node.textContent).toContain(COPY.pageUnchanged);
+    expect(outcome.kind === 'notice' && outcome.node.textContent).not.toContain(COPY.answerInChat);
+  });
+
+  it('says the same about an unrecognised follow-up payload', () => {
+    const outcome = interpretPayload(
+      { structuredContent: { unerwartet: true }, source: 'toolresult', text: '', isError: false },
+      'follow-up',
+    );
+
+    expect(outcome.kind === 'notice' && outcome.node.textContent).toContain(COPY.pageUnchanged);
+    expect(outcome.kind === 'notice' && outcome.node.textContent).not.toContain(COPY.answerInChat);
+  });
+});
+
+describe('focusPagination', () => {
+  function mounted(result = LAW_RESULT): HTMLElement {
+    const container = document.createElement('div');
+    document.body.replaceChildren(container);
+    renderResults(container, toViewModel(result), handlers());
+    return container;
+  }
+
+  it('labels the two footer buttons distinctly', () => {
+    const container = mounted();
+
+    expect(container.querySelector('.ris-page-prev')?.textContent).toBe('‹ Zurück');
+    expect(container.querySelector('.ris-page-next')?.textContent).toBe('Weiter ›');
+  });
+
+  it('returns focus to the button that triggered the page change', () => {
+    const container = mounted();
+
+    focusPagination(container, 1);
+
+    expect(document.activeElement).toBe(container.querySelector('.ris-page-next'));
+  });
+
+  it('falls back to the other direction when the preferred button is now disabled', () => {
+    // Last page: „Weiter ›" is disabled, so focus must not land on it — nor on body.
+    const container = mounted(COURT_RESULT);
+
+    focusPagination(container, 1);
+
+    expect(document.activeElement).toBe(container.querySelector('.ris-page-prev'));
+  });
+
+  it('leaves focus alone when there is no pagination at all', () => {
+    const container = mounted(EMPTY_RESULT);
+    const before = document.activeElement;
+
+    focusPagination(container, 1);
+
+    expect(document.activeElement).toBe(before);
   });
 });

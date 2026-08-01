@@ -233,14 +233,20 @@ export function parseSearchResult(value: unknown): SearchResultPayload | null {
   }
   if (typeof has_more !== 'boolean' || !Array.isArray(documents)) return null;
 
-  const identifiable = documents.every(
+  // `content_urls` and `citation` are checked because the mapping below reads
+  // straight through them. A document that reached the renderer without one
+  // would throw mid-render, and a thrown render leaves the widget stuck on its
+  // loading state — the one outcome it must never produce.
+  const renderable = documents.every(
     (doc) =>
       isRecord(doc) &&
       typeof doc.dokumentnummer === 'string' &&
-      typeof doc.applikation === 'string',
+      typeof doc.applikation === 'string' &&
+      isRecord(doc.content_urls) &&
+      isRecord(doc.citation),
   );
 
-  return identifiable ? (value as unknown as SearchResultPayload) : null;
+  return renderable ? (value as unknown as SearchResultPayload) : null;
 }
 
 function toolLabelFor(tool: string): string {

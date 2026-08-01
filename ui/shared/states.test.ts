@@ -6,6 +6,7 @@ describe('createSkeleton', () => {
   it('announces that something is loading', () => {
     const skeleton = createSkeleton();
 
+    expect(skeleton.getAttribute('role')).toBe('status');
     expect(skeleton.getAttribute('aria-busy')).toBe('true');
     expect(skeleton.textContent).toContain(COPY.loading);
   });
@@ -43,12 +44,19 @@ describe('createNotice', () => {
 });
 
 describe('COPY', () => {
-  it('tells the user where the full answer still is when the host sent no data', () => {
-    expect(COPY.degradedTitle).toBe('Keine strukturierten Daten vom Host erhalten.');
-    expect(COPY.degradedDetail).toBe('Die vollständige Antwort steht im Chat.');
+  it('offers a detail for each failure context', () => {
+    expect(COPY.degradedTitle).toBe('Keine strukturierten Daten erhalten.');
+    expect(COPY.answerInChat).toBe('Die vollständige Antwort steht im Chat.');
+    expect(COPY.pageUnchanged).toBe('Die angezeigte Seite bleibt unverändert.');
   });
 
   it('uses the agreed wording for an evicted session', () => {
     expect(COPY.sessionExpired).toBe('Verbindung abgelaufen — Suche im Chat erneut ausführen.');
+  });
+
+  it('never explains the failure in protocol terms', () => {
+    for (const [key, value] of Object.entries(COPY)) {
+      expect(value, key).not.toMatch(/host|payload|structuredcontent|tool[- ]?call/i);
+    }
   });
 });

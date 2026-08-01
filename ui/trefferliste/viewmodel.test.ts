@@ -45,6 +45,36 @@ describe('parseSearchResult', () => {
   it('rejects a document that is missing its identity fields', () => {
     expect(parseSearchResult({ ...LAW_RESULT, documents: [{ titel: 'ohne Nummer' }] })).toBeNull();
   });
+
+  // toViewModel reads doc.content_urls.* and doc.citation.* directly. Letting a
+  // document through without them would throw inside the render and strand the
+  // widget on its loading skeleton, so they are part of the contract check.
+  it.each([
+    ['content_urls', { ...LAW_DOCUMENT, content_urls: undefined }],
+    ['citation', { ...LAW_DOCUMENT, citation: undefined }],
+    ['a content_urls that is not an object', { ...LAW_DOCUMENT, content_urls: 'nope' }],
+    ['a citation that is not an object', { ...LAW_DOCUMENT, citation: [] }],
+  ])('rejects a document without %s', (_label, doc) => {
+    expect(parseSearchResult({ ...LAW_RESULT, documents: [doc] })).toBeNull();
+  });
+
+  it('never yields a result that toViewModel cannot render', () => {
+    for (const broken of [
+      { ...LAW_DOCUMENT, content_urls: undefined },
+      { ...LAW_DOCUMENT, citation: undefined },
+    ]) {
+      const parsed = parseSearchResult({ ...LAW_RESULT, documents: [broken] });
+      expect(parsed).toBeNull();
+    }
+
+    // The guard is what stands between a malformed payload and a thrown render.
+    expect(() =>
+      toViewModel({
+        ...LAW_RESULT,
+        documents: [{ ...LAW_DOCUMENT, content_urls: undefined }],
+      } as unknown as Parameters<typeof toViewModel>[0]),
+    ).toThrow();
+  });
 });
 
 describe('splitCaseNumbers', () => {
