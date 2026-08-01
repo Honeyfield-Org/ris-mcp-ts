@@ -291,27 +291,45 @@ function metaFor(doc: SearchDocument): RowMeta[] {
 /**
  * Pick the row headline.
  *
- * `citation_display` is the server's own short citation and wins whenever it
- * says something. It degrades to the plain document number for Justiz
- * Rechtssätze whose title is a chain of dozens of case numbers — there the
- * first case number is the more useful headline.
+ * A decision is cited by its case number, so that wins for court documents.
+ * `citation_display` is the server's short citation and is the right headline
+ * for laws — but for Judikatur it is derived from the document id whenever the
+ * server cannot parse a case number out of the title, and then reads as machine
+ * output (`OGH 20011022_OGH0002_0010OB00049/01i`) next to a perfectly good
+ * `1Ob49/01i` in the very same record.
  */
 function titleFor(doc: SearchDocument, caseNumbers: string[]): string {
+  if ('gericht' in doc && caseNumbers.length > 0) return caseNumbers[0];
+
   const citation = text(doc.citation_display);
   if (citation && citation !== doc.dokumentnummer) return citation;
 
   return caseNumbers[0] || text(doc.titel) || text(doc.kurztitel) || doc.dokumentnummer;
 }
 
+/**
+ * Pick the line under the headline, or nothing.
+ *
+ * RIS sets `titel` and `kurztitel` of a Judikatur document to its
+ * `geschaeftszahl` verbatim (confirmed across a live `ris_judikatur` page), so
+ * on those the subtitle would only restate the case chain — which the row
+ * already advertises with „+N weitere" and shows in full once expanded.
+ */
+function subtitleFor(doc: SearchDocument, title: string): string {
+  const subtitle = text(doc.kurztitel) || text(doc.titel);
+
+  if (subtitle === title || subtitle === text(doc.geschaeftszahl)) return '';
+  return subtitle;
+}
+
 function toRow(doc: SearchDocument): DocumentRow {
   const caseNumbers = splitCaseNumbers(doc.geschaeftszahl);
   const title = titleFor(doc, caseNumbers);
-  const subtitle = text(doc.kurztitel) || text(doc.titel);
 
   return {
     id: doc.dokumentnummer,
     title,
-    subtitle: subtitle === title ? '' : subtitle,
+    subtitle: subtitleFor(doc, title),
     badge: APPLICATION_LABELS[doc.applikation] ?? doc.applikation,
     isCourtDecision: 'gericht' in doc,
     meta: metaFor(doc),

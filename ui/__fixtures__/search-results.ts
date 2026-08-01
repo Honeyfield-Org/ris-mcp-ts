@@ -160,3 +160,57 @@ export const EMPTY_RESULT: SearchResultPayload = {
   documents: [],
   query: { tool: 'ris_bundesrecht', suchworte: 'xyzzy', seite: 1, limit: 20 },
 };
+
+/**
+ * An OGH decision exactly as the live server returns it (captured via
+ * `tools/call ris_judikatur`): `citation_display` is derived from the document
+ * id, and `titel` merely repeats the case chain.
+ */
+export const LIVE_OGH_DOCUMENT: SearchDocument = {
+  dokumentnummer: 'JJR_20011022_OGH0002_0010OB00049_01I0000_001',
+  applikation: 'Justiz',
+  titel: '1Ob49/01i; 10Ob62/22y; 6Ob100/25m',
+  kurztitel: '1Ob49/01i; 10Ob62/22y; 6Ob100/25m',
+  citation: {
+    kurztitel: '1Ob49/01i; 10Ob62/22y; 6Ob100/25m',
+    langtitel: null,
+    kundmachungsorgan: null,
+    paragraph: null,
+    eli: null,
+    inkrafttreten: '2026-06-30',
+    ausserkrafttreten: null,
+  },
+  citation_display: 'OGH 20011022_OGH0002_0010OB00049/01i',
+  content_urls: { html: 'https://www.ris.bka.gv.at/Dokumente/Justiz/JJR/JJR.html' },
+  dokument_url: null,
+  gesamte_rechtsvorschrift_url: null,
+  gericht: 'OGH',
+  geschaeftszahl: '1Ob49/01i; 10Ob62/22y; 6Ob100/25m',
+  entscheidungsdatum: '2026-06-30',
+  rechtssatznummer: 'RS0115754',
+};
+
+/** A Datenschutzbehörde decision: case number plus a real subject line. */
+export const DSB_DOCUMENT: SearchDocument = {
+  dokumentnummer: 'DSBT_20260101_2025_1_043_098_00',
+  applikation: 'Dsk',
+  titel: 'Geheimhaltung, Löschung, Rechtmäßigkeit der Verarbeitung',
+  kurztitel: null,
+  citation: {
+    kurztitel: null,
+    langtitel: null,
+    kundmachungsorgan: null,
+    paragraph: null,
+    eli: null,
+    inkrafttreten: '2026-01-01',
+    ausserkrafttreten: null,
+  },
+  citation_display: 'DSK 2025-1.043.098',
+  content_urls: {},
+  dokument_url: null,
+  gesamte_rechtsvorschrift_url: null,
+  gericht: 'Datenschutzbehörde',
+  geschaeftszahl: '2025-1.043.098',
+  entscheidungsdatum: '2026-01-01',
+  rechtssatznummer: null,
+};

@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   COURT_RESULT,
+  DSB_DOCUMENT,
   EMPTY_RESULT,
   JUSTIZ_CHAIN_DOCUMENT,
   LAW_DOCUMENT,
   LAW_RESULT,
+  LIVE_OGH_DOCUMENT,
   VWGH_DOCUMENT,
 } from '../__fixtures__/search-results.js';
 
@@ -306,5 +308,39 @@ describe('nextQuery', () => {
 
   it('refuses to page when the echo names no tool', () => {
     expect(nextQuery({ tool: '', seite: 1 }, 1)).toBeNull();
+  });
+});
+
+describe('toViewModel — court rows against live shapes', () => {
+  it('titles a decision by its case number, not by the id-derived citation', () => {
+    const [row] = toViewModel({ ...COURT_RESULT, documents: [LIVE_OGH_DOCUMENT] }).rows;
+
+    expect(row.title).toBe('1Ob49/01i');
+  });
+
+  it('drops a subtitle that only repeats the case chain', () => {
+    const [row] = toViewModel({ ...COURT_RESULT, documents: [LIVE_OGH_DOCUMENT] }).rows;
+
+    expect(row.subtitle).toBe('');
+  });
+
+  it('keeps a subtitle that says something the case number does not', () => {
+    const [row] = toViewModel({ ...COURT_RESULT, documents: [DSB_DOCUMENT] }).rows;
+
+    expect(row.title).toBe('2025-1.043.098');
+    expect(row.subtitle).toBe('Geheimhaltung, Löschung, Rechtmäßigkeit der Verarbeitung');
+  });
+
+  it('falls back to the citation for a decision without a case number', () => {
+    const withoutCase = { ...LIVE_OGH_DOCUMENT, geschaeftszahl: null };
+    const [row] = toViewModel({ ...COURT_RESULT, documents: [withoutCase] }).rows;
+
+    expect(row.title).toBe('OGH 20011022_OGH0002_0010OB00049/01i');
+  });
+
+  it('leaves law rows on their citation, which is the useful headline there', () => {
+    const [row] = toViewModel(LAW_RESULT).rows;
+
+    expect(row.title).toBe('§ 0 Allgemeines bürgerliches Gesetzbuch (JGS Nr. 946/1811)');
   });
 });
