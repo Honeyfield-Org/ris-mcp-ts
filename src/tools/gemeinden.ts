@@ -10,6 +10,7 @@ import { GEMEINDEN_INDEX_VALUES, IM_RIS_SEIT_VALUES } from '../constants.js';
 import {
   addOptionalParams,
   buildBaseParams,
+  buildQueryEcho,
   createValidationErrorResponse,
   executeSearchTool,
   hasAnyParam,
@@ -189,7 +190,13 @@ Example queries:
         ]);
       }
 
-      return executeSearchTool(searchGemeinden, params, response_format, extra.signal);
+      return executeSearchTool(
+        searchGemeinden,
+        params,
+        response_format,
+        extra.signal,
+        buildQueryEcho('ris_gemeinden', args),
+      );
     },
   );
 }

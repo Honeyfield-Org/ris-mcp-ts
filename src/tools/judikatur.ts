@@ -10,6 +10,7 @@ import { JUDIKATUR_FACHGEBIETE } from '../constants.js';
 import {
   addOptionalParams,
   buildBaseParams,
+  buildQueryEcho,
   createValidationErrorResponse,
   executeSearchTool,
   hasAnyParam,
@@ -223,7 +224,13 @@ Example queries:
         limit,
       });
 
-      return executeSearchTool(searchJudikatur, params, response_format, extra.signal);
+      return executeSearchTool(
+        searchJudikatur,
+        params,
+        response_format,
+        extra.signal,
+        buildQueryEcho('ris_judikatur', args),
+      );
     },
   );
 }

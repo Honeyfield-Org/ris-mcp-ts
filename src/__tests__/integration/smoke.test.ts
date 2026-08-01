@@ -14,6 +14,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { searchBundesrecht, searchJudikatur, getDocumentByNumber } from '../../client.js';
+import { parseSearchResults } from '../../parser.js';
 
 describe('RIS API Smoke Tests', () => {
   describe('searchBundesrecht', () => {
@@ -72,6 +73,46 @@ describe('RIS API Smoke Tests', () => {
       expect(typeof result.page_size).toBe('number');
       expect(Array.isArray(result.documents)).toBe(true);
       expect(result.documents.length).toBeGreaterThan(0);
+    });
+
+    it('should populate the court fields on live Justiz documents', async () => {
+      const result = await searchJudikatur({
+        Applikation: 'Justiz',
+        Suchworte: 'Gewährleistung',
+        DokumenteProSeite: 'Ten',
+      });
+
+      const { documents } = parseSearchResults(result);
+      expect(documents.length).toBeGreaterThan(0);
+
+      for (const doc of documents) {
+        expect(doc.citation_display, doc.dokumentnummer).toBeTruthy();
+        expect(doc.gericht, doc.dokumentnummer).toBeTruthy();
+        expect(doc.geschaeftszahl, doc.dokumentnummer).toBeTruthy();
+        // RIS dates are ISO; assert the shape, not a value that moves.
+        expect(doc.entscheidungsdatum, doc.dokumentnummer).toMatch(/^\d{4}-\d{2}-\d{2}/);
+      }
+
+      // Justiz Rechtssätze carry an RS number; Entscheidungstexte do not.
+      const rechtssaetze = documents.filter((doc) => doc.rechtssatznummer);
+      expect(rechtssaetze.length).toBeGreaterThan(0);
+      expect(rechtssaetze[0].rechtssatznummer).toMatch(/^RS\d+/);
+    });
+
+    it('should leave the court fields off live Bundesrecht documents', async () => {
+      const result = await searchBundesrecht({
+        Titel: 'ABGB',
+        Applikation: 'BrKons',
+        DokumenteProSeite: 'Ten',
+      });
+
+      const { documents } = parseSearchResults(result);
+      expect(documents.length).toBeGreaterThan(0);
+
+      for (const doc of documents) {
+        expect(doc.citation_display, doc.dokumentnummer).toBeTruthy();
+        expect(doc, doc.dokumentnummer).not.toHaveProperty('gericht');
+      }
     });
   });
 

@@ -20,6 +20,7 @@ import {
 import {
   addOptionalParams,
   buildBaseParams,
+  buildQueryEcho,
   createValidationErrorResponse,
   executeSearchTool,
   hasAnyParam,
@@ -306,7 +307,13 @@ Example queries:
           break;
       }
 
-      return executeSearchTool(searchSonstige, params, response_format, extra.signal);
+      return executeSearchTool(
+        searchSonstige,
+        params,
+        response_format,
+        extra.signal,
+        buildQueryEcho('ris_sonstige', args),
+      );
     },
   );
 }

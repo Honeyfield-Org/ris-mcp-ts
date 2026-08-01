@@ -1,0 +1,213 @@
+{
+  "hits": 2570,
+  "page_number": 1,
+  "page_size": 10,
+  "documents": [
+    {
+      "Data": {
+        "Metadaten": {
+          "Technisch": {
+            "ID": "NOR40198929",
+            "Applikation": "BrKons",
+            "Organ": "BKA (Bundeskanzleramt)",
+            "ImportTimestamp": {
+              "@xsi:nil": "true",
+              "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
+            }
+          },
+          "Allgemein": {
+            "Veroeffentlicht": "2017-11-16",
+            "Geaendert": "2026-07-30",
+            "DokumentUrl": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P0/NOR40198929"
+          },
+          "Bundesrecht": {
+            "Kurztitel": "Allgemeines bürgerliches Gesetzbuch",
+            "Titel": "Allgemeines bürgerliches Gesetzbuch für die gesammten deutschen Erbländer der Oesterreichischen Monarchie<br/>StF: JGS Nr. 946/1811",
+            "Eli": "https://ris.bka.gv.at/eli/jgs/1811/946/P0/NOR40198929",
+            "BrKons": {
+              "Kundmachungsorgan": "JGS Nr. 946/1811",
+              "Typ": "BG",
+              "Dokumenttyp": "Norm",
+              "ArtikelParagraphAnlage": "§ 0",
+              "Paragraphnummer": "0",
+              "StammnormPublikationsorgan": "JGS Nr.",
+              "StammnormBgblnummer": "946/1811",
+              "Inkrafttretensdatum": "1812-01-01",
+              "Abkuerzung": "ABGB",
+              "Indizes": {
+                "item": "20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)"
+              },
+              "Aenderung": "JGS Nr. 970/1846\r\nRGBl. Nr. 185/1856\r\nRGBl. Nr. 217/1859\r\nRGBl. Nr. 9/1860\r\nRGBl. Nr. 108/1860\r\nRGBl. Nr. 131/1867\r\nRGBl. Nr. 47/1868\r\nRGBl. Nr. 49/1868\r\nRGBl. Nr. 62/1868\r\nRGBl. Nr. 79/1868\r\nRGBl. Nr. 4/1869\r\nRGBl. Nr. 110/1895\r\nRGBl. Nr. 276/1914\r\nRGBl. Nr. 208/1915\r\nRGBl. Nr. 69/1916\r\nStGBl. Nr. 95/1919 (PNV: 165 AB 204 S. 18.)\r\nStGBl. Nr. 96/1919 (PNV: 112 AB 203 S. 18.)\r\nBGBl. Nr. 638/1921 (NR: GP I 531 AB 597 S. 66.)\r\nBGBl. Nr. 850/1922 (Betragsanpassung durch V)\r\nBGBl. Nr. 111/1936 (StR: 39/Gu. BT: 64/Ge S. 19.)\r\ndRGBl. I S 807/1938\r\ndRGBl. I S 825/1938\r\ndRGBl. I S 923/1938\r\ndRGBl. I S 973/1938\r\ndRGBl. I S 1186/1939\r\ndRGBl. I S 2394/1939\r\ndRGBl. I S 230/1940\r\ndRGBl. I S 80/1943\r\ndRGBl. I S 266/1943\r\ndRGBl. I S 668/1943\r\nBGBl. Nr. 30/1947 (NR: GP V RV 258 AB 275 S. 40. BR: S. 14.)\r\nBGBl. Nr. 158/1947 (NR: GP V RV 402 AB 412 S. 57. BR: S. 21.)\r\nBGBl. Nr. 99/1954 (NR: GP VII RV 140 AB 247 S. 37. BR: S. 91.)\r\nBGBl. Nr. 157/1956 (NR: GP VIII RV 28 AB 37 S. 5. BR: S. 117.)\r\nBGBl. Nr. 268/1958 (NR: GP VIII RV 524 AB 536 S. 67. BR: S. 139.)\r\nBGBl. Nr. 58/1960 (NR: GP IX RV 107 AB 158 S. 26. BR: S. 156.)\r\nBGBl. Nr. 122/1967 (NR: GP XI RV 355 AB 414 S. 49. BR: S. 252.)\r\nBGBl. Nr. 306/1968 (NR: GP XI RV 508 AB 949 S. 105. u. 109. BR: S. 267.)\r\nBGBl. Nr. 342/1970 (NR: GP XII RV 6 AB 155 S. 16. BR: S. 295.)\r\nBGBl. Nr. 108/1973 (NR: GP XIII RV 93 AB 645 S. 64. BR: S. 319.)\r\nBGBl. Nr. 496/1974 (NR: GP XIII AB 1240 S. 113. BR: S. 334.)\r\nBGBl. Nr. 412/1975 (NR: GP XIII RV 851 AB 1662 S. 149. BR: S. 345.)\r\nBGBl. Nr. 416/1975 (NR: GP XIII AB 1678 S. 150. BR: S. 344.)\r\nBGBl. Nr. 91/1976 (NR: GP XIV RV 80 AB 102 S. 18. BR: S. 349.)\r\nBGBl. Nr. 403/1977  idF BGBl. Nr. 168/1979 (DFB) (NR: GP XIV RV 60 u. 73 AB 587 S. 62. BR: S. 366.)\r\nBGBl. Nr. 280/1978 (NR: GP XIV RV 136 u. 289 AB 916 S. 96. BR: S. 377.)\r\nBGBl. Nr. 304/1978 (NR: GP XIV RV 784 AB 945 S. 96. BR: S. 377.)\r\nBGBl. Nr. 140/1979 (NR: GP XIV RV 744 AB 1223 S. 122. BR: S. 385.)\r\nBGBl. Nr. 370/1982 (NR: GP XV RV 3 AB 1147 S. 123. BR: S. 426.)\r\nBGBl. Nr. 136/1983 (NR: GP XV RV 742 AB 1420 S. 144. BR: S. 432.)\r\nBGBl. Nr. 566/1983 (NR: GP XVI RV 3 AB 78 S. 20. BR: 2757 AB 2764 S. 439.)\r\nBGBl. Nr. 196/1985 (VfGH)\r\nBGBl. Nr. 97/1986 (NR: GP XVI RV 865 AB 893 S. 127. BR: 3084 AB 3088 S. 472.)\r\nBGBl. Nr. 325/1986 (NR: GP XVI RV 934 AB 980 S. 143. BR: 3131 AB 3134 S. 477.)\r\nBGBl. Nr. 179/1988 (NR: GP XVII IA 130/A AB 497 S. 53. BR: AB 3447 S. 498.)\r\nBGBl. Nr. 162/1989 (NR: GP XVII RV 172 AB 887 S. 96. BR: AB 3657 S. 513.)\r\nBGBl. Nr. 343/1989 (NR: GP XVII RV 888 AB 991 S. 110. BR: 3700 AB 3719 S. 518.)\r\nBGBl. Nr. 656/1989 (NR: GP XVII AB 1158 S. 125. BR: AB 3774 S. 523.)\r\nBGBl. Nr. 275/1992 (NR: GP XVIII RV 216 AB 490 S. 69. BR: AB 4255 S. 553.)\r\nBGBl. Nr. 502/1993 (NR: GP XVIII RV 1194 AB 1222 S. 130. BR: AB 4617 S. 573.)\r\nBGBl. Nr. 532/1993 (NR: GP XVIII RV 1130 AB 1170 S. 127. BR: AB 4571 S. 573.)\r\n[CELEX-Nr.: 373L0183, 377L0780, 389L0646, 389L0299, 389L0647, 391L0031, 383L0350, 386L0635, 389L0117, 391L0308 (EWR/Anh. IX)]\r\n[CELEX-Nr.: 387L0102 (EWR/Anh. XIX)]\r\nBGBl. Nr. 25/1995 (NR: GP XIX IA 4/A, 21/A und 25/A AB 49 S. 12. BR: AB 4949 S. 593.)\r\nBGBl. Nr. 759/1996 (NR: GP XX RV 252 AB 407 S. 47. BR: 5300 AB 5311 S. 619.)\r\nBGBl. I Nr. 6/1997 (NR: GP XX RV 311 AB 449 S. 53. BR: 5379 AB 5357 S. 620.)\r\n[CELEX-Nr.: 387L0102, 390L0088, 393L0013, 390L0619, 392L0096]\r\nBGBl. I Nr. 30/1997 (NR: GP XX RV 561 AB 587 S. 64. BR: AB 5395 S. 623.)\r\nBGBl. I Nr. 140/1997 (NR: GP XX RV 898 AB 1002 S. 104. BR: AB 5602 S. 634.)\r\nBGBl. I Nr. 125/1999 (NR: GP XX RV 1653 AB 1926 S. 174. BR: AB 5974 S. 656.)\r\nBGBl. I Nr. 164/1999 (NR: GP XX IA 1173/A AB 2034 S. 179. BR: AB 6039 S. 657.)\r\nBGBl. I Nr. 44/2000 (NR: GP XXI RV 91 AB 189 S. 30. BR: AB 6153 S. 666.)\r\nBGBl. I Nr. 135/2000 (NR: GP XXI RV 296 AB 366 S. 44. BR: AB 6275 S. 670.)\r\nBGBl. I Nr. 48/2001 (NR: GP XXI RV 422 AB 522 S. 62. BR: AB 6348 S. 676.)\r\n[CELEX-Nr.: 399L0044]\r\nBGBl. I Nr. 98/2001 (NR: GP XXI RV 621 AB 704 S. 75. BR: 6398 AB 6424 S. 679.)\r\nBGBl. I Nr. 71/2002 (NR: GP XXI AB 1051 S. 97. BR: AB 6617 S. 686.)\r\nBGBl. I Nr. 104/2002 (NR: GP XXI RV 1138 AB 1170 S. 106. BR: 6666 AB 6672 S. 689.)\r\nBGBl. I Nr. 118/2002 (NR: GP XXI RV 1167 AB 1215 S. 110. BR: AB 6740 S. 690.)\r\n[CELEX-Nr.: 300L0035]\r\nBGBl. I Nr. 85/2003 (VfGH)\r\nBGBl. I Nr. 91/2003 (NR: GP XXII RV 173 AB 212 S. 32. BR: AB 6865 S. 701.)\r\nBGBl. I Nr. 58/2004 (NR: GP XXII RV 471 AB 489 S. 62. BR: AB 7048 S. 710.)\r\nBGBl. I Nr. 77/2004 (NR: GP XXII RV 464 AB 543 S. 66. BR: AB 7069 S. 711.)\r\nBGBl. I Nr. 43/2005 (NR: GP XXII AB 922 S. 110. BR: AB 7283 S. 722.)\r\nBGBl. I Nr. 51/2005 (NR: GP XXII RV 861 AB 882 S. 110. BR: AB 7293 S. 722.)\r\nBGBl. I Nr. 120/2005 (NR: GP XXII RV 1058 AB 1078 S. 122. BR: AB 7388 S. 725.)\r\n[CELEX-Nr.: 32003L0058]\r\nBGBl. I Nr. 92/2006 (NR: GP XXII RV 1420 AB 1511 S. 153. BR: AB 7566 S. 735.)\r\nBGBl. I Nr. 113/2006 (NR: GP XXII RV 1410 AB 1549 S. 150. BR: AB 7584 S. 736.)\r\nBGBl. I Nr. 100/2008 (NR: GP XXIII RV 542 AB 582 S. 61. BR: AB 7961 S. 757.)\r\nBGBl. I Nr. 40/2009 (NR: GP XXIV IA 271/A AB 106 S. 16. BR: 8072 AB 8085 S. 768.)\r\nBGBl. I Nr. 52/2009 (NR: GP XXIV RV 113 und Zu 113 AB 198 S. 21. BR: AB 8112 S. 771.)\r\nBGBl. I Nr. 75/2009 (NR: GP XXIV IA 673/A AB 275 S. 29. BR: AB 8146 S. 774.)\r\nBGBl. I Nr. 135/2009 (NR: GP XXIV RV 485 AB 558 S. 49. BR: 8217 AB 8228 S. 780.)\r\nBGBl. I Nr. 28/2010 (NR: GP XXIV RV 650 AB 652 S. 60. BR: 8303 AB 8305 S. 784.)\r\n[CELEX-Nr.: 32008L0048]\r\nBGBl. I Nr. 29/2010 (NR: GP XXIV RV 612 AB 651 S. 60. BR: 8302 AB 8304 S. 784.)\r\nBGBl. I Nr. 58/2010 (NR: GP XXIV RV 771 AB 840 S. 74. BR: 8354 AB 8380 S. 787.)\r\nBGBl. I Nr. 68/2012 (VfGH)\r\nBGBl. I Nr. 15/2013 (NR: GP XXIV RV 2004 AB 2087 S. 184. BR: AB 8845 S. 816.)\r\nBGBl. I Nr. 50/2013 (NR: GP XXIV RV 2111 AB 2178 S. 191. BR: AB 8910 S. 818.)\r\n[CELEX-Nr.: 32011L0007, 32011L0090]\r\nBGBl. I Nr. 145/2013 (NR: GP XXIV IA 2366/A AB 2506 S. 215. BR: AB 9080 S. 823.)\r\nBGBl. I Nr. 179/2013 (NR: GP XXIV RV 2403 AB 2458 S. 216. BR: AB 9110 S. 823.)\r\nBGBl. I Nr. 33/2014 (NR: GP XXV RV 89 AB 92 S. 21. BR: AB 9169 S. 829.)\r\n[CELEX-Nr.: 32011L0083]\r\nBGBl. I Nr. 83/2014 (NR: GP XXV RV 270 AB 297 S. 44. BR: AB 9241 S. 834. )\r\nBGBl. I Nr. 25/2015 (VfGH)\r\nBGBl. I Nr. 29/2015 (VfGH)\r\nBGBl. I Nr. 35/2015 (NR: GP XXV RV 445 AB 450 S. 59. BR: 9316 AB 9318 S. 838.)\r\nBGBl. I Nr. 87/2015 (NR: GP XXV RV 688 AB 718 S. 83. BR: AB 9419 S. 844.)\r\nBGBl. I Nr. 43/2016 (NR: GP XXV RV 1109 AB 1123 S. 130. BR: 9586 AB 9593 S. 854.)\r\n[CELEX-Nr.: 32014L0056]\r\nBGBl. I Nr. 59/2017 (NR: GP XXV RV 1461 AB 1528 S. 173. BR: AB 9764 S. 866.)\r\nBGBl. I Nr. 153/2017 (NR: GP XXV IA 2306/A S. 199. BR: 9897 AB 9905 S. 873.)\r\nBGBl. I Nr. 161/2017 (VfGH)\r\nBGBl. I Nr. 58/2018 (NR: GP XXVI RV 195 AB 221 S. 34. BR: AB 10018 S. 882.)\r\nBGBl. I Nr. 100/2018 (NR: GP XXVI RV 329 AB 413 S. 57. BR: 10079 AB 10082 S. 888.)\r\nBGBl. I Nr. 69/2019 (NR: GP XXVI RV 623 AB 656 S. 84. BR: AB 10217 S. 896.)\r\nBGBl. I Nr. 74/2019 (NR: GP XXVI IA 274/A S. 84. BR: 10196 AB 10214 S. 896.)\r\nBGBl. I Nr. 105/2019 (NR: GP XXVI IA 970/A S. 89. BR: AB 10260 S. 897.)\r\nBGBl. I Nr. 16/2020 (NR: GP XXVII IA 397/A AB 112 S. 19. BR: AB 10288 S. 904.)\r\nBGBl. I Nr. 131/2020 (NR: GP XXVII IA 986/A AB 460 S. 64. BR: 10441 AB 10455 S. 915.)\r\nBGBl. I Nr. 148/2020 (NR: GP XXVII RV 481 AB 516 S. 69. BR: 10456 AB 10523 S. 917.)\r\n[CELEX-Nr.: 32011L0093, 32012L0029, 32017L0541]\r\nBGBl. I Nr. 86/2021 (NR: GP XXVII RV 770 AB 786 S. 99. BR: AB 10614 S. 925.)\r\nBGBl. I Nr. 121/2021 (NR: GP XXVII IA 1698/A AB 909 S. 113. BR: AB 10676 S. 927.)\r\nBGBl. I Nr. 175/2021 (NR: GP XXVII RV 949 AB 980 S. 115. BR: AB 10704 S. 929.)\r\n[CELEX-Nr.: 32019L0770, 32019L0771]\r\nBGBl. I Nr. 145/2022 (VfGH)\r\nBGBl. I Nr. 30/2023 (VfGH)\r\nBGBl. I Nr. 38/2023 (NR: GP XXVII RV 1920 AB 1979 S. 207. BR: AB 11201 S. 952.)\r\nBGBl. I Nr. 115/2023 (NR: GP XXVII IA 3478/A AB 2181 S. 230. BR: 11296 AB 11301 S. 958.)\r\n[CELEX-Nr.: 32019L1158]\r\nBGBl. I Nr. 180/2023 (NR: GP XXVII IA 3754/A AB 2345 S. 247. BR: 11365 AB 11398 S. 961.)\r\nBGBl. I Nr. 182/2023 (NR: GP XXVII RV 2309 AB 2344 S. 247. BR: 11366 AB 11400 S. 961.)\r\nBGBl. I Nr. 11/2024 (NR: GP XXVII IA 3871/A AB 2453 S. 252. BR: AB 11435 S. 964.)\r\n[CELEX Nr.: 32019L1152]\r\nBGBl. I Nr. 33/2024 (NR: GP XXVII RV 2462 AB 2481 S. 257. BR: AB 11461 S. 965.)\r\nBGBl. I Nr. 25/2025 (NR: GP XXVIII RV 69 und Zu 69 AB 100 S. 30. BR: 11643 AB 11645 S. 979.)\r\nBGBl. I Nr. 74/2025 (NR: GP XXVIII IA 379/A AB 213 S. 44. BR: AB 11704 S. 982.)\r\nBGBl. I Nr. 75/2025 (NR: GP XXVIII RV 212 AB 229 S. 46. BR: AB 11695 S. 982.)\r\nBGBl. I Nr. 110/2025 (NR: GP XXVIII RV 279 AB 314 S. 57. BR: AB 11746 S. 984.)\r\nBGBl. I Nr. 111/2025 (NR: GP XXVIII RV 187 AB 350 S. 57. BR: AB 11754 S. 985.)\r\n[CELEX-Nr.: 32022L2041]\r\nBGBl. I Nr. 40/2026 (NR: GP XXVIII RV 445 AB 458 S. 77. BR: 11811 AB 11815 S. 991.)\r\n[CELEX-Nr.: 32024L1346]\r\nBGBl. I Nr. 62/2026 (NR: GP XXVIII RV 523 AB 561 S. 89. BR: 11838 AB 11839 S. 994.)",
+              "Anmerkung": "1. Die Randschriften der amtlichen Ausgabe aus 1811 sind als Überschriften gesetzt; diese gebundene Ausgabe war die für das Inkrafttreten maßgebende Publikation (nach besonderer kaiserlicher Anordnung für die Kundmachung des ABGB; generelle verfassungssrechtliche Rechtserzeugungsnormen, besonders Kundmachungsregelungen, wie etwa Art. 49 Abs. 1 B-VG, gab es damals nicht). Die Kundmachung in der JGS enthält die Randschriften nicht; sie ist zwar auch authentisch, aber erst 1816 erschienen und daher nicht der für die Wirksamkeit maßgebende Publikationsakt.<br/>2. Das ABGB wurde in der amtlichen Ausgabe aus 1811 mit einem Inhaltsverzeichnis kundgemacht, das sich auf die Seiten der Ausgabe bezieht. Das hier dokumentierte Inhaltsverzeichnis wurde anhand der Randschriften und bisherigen Novellen neu erstellt und wird laufend aktualisiert.<br/>3. Absätze in Paragraphen mit mehreren Absätzen erhielten Absatzbezeichnungen ((1), (2) usw.) gemäß Art. I Z 5 der WGN 1989, BGBl. Nr. 343/1989.<br/>4. Erfassungsstichtag: 1.7.1992<br/>5. ÜR: Art. III, BGBl. Nr. 656/1989<br/>6. vgl. Art. XVI und XVII, BGBl. I Nr. 135/2000<br/>7. ÜR: Art XVIII § 2, BGBl. I Nr. 135/2000<br/>8. ÜR: Art. 18 §§ 1, 3 und 4, BGBl. I Nr. 75/2009",
+              "Schlagworte": "e-rk3, Inh<br/>Hofkommission, Polizeiübertretung, Kommission, Beurteilung, Teil, Zeitpunkt,<br/>Namensrechtsänderungsgesetz – NamRÄG (BGBl. Nr. 25/1995),<br/>Bundesgesetz zum Schutz vor Gewalt in der Familie – GeSchG (BGBl. Nr. 759/1996),<br/>Grundbuchsnovelle 1997 – GBNov. 1997 (BGBl. I Nr. 30/1997),<br/>Erweiterte Wertgrenzen-Novelle 1997 – WGN 1997 (BGBl. I Nr. 140/1997),<br/>Eherechts-Änderungsgesetz 1999 – EheRÄG 1999 (BGBl. I Nr. 125/1999),<br/>Arbeitsrechtsänderungsgesetz 2000 – ARÄG 2000 (BGBl. I Nr. 44/2000),<br/>Gewährleistungsrechts-Änderungsgesetz – GewRÄG (BGBl. I Nr. 48/2001),<br/>1. Euro-Umstellungsgesetz – Bund, 2. Euro-Justiz-Begleitgesetz – 2. Euro-JuBeG, BGBl. I Nr. 98/2001,<br/>Wohnungseigentumsbegleitgesetz 2002 (BGBl. I Nr. 71/2002),<br/>SPG-Novelle 2002 (BGBl. I Nr. 104/2002),<br/>Zinsenrechts-Änderungsgesetz – ZinsRÄG (BGBl. I Nr. 118/2002),<br/>Zivilrechts-Änderungsgesetz 2004 – ZivRÄG 2004 (BGBl. I Nr. 91/2003),<br/>Familien- und Erbrechts-Änderungsgesetz 2004 – FamErbRÄG 2004 (BGBl. I Nr. 58/2004),<br/>Arbeitsmarktreformgesetz (BGBl. I Nr. 77/2004),<br/>Zessionsrechts-Änderungsgesetz – ZessRÄG (BGBl. I Nr. 51/2005),<br/>Handelsrechts-Änderungsgesetz – HaRÄG (BGBl. I Nr. 120/2005),<br/>Sachwalterrechts-Änderungsgesetz 2006 – SWRÄG 2006 (BGBl. I Nr. 92/2006),<br/>Deregulierungsgesetz 2006 – DRG 2006 (BGBl. I Nr. 113/2006),<br/>Grundbuchs-Novelle 2008 – GB-Nov 2008 (BGBl. I Nr. 100/2008),<br/>Zweites Gewaltschutzgesetz – 2. GeSchG (BGBl. I Nr. 40/2009),<br/>Budgetbegleitgesetz 2009 (BGBl. I Nr. 52/2009),<br/>Familienrechts-Änderungsgesetz 2009 – FamRÄG 2009 (BGBl. I Nr. 75/2009),<br/>Insolvenzrechtsänderungs-Begleitgesetz – IRÄ-BG (BGBl. I Nr. 58/2010),<br/>Kindschafts- und Namensrechts-Änderungsgesetz 2013 – KindNamRÄG 2013 (BGBl. I Nr. 15/2013),<br/>Zahlungsverzugsgesetz – ZVG (BGBl. I Nr. 50/2013),<br/>Adoptionsrechts-Änderungsgesetz 2013 – AdRÄG 2013 (BGBl. I Nr. 179/2013),<br/>Verbraucherrechte-Richtlinie-Umsetzungsgesetz – VRUG (BGBl. I Nr. 33/2014)<br/>GesbR-Reformgesetz – GesbR-RG (BGBl. I Nr. 83/2014), Reform der Gesellschaft bürgerlichen Rechts,<br/>Fortpflanzungsmedizinrechts-Änderungsgesetz 2015 – FMedRÄG 2015 (BGBl. I Nr. 35/2015),<br/>Erbrechts-Änderungsgesetz 2015 – ErbRÄG 2015 (BGBl. I Nr. 87/2015)<br/>Abschlussprüfungsrechts-Änderungsgesetz 2016 – APRÄG 2016 (BGBl. I Nr. 43/2016),<br/>2. Erwachsenenschutz-Gesetz – 2. ErwSchG (BGBl. I Nr. 59/2017),<br/>Erwachsenenschutz-Anpassungsgesetz für den Bereich des Bundesministeriums für Verfassung, Reformen, Deregulierung und Justiz – ErwSchAG-Justiz (BGBl. I Nr. 58/2018),<br/>Sozialversicherungs-Organisationsgesetz – SV-OG (BGBl. I Nr. 100/2018),<br/>Haftungsrechts-Änderungsgesetz 2019 – HaftRÄG 2019 (BGBl. I Nr. 69/2019),<br/>Gewaltschutzgesetz 2019 (BGBl. I Nr. 105/2019),<br/>2. COVID-19-Gesetz (BGBl. I Nr. 16/2020),<br/>Hass-im-Netz-Bekämpfungs-Gesetz – HiNBG (BGBl. I Nr. 148/2020),<br/>Gesamtreform des Exekutionsrechts – GREx (BGBl. I Nr. 86/2021),<br/>Gewährleistungsrichtlinien-Umsetzungsgesetz – GRUG (BGBl. I Nr. 175/2021),<br/>Abstammungsrechts-Anpassungsgesetz 2023 – AbAG 2023 (BGBl. I Nr. 180/2023),<br/>DSA-Begleitgesetz – DSA-BegG (BGBl. I Nr. 182/2023), <br/>Haftungsrechts-Änderungsgesetz 2024 – HaftRÄG 2024 (BGBl. I Nr. 33/2024), <br/>Budgetbegleitgesetz 2025 (BGBl. I Nr. 25/2025), <br/>Erwachsenenschutz-Anpassungsgesetz 2025 – ErwSchAG 2025 (BGBl. I Nr. 74/2025),<br/>Zivilrechtliches Indexierungs-Anpassungsgesetz – ZIAG (BGBl. I Nr. 110/2025), <br/>Obsorge für unbegleitete Minderjährige-Gesetz – ObUM-G (BGBl. I Nr. 40/2026),<br/>Budgetbegleitgesetz 2027-2028 (BGBl. I Nr. 62/2026)<br/>",
+              "Gesetzesnummer": "10001622",
+              "GesamteRechtsvorschriftUrl": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622"
+            }
+          }
+        },
+        "Dokumentliste": {
+          "ContentReference": {
+            "ContentType": "MainDocument",
+            "Name": "Hauptdokument",
+            "Urls": {
+              "ContentUrl": [
+                {
+                  "DataType": "Xml",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.xml"
+                },
+                {
+                  "DataType": "Html",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.html"
+                },
+                {
+                  "DataType": "Rtf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.rtf"
+                },
+                {
+                  "DataType": "Pdf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.pdf"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "Data": {
+        "Metadaten": {
+          "Technisch": {
+            "ID": "NOR12017691",
+            "Applikation": "BrKons",
+            "Organ": "BKA (Bundeskanzleramt)",
+            "ImportTimestamp": {
+              "@xsi:nil": "true",
+              "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
+            }
+          },
+          "Allgemein": {
+            "Geaendert": "2015-04-08",
+            "DokumentUrl": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P1/NOR12017691"
+          },
+          "Bundesrecht": {
+            "Kurztitel": "Allgemeines bürgerliches Gesetzbuch",
+            "Eli": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P1/NOR12017691",
+            "BrKons": {
+              "Kundmachungsorgan": "JGS Nr. 946/1811",
+              "Typ": "BG",
+              "Dokumenttyp": "Paragraph",
+              "ArtikelParagraphAnlage": "§ 1",
+              "Paragraphnummer": "1",
+              "StammnormPublikationsorgan": "JGS Nr.",
+              "StammnormBgblnummer": "946/1811",
+              "Inkrafttretensdatum": "1812-01-01",
+              "Abkuerzung": "ABGB",
+              "Indizes": {
+                "item": "20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)"
+              },
+              "Aenderung": "",
+              "Schlagworte": "Privatrecht",
+              "Gesetzesnummer": "10001622",
+              "AlteDokumentnummer": "N2181110171Z",
+              "GesamteRechtsvorschriftUrl": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622"
+            }
+          }
+        },
+        "Dokumentliste": {
+          "ContentReference": {
+            "ContentType": "MainDocument",
+            "Name": "Hauptdokument",
+            "Urls": {
+              "ContentUrl": [
+                {
+                  "DataType": "Xml",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.xml"
+                },
+                {
+                  "DataType": "Html",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.html"
+                },
+                {
+                  "DataType": "Rtf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.rtf"
+                },
+                {
+                  "DataType": "Pdf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.pdf"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "Data": {
+        "Metadaten": {
+          "Technisch": {
+            "ID": "NOR12017692",
+            "Applikation": "BrKons",
+            "Organ": "BKA (Bundeskanzleramt)",
+            "ImportTimestamp": {
+              "@xsi:nil": "true",
+              "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
+            }
+          },
+          "Allgemein": {
+            "Geaendert": "2015-04-08",
+            "DokumentUrl": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P2/NOR12017692"
+          },
+          "Bundesrecht": {
+            "Kurztitel": "Allgemeines bürgerliches Gesetzbuch",
+            "Eli": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P2/NOR12017692",
+            "BrKons": {
+              "Kundmachungsorgan": "JGS Nr. 946/1811",
+              "Typ": "BG",
+              "Dokumenttyp": "Paragraph",
+              "ArtikelParagraphAnlage": "§ 2",
+              "Paragraphnummer": "2",
+              "StammnormPublikationsorgan": "JGS Nr.",
+              "StammnormBgblnummer": "946/1811",
+              "Inkrafttretensdatum": "1812-01-01",
+              "Abkuerzung": "ABGB",
+              "Indizes": {
+                "item": "20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)"
+              },
+              "Aenderung": "",
+              "Schlagworte": "Rechtskenntnis, Rechtsirrtum",
+              "Gesetzesnummer": "10001622",
+              "AlteDokumentnummer": "N2181110172Z",
+              "GesamteRechtsvorschriftUrl": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622"
+            }
+          }
+        },
+        "Dokumentliste": {
+          "ContentReference": {
+            "ContentType": "MainDocument",
+            "Name": "Hauptdokument",
+            "Urls": {
+              "ContentUrl": [
+                {
+                  "DataType": "Xml",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.xml"
+                },
+                {
+                  "DataType": "Html",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.html"
+                },
+                {
+                  "DataType": "Rtf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.rtf"
+                },
+                {
+                  "DataType": "Pdf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.pdf"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

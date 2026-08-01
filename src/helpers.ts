@@ -150,6 +150,27 @@ export function addOptionalParams(
   }
 }
 
+/**
+ * Build the `query` echo returned alongside a search result.
+ *
+ * Carries the tool's own name plus its validated arguments (Zod defaults
+ * included), which is everything a client needs to re-issue the same search for
+ * another page. Arguments the caller omitted are dropped rather than echoed as
+ * `undefined`, so the echo only ever describes the search that actually ran.
+ */
+export function buildQueryEcho(
+  tool: string,
+  args: Record<string, unknown>,
+): Record<string, unknown> {
+  const echo: Record<string, unknown> = { tool };
+  for (const [key, value] of Object.entries(args)) {
+    if (value !== undefined) {
+      echo[key] = value;
+    }
+  }
+  return echo;
+}
+
 /** Search function type for API calls */
 export type SearchFunction = (
   params: Record<string, unknown>,
@@ -169,19 +190,28 @@ export type SearchFunction = (
  * the outbound RIS request so an abandoned call stops upstream too; a cancelled
  * request then propagates the abort instead of being reported as a tool error,
  * since nobody is waiting to read it.
+ *
+ * `queryEcho` (see {@link buildQueryEcho}) is attached to the structured payload
+ * so a client can page through the results without reconstructing the call. It is
+ * required, not optional: a search tool added later could otherwise omit it and
+ * silently strand its clients without pagination for that one tool.
  */
 export async function executeSearchTool(
   searchFn: SearchFunction,
   params: Record<string, unknown>,
   responseFormat: 'markdown' | 'json',
-  signal?: AbortSignal,
+  signal: AbortSignal | undefined,
+  queryEcho: Record<string, unknown>,
 ): Promise<McpToolResponse<[TextContent]>> {
   try {
     const apiResponse = await searchFn(params, undefined, signal);
     const searchResult = parseSearchResults(apiResponse as NormalizedSearchResults);
     const formatted = formatSearchResults(searchResult, responseFormat);
     const result = truncateResponse(formatted);
-    return { ...createMcpResponse(result), structuredContent: searchResult };
+    return {
+      ...createMcpResponse(result),
+      structuredContent: { ...searchResult, query: queryEcho },
+    };
   } catch (e) {
     if (signal?.aborted) {
       throw e;

@@ -10,6 +10,7 @@ import { IM_RIS_SEIT_VALUES } from '../constants.js';
 import {
   addOptionalParams,
   buildBaseParams,
+  buildQueryEcho,
   createValidationErrorResponse,
   executeSearchTool,
   hasAnyParam,
@@ -110,7 +111,13 @@ Example queries:
         [im_ris_seit, 'ImRisSeit'],
       ]);
 
-      return executeSearchTool(searchBezirke, params, response_format, extra.signal);
+      return executeSearchTool(
+        searchBezirke,
+        params,
+        response_format,
+        extra.signal,
+        buildQueryEcho('ris_bezirke', args),
+      );
     },
   );
 }

@@ -5,6 +5,7 @@
  * structured Document and SearchResult models.
  */
 
+import { formatCitation } from './formatting.js';
 import type {
   Citation,
   ContentUrl,
@@ -137,6 +138,12 @@ export function extractContentUrls(contentRef: RawContentReference | undefined):
 // Document Parsing
 // =============================================================================
 
+/** Court fields carried only by Judikatur documents. */
+type JudikaturFields = Pick<
+  Document,
+  'gericht' | 'geschaeftszahl' | 'entscheidungsdatum' | 'rechtssatznummer'
+>;
+
 /**
  * Parse a document reference from the API response into a Document model.
  */
@@ -178,6 +185,7 @@ export function parseDocumentFromApiResponse(docRef: RawDocumentReference): Docu
   let gesamteRechtsvorschriftUrl = '';
   let geschaeftszahl = '';
   let entscheidungsdatum: unknown = '';
+  let judikaturFields: JudikaturFields | undefined;
 
   if (bundesrecht) {
     // Handle Bundesrecht
@@ -225,6 +233,19 @@ export function parseDocumentFromApiResponse(docRef: RawDocumentReference): Docu
 
     kurztitelElem = geschaeftszahl; // Use Geschaeftszahl as kurztitel
     langtitelElem = extractText(courtNested?.Leitsatz) ?? extractText(courtNested?.Kurzinformation);
+
+    judikaturFields = {
+      // Technisch.Organ names the deciding body for every Judikatur applikation
+      // and equals the nested Judikatur.<Applikation>.Gericht wherever that
+      // exists — but it is the only source for the authorities that have no
+      // nested Gericht at all (Dsk, Gbk, Pvak, Dok). Reading it is confined to
+      // this branch because law documents carry it too, naming the publisher.
+      gericht: extractText(technisch.Organ),
+      geschaeftszahl: geschaeftszahl || null,
+      entscheidungsdatum: extractText(entscheidungsdatum),
+      rechtssatznummer:
+        extractText(courtNested?.Rechtssatznummern) ?? extractText(courtNested?.Rechtssatznummer),
+    };
   }
 
   // Build Citation
@@ -259,7 +280,7 @@ export function parseDocumentFromApiResponse(docRef: RawDocumentReference): Docu
   // Build document URLs
   const dokumentUrl = allgemein.DokumentUrl ?? null;
 
-  return {
+  const document: Omit<Document, 'citation_display'> = {
     dokumentnummer,
     applikation,
     titel,
@@ -268,7 +289,12 @@ export function parseDocumentFromApiResponse(docRef: RawDocumentReference): Docu
     content_urls: contentUrls,
     dokument_url: dokumentUrl,
     gesamte_rechtsvorschrift_url: gesamteRechtsvorschriftUrl || null,
+    ...judikaturFields,
   };
+
+  // Derived from the finished document through the very function the markdown
+  // renderer calls, so the field cannot drift from the citation users see.
+  return { ...document, citation_display: formatCitation(document) };
 }
 
 // =============================================================================

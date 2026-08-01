@@ -9,6 +9,7 @@ import { searchBundesrecht } from '../client.js';
 import {
   addOptionalParams,
   buildBaseParams,
+  buildQueryEcho,
   createValidationErrorResponse,
   executeSearchTool,
   hasAnyParam,
@@ -84,7 +85,13 @@ Example queries:
         [titel, 'Titel'],
       ]);
 
-      return executeSearchTool(searchBundesrecht, params, response_format, extra.signal);
+      return executeSearchTool(
+        searchBundesrecht,
+        params,
+        response_format,
+        extra.signal,
+        buildQueryEcho('ris_bundesgesetzblatt', args),
+      );
     },
   );
 }
