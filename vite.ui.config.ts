@@ -22,10 +22,20 @@ if (Object.keys(widgetEntries).length === 0) {
 
 export default defineConfig({
   root: uiRoot,
-  plugins: [viteSingleFile()],
+  // useRecommendedBuildConfig assumes a single entry: it sets
+  // output.inlineDynamicImports, which Rollup rejects outright as soon as a
+  // second widget exists. Opting out and setting the parts we need ourselves —
+  // the inlining itself happens in the plugin's generateBundle hook, which is
+  // unaffected. Deliberately NOT adopted from the recommended set:
+  // cssCodeSplit: false, which merges every widget's CSS into one file and
+  // would inline all of it into each widget; Vite's per-entry default keeps a
+  // widget's CSS to itself.
+  plugins: [viteSingleFile({ useRecommendedBuildConfig: false })],
   build: {
     outDir,
     emptyOutDir: true,
+    // Inline assets regardless of size, so none is left behind as a loose file.
+    assetsInlineLimit: () => true,
     // A single-file bundle can never carry modulepreload links, so the
     // polyfill would only ship dead code and a MutationObserver.
     modulePreload: { polyfill: false },
