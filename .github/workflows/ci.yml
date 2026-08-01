@@ -47,6 +47,24 @@ jobs:
       - name: Test with coverage
         run: pnpm run test:coverage
 
+      - name: Build
+        run: pnpm run build
+
+      # The widget HTML is generated, never committed. Assert it survived both
+      # the vite bundle and the tsc compile, so a broken pipeline fails here
+      # instead of shipping a server whose widget resource is empty.
+      - name: Verify widget template is bundled
+        run: |
+          test -s src/generated/trefferliste-html.ts
+          node --input-type=module -e '
+            const { TREFFERLISTE_HTML } = await import("./dist/generated/trefferliste-html.js");
+            if (TREFFERLISTE_HTML.length < 500) {
+              console.error("widget template too small: " + TREFFERLISTE_HTML.length + " chars");
+              process.exit(1);
+            }
+            console.log("widget template ok: " + TREFFERLISTE_HTML.length + " chars");
+          '
+
       - name: Upload coverage artifacts
         if: matrix.node-version == 22
         uses: actions/upload-artifact@v7

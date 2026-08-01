@@ -5,8 +5,13 @@ WORKDIR /app
 ENV HUSKY=0
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
-COPY tsconfig.json ./
+COPY tsconfig.json vite.ui.config.ts ./
 COPY src/ ./src/
+# Widget sources: `pnpm run build` bundles them into src/generated/ first, so
+# the compiled server carries the HTML in dist/generated/ — no runtime file
+# lookup, nothing extra to copy into the runtime stage.
+COPY ui/ ./ui/
+COPY scripts/ ./scripts/
 RUN pnpm run build
 
 FROM node:22-alpine
