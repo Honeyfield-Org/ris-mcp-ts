@@ -1,0 +1,187 @@
+{
+  "judikatur-search-raw": {
+    "parsed": {
+      "total_hits": 259,
+      "page": 1,
+      "page_size": 10,
+      "has_more": true,
+      "documents": [
+        {
+          "dokumentnummer": "JJR_19901010_OGH0002_0020OB00535_9000000_001",
+          "applikation": "Justiz",
+          "titel": "2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h; 4Ob227/06w; 8Ob46/07h; 1Ob262/07x; 9Ob50/10h; 1Ob42/11z; 4Ob191/10g; 9Ob61/11b; 3Ob143/12v; 1Ob14/13k; 2Ob196/13g; 3Ob191/13d; 4Ob44/14w; 8Ob57/14m; 7Ob4/16p; 9Ob64/16a; 1Ob239/16b; 7Ob45/17v; 9Ob45/17h; 2Ob206/16g; 6Ob90/18f; 4Ob168/18m; 5Ob7/19v; 6Ob106/19k; 5Ob119/19i; 3Ob34/20a; 6Ob240/19s; 7Ob97/20w; 10Ob49/20h; 3Ob143/20f; 8Ob113/21g; 5Ob193/21z; 10Ob2/23a; 5Ob131/22h; 2Ob42/23z; 3Ob140/22t; 3Ob30/23t; 6Ob149/22p; 6Ob150/22k; 7Ob70/23d; 7Ob43/23h; 3Ob142/22m; 2Ob142/23f; 8Ob126/23x; 6Ob160/22f; 2Ob243/23h; 4ob215/23f; 4Ob96/24g; 5Ob53/24s; 5Ob57/24d; 5Ob132/24h; 5Ob200/24h; 6Ob9/25d; 3Ob200/25w; 2Ob210/25h; 3Ob73/26w",
+          "kurztitel": "2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h; 4Ob227/06w; 8Ob46/07h; 1Ob262/07x; 9Ob50/10h; 1Ob42/11z; 4Ob191/10g; 9Ob61/11b; 3Ob143/12v; 1Ob14/13k; 2Ob196/13g; 3Ob191/13d; 4Ob44/14w; 8Ob57/14m; 7Ob4/16p; 9Ob64/16a; 1Ob239/16b; 7Ob45/17v; 9Ob45/17h; 2Ob206/16g; 6Ob90/18f; 4Ob168/18m; 5Ob7/19v; 6Ob106/19k; 5Ob119/19i; 3Ob34/20a; 6Ob240/19s; 7Ob97/20w; 10Ob49/20h; 3Ob143/20f; 8Ob113/21g; 5Ob193/21z; 10Ob2/23a; 5Ob131/22h; 2Ob42/23z; 3Ob140/22t; 3Ob30/23t; 6Ob149/22p; 6Ob150/22k; 7Ob70/23d; 7Ob43/23h; 3Ob142/22m; 2Ob142/23f; 8Ob126/23x; 6Ob160/22f; 2Ob243/23h; 4ob215/23f; 4Ob96/24g; 5Ob53/24s; 5Ob57/24d; 5Ob132/24h; 5Ob200/24h; 6Ob9/25d; 3Ob200/25w; 2Ob210/25h; 3Ob73/26w",
+          "citation": {
+            "kurztitel": "2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h; 4Ob227/06w; 8Ob46/07h; 1Ob262/07x; 9Ob50/10h; 1Ob42/11z; 4Ob191/10g; 9Ob61/11b; 3Ob143/12v; 1Ob14/13k; 2Ob196/13g; 3Ob191/13d; 4Ob44/14w; 8Ob57/14m; 7Ob4/16p; 9Ob64/16a; 1Ob239/16b; 7Ob45/17v; 9Ob45/17h; 2Ob206/16g; 6Ob90/18f; 4Ob168/18m; 5Ob7/19v; 6Ob106/19k; 5Ob119/19i; 3Ob34/20a; 6Ob240/19s; 7Ob97/20w; 10Ob49/20h; 3Ob143/20f; 8Ob113/21g; 5Ob193/21z; 10Ob2/23a; 5Ob131/22h; 2Ob42/23z; 3Ob140/22t; 3Ob30/23t; 6Ob149/22p; 6Ob150/22k; 7Ob70/23d; 7Ob43/23h; 3Ob142/22m; 2Ob142/23f; 8Ob126/23x; 6Ob160/22f; 2Ob243/23h; 4ob215/23f; 4Ob96/24g; 5Ob53/24s; 5Ob57/24d; 5Ob132/24h; 5Ob200/24h; 6Ob9/25d; 3Ob200/25w; 2Ob210/25h; 3Ob73/26w",
+            "langtitel": null,
+            "kundmachungsorgan": null,
+            "paragraph": null,
+            "eli": null,
+            "inkrafttreten": "2026-06-23",
+            "ausserkrafttreten": null
+          },
+          "content_urls": {
+            "html": "https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.html",
+            "xml": "https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.xml",
+            "pdf": "https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.pdf",
+            "rtf": "https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.rtf"
+          },
+          "dokument_url": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Justiz&Dokumentnummer=JJR_19901010_OGH0002_0020OB00535_9000000_001",
+          "gesamte_rechtsvorschrift_url": null
+        },
+        {
+          "dokumentnummer": "JWR_2025090038_20260624L04",
+          "applikation": "Vwgh",
+          "titel": "Ra 2025/09/0038",
+          "kurztitel": "Ra 2025/09/0038",
+          "citation": {
+            "kurztitel": "Ra 2025/09/0038",
+            "langtitel": null,
+            "kundmachungsorgan": null,
+            "paragraph": null,
+            "eli": null,
+            "inkrafttreten": "2026-06-24",
+            "ausserkrafttreten": null
+          },
+          "content_urls": {
+            "html": "https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.html",
+            "xml": "https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.xml",
+            "pdf": "https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.pdf",
+            "rtf": "https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.rtf"
+          },
+          "dokument_url": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Vwgh&Dokumentnummer=JWR_2025090038_20260624L04",
+          "gesamte_rechtsvorschrift_url": null
+        },
+        {
+          "dokumentnummer": "LVWGT_TI_20260720_LVwG_2026_19_0064_4_00",
+          "applikation": "Lvwg",
+          "titel": "LVwG-2026/19/0064-4",
+          "kurztitel": "LVwG-2026/19/0064-4",
+          "citation": {
+            "kurztitel": "LVwG-2026/19/0064-4",
+            "langtitel": null,
+            "kundmachungsorgan": null,
+            "paragraph": null,
+            "eli": null,
+            "inkrafttreten": "2026-07-20",
+            "ausserkrafttreten": null
+          },
+          "content_urls": {
+            "html": "https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.html",
+            "xml": "https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.xml",
+            "pdf": "https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.pdf",
+            "rtf": "https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.rtf"
+          },
+          "dokument_url": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Lvwg&Dokumentnummer=LVWGT_TI_20260720_LVwG_2026_19_0064_4_00",
+          "gesamte_rechtsvorschrift_url": null
+        },
+        {
+          "dokumentnummer": "DSBT_20251219_2025_1_043_098_00",
+          "applikation": "Dsk",
+          "titel": "2025-1.043.098",
+          "kurztitel": "2025-1.043.098",
+          "citation": {
+            "kurztitel": "2025-1.043.098",
+            "langtitel": "Geheimhaltung, Löschung, Information, Rechtmäßigkeit der Verarbeitung, Datenrichtigkeit, Datenmin...",
+            "kundmachungsorgan": null,
+            "paragraph": null,
+            "eli": null,
+            "inkrafttreten": "2025-12-19",
+            "ausserkrafttreten": null
+          },
+          "content_urls": {
+            "html": "https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.html",
+            "xml": "https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.xml",
+            "pdf": "https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.pdf",
+            "rtf": "https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.rtf"
+          },
+          "dokument_url": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Dsk&Dokumentnummer=DSBT_20251219_2025_1_043_098_00",
+          "gesamte_rechtsvorschrift_url": null
+        }
+      ]
+    },
+    "markdown": "**Gefunden: 259 Treffer** (Seite 1 von 26)\n\n### 1. JJR_19901010_OGH0002_0020OB00535_9000000_001\n**2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h; 4Ob227/06w; 8Ob46/07h; 1Ob262/07x; 9Ob50/10h; 1Ob42/11z; 4Ob191/10g; 9Ob61/11b; 3Ob143/12v; 1Ob14/13k; 2Ob196/13g; 3Ob191/13d; 4Ob44/14w; 8Ob57/14m; 7Ob4/16p; 9Ob64/16a; 1Ob239/16b; 7Ob45/17v; 9Ob45/17h; 2Ob206/16g; 6Ob90/18f; 4Ob168/18m; 5Ob7/19v; 6Ob106/19k; 5Ob119/19i; 3Ob34/20a; 6Ob240/19s; 7Ob97/20w; 10Ob49/20h; 3Ob143/20f; 8Ob113/21g; 5Ob193/21z; 10Ob2/23a; 5Ob131/22h; 2Ob42/23z; 3Ob140/22t; 3Ob30/23t; 6Ob149/22p; 6Ob150/22k; 7Ob70/23d; 7Ob43/23h; 3Ob142/22m; 2Ob142/23f; 8Ob126/23x; 6Ob160/22f; 2Ob243/23h; 4ob215/23f; 4Ob96/24g; 5Ob53/24s; 5Ob57/24d; 5Ob132/24h; 5Ob200/24h; 6Ob9/25d; 3Ob200/25w; 2Ob210/25h; 3Ob73/26w**\nIn Kraft seit: 23.06.2026\n`Dokumentnummer: JJR_19901010_OGH0002_0020OB00535_9000000_001`\n\n### 2. Ra 2025/09/0038\nIn Kraft seit: 24.06.2026\n`Dokumentnummer: JWR_2025090038_20260624L04`\n\n### 3. LVwG-2026/19/0064-4\nIn Kraft seit: 20.07.2026\n`Dokumentnummer: LVWGT_TI_20260720_LVwG_2026_19_0064_4_00`\n\n### 4. 2025-1.043.098\n_Geheimhaltung, Löschung, Information, Rechtmäßigkeit der Verarbeitung, Datenrichtigkeit, Datenmin..._  \nIn Kraft seit: 19.12.2025\n`Dokumentnummer: DSBT_20251219_2025_1_043_098_00`\n\n---\n_Weitere Treffer verfügbar. Verwende `seite: 2` für die nächste Seite._",
+    "json": "{\n  \"total_hits\": 259,\n  \"page\": 1,\n  \"page_size\": 10,\n  \"has_more\": true,\n  \"documents\": [\n    {\n      \"dokumentnummer\": \"JJR_19901010_OGH0002_0020OB00535_9000000_001\",\n      \"applikation\": \"Justiz\",\n      \"titel\": \"2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h; 4Ob227/06w; 8Ob46/07h; 1Ob262/07x; 9Ob50/10h; 1Ob42/11z; 4Ob191/10g; 9Ob61/11b; 3Ob143/12v; 1Ob14/13k; 2Ob196/13g; 3Ob191/13d; 4Ob44/14w; 8Ob57/14m; 7Ob4/16p; 9Ob64/16a; 1Ob239/16b; 7Ob45/17v; 9Ob45/17h; 2Ob206/16g; 6Ob90/18f; 4Ob168/18m; 5Ob7/19v; 6Ob106/19k; 5Ob119/19i; 3Ob34/20a; 6Ob240/19s; 7Ob97/20w; 10Ob49/20h; 3Ob143/20f; 8Ob113/21g; 5Ob193/21z; 10Ob2/23a; 5Ob131/22h; 2Ob42/23z; 3Ob140/22t; 3Ob30/23t; 6Ob149/22p; 6Ob150/22k; 7Ob70/23d; 7Ob43/23h; 3Ob142/22m; 2Ob142/23f; 8Ob126/23x; 6Ob160/22f; 2Ob243/23h; 4ob215/23f; 4Ob96/24g; 5Ob53/24s; 5Ob57/24d; 5Ob132/24h; 5Ob200/24h; 6Ob9/25d; 3Ob200/25w; 2Ob210/25h; 3Ob73/26w\",\n      \"kurztitel\": \"2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h; 4Ob227/06w; 8Ob46/07h; 1Ob262/07x; 9Ob50/10h; 1Ob42/11z; 4Ob191/10g; 9Ob61/11b; 3Ob143/12v; 1Ob14/13k; 2Ob196/13g; 3Ob191/13d; 4Ob44/14w; 8Ob57/14m; 7Ob4/16p; 9Ob64/16a; 1Ob239/16b; 7Ob45/17v; 9Ob45/17h; 2Ob206/16g; 6Ob90/18f; 4Ob168/18m; 5Ob7/19v; 6Ob106/19k; 5Ob119/19i; 3Ob34/20a; 6Ob240/19s; 7Ob97/20w; 10Ob49/20h; 3Ob143/20f; 8Ob113/21g; 5Ob193/21z; 10Ob2/23a; 5Ob131/22h; 2Ob42/23z; 3Ob140/22t; 3Ob30/23t; 6Ob149/22p; 6Ob150/22k; 7Ob70/23d; 7Ob43/23h; 3Ob142/22m; 2Ob142/23f; 8Ob126/23x; 6Ob160/22f; 2Ob243/23h; 4ob215/23f; 4Ob96/24g; 5Ob53/24s; 5Ob57/24d; 5Ob132/24h; 5Ob200/24h; 6Ob9/25d; 3Ob200/25w; 2Ob210/25h; 3Ob73/26w\",\n      \"citation\": {\n        \"kurztitel\": \"2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h; 4Ob227/06w; 8Ob46/07h; 1Ob262/07x; 9Ob50/10h; 1Ob42/11z; 4Ob191/10g; 9Ob61/11b; 3Ob143/12v; 1Ob14/13k; 2Ob196/13g; 3Ob191/13d; 4Ob44/14w; 8Ob57/14m; 7Ob4/16p; 9Ob64/16a; 1Ob239/16b; 7Ob45/17v; 9Ob45/17h; 2Ob206/16g; 6Ob90/18f; 4Ob168/18m; 5Ob7/19v; 6Ob106/19k; 5Ob119/19i; 3Ob34/20a; 6Ob240/19s; 7Ob97/20w; 10Ob49/20h; 3Ob143/20f; 8Ob113/21g; 5Ob193/21z; 10Ob2/23a; 5Ob131/22h; 2Ob42/23z; 3Ob140/22t; 3Ob30/23t; 6Ob149/22p; 6Ob150/22k; 7Ob70/23d; 7Ob43/23h; 3Ob142/22m; 2Ob142/23f; 8Ob126/23x; 6Ob160/22f; 2Ob243/23h; 4ob215/23f; 4Ob96/24g; 5Ob53/24s; 5Ob57/24d; 5Ob132/24h; 5Ob200/24h; 6Ob9/25d; 3Ob200/25w; 2Ob210/25h; 3Ob73/26w\",\n        \"langtitel\": null,\n        \"kundmachungsorgan\": null,\n        \"paragraph\": null,\n        \"eli\": null,\n        \"inkrafttreten\": \"2026-06-23\",\n        \"ausserkrafttreten\": null\n      },\n      \"content_urls\": {\n        \"html\": \"https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.html\",\n        \"xml\": \"https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.xml\",\n        \"pdf\": \"https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.pdf\",\n        \"rtf\": \"https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.rtf\"\n      },\n      \"dokument_url\": \"https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Justiz&Dokumentnummer=JJR_19901010_OGH0002_0020OB00535_9000000_001\",\n      \"gesamte_rechtsvorschrift_url\": null\n    },\n    {\n      \"dokumentnummer\": \"JWR_2025090038_20260624L04\",\n      \"applikation\": \"Vwgh\",\n      \"titel\": \"Ra 2025/09/0038\",\n      \"kurztitel\": \"Ra 2025/09/0038\",\n      \"citation\": {\n        \"kurztitel\": \"Ra 2025/09/0038\",\n        \"langtitel\": null,\n        \"kundmachungsorgan\": null,\n        \"paragraph\": null,\n        \"eli\": null,\n        \"inkrafttreten\": \"2026-06-24\",\n        \"ausserkrafttreten\": null\n      },\n      \"content_urls\": {\n        \"html\": \"https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.html\",\n        \"xml\": \"https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.xml\",\n        \"pdf\": \"https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.pdf\",\n        \"rtf\": \"https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.rtf\"\n      },\n      \"dokument_url\": \"https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Vwgh&Dokumentnummer=JWR_2025090038_20260624L04\",\n      \"gesamte_rechtsvorschrift_url\": null\n    },\n    {\n      \"dokumentnummer\": \"LVWGT_TI_20260720_LVwG_2026_19_0064_4_00\",\n      \"applikation\": \"Lvwg\",\n      \"titel\": \"LVwG-2026/19/0064-4\",\n      \"kurztitel\": \"LVwG-2026/19/0064-4\",\n      \"citation\": {\n        \"kurztitel\": \"LVwG-2026/19/0064-4\",\n        \"langtitel\": null,\n        \"kundmachungsorgan\": null,\n        \"paragraph\": null,\n        \"eli\": null,\n        \"inkrafttreten\": \"2026-07-20\",\n        \"ausserkrafttreten\": null\n      },\n      \"content_urls\": {\n        \"html\": \"https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.html\",\n        \"xml\": \"https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.xml\",\n        \"pdf\": \"https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.pdf\",\n        \"rtf\": \"https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.rtf\"\n      },\n      \"dokument_url\": \"https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Lvwg&Dokumentnummer=LVWGT_TI_20260720_LVwG_2026_19_0064_4_00\",\n      \"gesamte_rechtsvorschrift_url\": null\n    },\n    {\n      \"dokumentnummer\": \"DSBT_20251219_2025_1_043_098_00\",\n      \"applikation\": \"Dsk\",\n      \"titel\": \"2025-1.043.098\",\n      \"kurztitel\": \"2025-1.043.098\",\n      \"citation\": {\n        \"kurztitel\": \"2025-1.043.098\",\n        \"langtitel\": \"Geheimhaltung, Löschung, Information, Rechtmäßigkeit der Verarbeitung, Datenrichtigkeit, Datenmin...\",\n        \"kundmachungsorgan\": null,\n        \"paragraph\": null,\n        \"eli\": null,\n        \"inkrafttreten\": \"2025-12-19\",\n        \"ausserkrafttreten\": null\n      },\n      \"content_urls\": {\n        \"html\": \"https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.html\",\n        \"xml\": \"https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.xml\",\n        \"pdf\": \"https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.pdf\",\n        \"rtf\": \"https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.rtf\"\n      },\n      \"dokument_url\": \"https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Dsk&Dokumentnummer=DSBT_20251219_2025_1_043_098_00\",\n      \"gesamte_rechtsvorschrift_url\": null\n    }\n  ]\n}"
+  },
+  "bundesrecht-search-raw": {
+    "parsed": {
+      "total_hits": 2570,
+      "page": 1,
+      "page_size": 10,
+      "has_more": true,
+      "documents": [
+        {
+          "dokumentnummer": "NOR40198929",
+          "applikation": "BrKons",
+          "titel": "Allgemeines bürgerliches Gesetzbuch",
+          "kurztitel": "Allgemeines bürgerliches Gesetzbuch",
+          "citation": {
+            "kurztitel": "Allgemeines bürgerliches Gesetzbuch",
+            "langtitel": "Allgemeines bürgerliches Gesetzbuch für die gesammten deutschen Erbländer der Oesterreichischen Monarchie<br/>StF: JGS Nr. 946/1811",
+            "kundmachungsorgan": "JGS Nr. 946/1811",
+            "paragraph": "§ 0",
+            "eli": "https://ris.bka.gv.at/eli/jgs/1811/946/P0/NOR40198929",
+            "inkrafttreten": "1812-01-01",
+            "ausserkrafttreten": null
+          },
+          "content_urls": {
+            "html": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.html",
+            "xml": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.xml",
+            "pdf": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.pdf",
+            "rtf": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.rtf"
+          },
+          "dokument_url": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P0/NOR40198929",
+          "gesamte_rechtsvorschrift_url": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622"
+        },
+        {
+          "dokumentnummer": "NOR12017691",
+          "applikation": "BrKons",
+          "titel": "Allgemeines bürgerliches Gesetzbuch",
+          "kurztitel": "Allgemeines bürgerliches Gesetzbuch",
+          "citation": {
+            "kurztitel": "Allgemeines bürgerliches Gesetzbuch",
+            "langtitel": null,
+            "kundmachungsorgan": "JGS Nr. 946/1811",
+            "paragraph": "§ 1",
+            "eli": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P1/NOR12017691",
+            "inkrafttreten": "1812-01-01",
+            "ausserkrafttreten": null
+          },
+          "content_urls": {
+            "html": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.html",
+            "xml": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.xml",
+            "pdf": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.pdf",
+            "rtf": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.rtf"
+          },
+          "dokument_url": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P1/NOR12017691",
+          "gesamte_rechtsvorschrift_url": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622"
+        },
+        {
+          "dokumentnummer": "NOR12017692",
+          "applikation": "BrKons",
+          "titel": "Allgemeines bürgerliches Gesetzbuch",
+          "kurztitel": "Allgemeines bürgerliches Gesetzbuch",
+          "citation": {
+            "kurztitel": "Allgemeines bürgerliches Gesetzbuch",
+            "langtitel": null,
+            "kundmachungsorgan": "JGS Nr. 946/1811",
+            "paragraph": "§ 2",
+            "eli": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P2/NOR12017692",
+            "inkrafttreten": "1812-01-01",
+            "ausserkrafttreten": null
+          },
+          "content_urls": {
+            "html": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.html",
+            "xml": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.xml",
+            "pdf": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.pdf",
+            "rtf": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.rtf"
+          },
+          "dokument_url": "https://www.ris.bka.gv.at/eli/jgs/1811/946/P2/NOR12017692",
+          "gesamte_rechtsvorschrift_url": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622"
+        }
+      ]
+    },
+    "markdown": "**Gefunden: 2570 Treffer** (Seite 1 von 257)\n\n### 1. § 0 Allgemeines bürgerliches Gesetzbuch (JGS Nr. 946/1811)\n**Allgemeines bürgerliches Gesetzbuch**\n_Allgemeines bürgerliches Gesetzbuch für die gesammten deutschen Erbländer der Oesterreichischen Monarchie<br/>StF: JGS Nr. 946/1811_  \nIn Kraft seit: 01.01.1812  \nFundstelle: JGS Nr. 946/1811\n`Dokumentnummer: NOR40198929`\n\n### 2. § 1 Allgemeines bürgerliches Gesetzbuch (JGS Nr. 946/1811)\n**Allgemeines bürgerliches Gesetzbuch**\nIn Kraft seit: 01.01.1812  \nFundstelle: JGS Nr. 946/1811\n`Dokumentnummer: NOR12017691`\n\n### 3. § 2 Allgemeines bürgerliches Gesetzbuch (JGS Nr. 946/1811)\n**Allgemeines bürgerliches Gesetzbuch**\nIn Kraft seit: 01.01.1812  \nFundstelle: JGS Nr. 946/1811\n`Dokumentnummer: NOR12017692`\n\n---\n_Weitere Treffer verfügbar. Verwende `seite: 2` für die nächste Seite._",
+    "json": "{\n  \"total_hits\": 2570,\n  \"page\": 1,\n  \"page_size\": 10,\n  \"has_more\": true,\n  \"documents\": [\n    {\n      \"dokumentnummer\": \"NOR40198929\",\n      \"applikation\": \"BrKons\",\n      \"titel\": \"Allgemeines bürgerliches Gesetzbuch\",\n      \"kurztitel\": \"Allgemeines bürgerliches Gesetzbuch\",\n      \"citation\": {\n        \"kurztitel\": \"Allgemeines bürgerliches Gesetzbuch\",\n        \"langtitel\": \"Allgemeines bürgerliches Gesetzbuch für die gesammten deutschen Erbländer der Oesterreichischen Monarchie<br/>StF: JGS Nr. 946/1811\",\n        \"kundmachungsorgan\": \"JGS Nr. 946/1811\",\n        \"paragraph\": \"§ 0\",\n        \"eli\": \"https://ris.bka.gv.at/eli/jgs/1811/946/P0/NOR40198929\",\n        \"inkrafttreten\": \"1812-01-01\",\n        \"ausserkrafttreten\": null\n      },\n      \"content_urls\": {\n        \"html\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.html\",\n        \"xml\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.xml\",\n        \"pdf\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.pdf\",\n        \"rtf\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.rtf\"\n      },\n      \"dokument_url\": \"https://www.ris.bka.gv.at/eli/jgs/1811/946/P0/NOR40198929\",\n      \"gesamte_rechtsvorschrift_url\": \"https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622\"\n    },\n    {\n      \"dokumentnummer\": \"NOR12017691\",\n      \"applikation\": \"BrKons\",\n      \"titel\": \"Allgemeines bürgerliches Gesetzbuch\",\n      \"kurztitel\": \"Allgemeines bürgerliches Gesetzbuch\",\n      \"citation\": {\n        \"kurztitel\": \"Allgemeines bürgerliches Gesetzbuch\",\n        \"langtitel\": null,\n        \"kundmachungsorgan\": \"JGS Nr. 946/1811\",\n        \"paragraph\": \"§ 1\",\n        \"eli\": \"https://www.ris.bka.gv.at/eli/jgs/1811/946/P1/NOR12017691\",\n        \"inkrafttreten\": \"1812-01-01\",\n        \"ausserkrafttreten\": null\n      },\n      \"content_urls\": {\n        \"html\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.html\",\n        \"xml\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.xml\",\n        \"pdf\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.pdf\",\n        \"rtf\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.rtf\"\n      },\n      \"dokument_url\": \"https://www.ris.bka.gv.at/eli/jgs/1811/946/P1/NOR12017691\",\n      \"gesamte_rechtsvorschrift_url\": \"https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622\"\n    },\n    {\n      \"dokumentnummer\": \"NOR12017692\",\n      \"applikation\": \"BrKons\",\n      \"titel\": \"Allgemeines bürgerliches Gesetzbuch\",\n      \"kurztitel\": \"Allgemeines bürgerliches Gesetzbuch\",\n      \"citation\": {\n        \"kurztitel\": \"Allgemeines bürgerliches Gesetzbuch\",\n        \"langtitel\": null,\n        \"kundmachungsorgan\": \"JGS Nr. 946/1811\",\n        \"paragraph\": \"§ 2\",\n        \"eli\": \"https://www.ris.bka.gv.at/eli/jgs/1811/946/P2/NOR12017692\",\n        \"inkrafttreten\": \"1812-01-01\",\n        \"ausserkrafttreten\": null\n      },\n      \"content_urls\": {\n        \"html\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.html\",\n        \"xml\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.xml\",\n        \"pdf\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.pdf\",\n        \"rtf\": \"https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017692/NOR12017692.rtf\"\n      },\n      \"dokument_url\": \"https://www.ris.bka.gv.at/eli/jgs/1811/946/P2/NOR12017692\",\n      \"gesamte_rechtsvorschrift_url\": \"https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622\"\n    }\n  ]\n}"
+  }
+}

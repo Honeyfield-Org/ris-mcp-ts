@@ -5,8 +5,11 @@
  * raw RIS API responses into structured Document and SearchResult models.
  */
 
+import { readFileSync } from 'node:fs';
+
 import { describe, it, expect } from 'vitest';
 
+import { formatSearchResults } from '../formatting.js';
 import {
   extractText,
   extractContentUrls,
@@ -17,7 +20,16 @@ import type {
   RawContentReference,
   RawDocumentReference,
   NormalizedSearchResults,
+  SearchResult,
 } from '../types.js';
+
+/**
+ * Fixtures captured verbatim from the live RIS API v2.6 on 2026-08-01, so the
+ * assertions below describe real payload shapes instead of invented ones.
+ */
+function loadFixture<T>(name: string): T {
+  return JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8')) as T;
+}
 
 // =============================================================================
 // Tests for extractText()
@@ -1274,4 +1286,172 @@ describe('parseSearchResults', () => {
       expect(result.documents[1].citation.inkrafttreten).toBe('2024-03-15');
     });
   });
+});
+
+// =============================================================================
+// Tests for citation_display
+// =============================================================================
+
+describe('citation_display', () => {
+  it('should repeat the citation the markdown output renders as a heading', () => {
+    const raw = loadFixture<NormalizedSearchResults>('judikatur-search-raw');
+
+    const result = parseSearchResults(raw);
+    const headings = formatSearchResults(result, 'markdown')
+      .split('\n')
+      .filter((line) => line.startsWith('### '))
+      .map((line) => line.replace(/^### \d+\. /, ''));
+
+    expect(headings).toHaveLength(result.documents.length);
+    expect(result.documents.map((doc) => doc.citation_display)).toEqual(headings);
+  });
+
+  it('should repeat the markdown heading for law documents too', () => {
+    const raw = loadFixture<NormalizedSearchResults>('bundesrecht-search-raw');
+
+    const result = parseSearchResults(raw);
+    const headings = formatSearchResults(result, 'markdown')
+      .split('\n')
+      .filter((line) => line.startsWith('### '))
+      .map((line) => line.replace(/^### \d+\. /, ''));
+
+    expect(result.documents.map((doc) => doc.citation_display)).toEqual(headings);
+    expect(result.documents[1].citation_display).toBe(
+      '§ 1 Allgemeines bürgerliches Gesetzbuch (JGS Nr. 946/1811)',
+    );
+  });
+
+  it('should be a non-empty string on every parsed document', () => {
+    for (const name of ['judikatur-search-raw', 'bundesrecht-search-raw']) {
+      const result = parseSearchResults(loadFixture<NormalizedSearchResults>(name));
+      for (const doc of result.documents) {
+        expect(typeof doc.citation_display, `${name} / ${doc.dokumentnummer}`).toBe('string');
+        expect(doc.citation_display.length, `${name} / ${doc.dokumentnummer}`).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+// =============================================================================
+// Tests for the additive Judikatur fields
+// =============================================================================
+
+describe('Judikatur document fields', () => {
+  /** Parsed live fixture holding one document per metadata shape variant. */
+  function judikaturDocuments(): SearchResult['documents'] {
+    return parseSearchResults(loadFixture<NormalizedSearchResults>('judikatur-search-raw'))
+      .documents;
+  }
+
+  it('should read gericht from Technisch.Organ for a court with a nested Gericht', () => {
+    const [justiz, vwgh, lvwg] = judikaturDocuments();
+
+    expect(justiz.gericht).toBe('OGH');
+    expect(vwgh.gericht).toBe('Verwaltungsgerichtshof (VwGH)');
+    expect(lvwg.gericht).toBe('Landesverwaltungsgericht Tirol');
+  });
+
+  it('should still report gericht for authorities whose block has no Gericht', () => {
+    const dsk = judikaturDocuments()[3];
+
+    expect(dsk.dokumentnummer).toBe('DSBT_20251219_2025_1_043_098_00');
+    expect(dsk.gericht).toBe('Datenschutzbehörde');
+  });
+
+  it('should expose geschaeftszahl and entscheidungsdatum', () => {
+    const [justiz, vwgh] = judikaturDocuments();
+
+    expect(justiz.geschaeftszahl).toContain('2Ob535/90');
+    expect(justiz.entscheidungsdatum).toBe('2026-06-23');
+    expect(vwgh.geschaeftszahl).toBe('Ra 2025/09/0038');
+    expect(vwgh.entscheidungsdatum).toBe('2026-06-24');
+  });
+
+  it('should read rechtssatznummer from both the plural and singular RIS spelling', () => {
+    const [justiz, vwgh] = judikaturDocuments();
+
+    // Justiz nests Rechtssatznummern.item, Vwgh uses a bare Rechtssatznummer.
+    expect(justiz.rechtssatznummer).toBe('RS0018547');
+    expect(vwgh.rechtssatznummer).toBe('4');
+  });
+
+  it('should report rechtssatznummer as null where RIS supplies none', () => {
+    // The four court fields are present on every Judikatur document; a missing
+    // value is null. Absence therefore means "not a court decision" and never
+    // "court decision without a Rechtssatz".
+    const [, , lvwg, dsk] = judikaturDocuments();
+
+    expect(lvwg).toHaveProperty('rechtssatznummer', null);
+    expect(dsk).toHaveProperty('rechtssatznummer', null);
+    expect(lvwg.gericht).toBe('Landesverwaltungsgericht Tirol');
+  });
+
+  it('should not attach court fields to law documents', () => {
+    // Bundesrecht documents also carry Technisch.Organ ("BKA (Bundeskanzleramt)"),
+    // which must never be mistaken for a deciding court.
+    for (const doc of parseSearchResults(
+      loadFixture<NormalizedSearchResults>('bundesrecht-search-raw'),
+    ).documents) {
+      expect(doc.gericht).toBeUndefined();
+      expect(doc.geschaeftszahl).toBeUndefined();
+      expect(doc.entscheidungsdatum).toBeUndefined();
+      expect(doc.rechtssatznummer).toBeUndefined();
+    }
+  });
+});
+
+// =============================================================================
+// Backwards compatibility guard
+// =============================================================================
+
+/**
+ * The new fields are additive: every key that existed before must keep its exact
+ * value, and the rendered text output must not shift by a single byte. The
+ * baseline was captured from the fixtures at commit 1a85453, before the change.
+ */
+describe('additive output compatibility', () => {
+  interface Baseline {
+    parsed: SearchResult;
+    markdown: string;
+    json: string;
+  }
+
+  const baseline = loadFixture<Record<string, Baseline>>('search-output-baseline');
+
+  for (const name of ['judikatur-search-raw', 'bundesrecht-search-raw']) {
+    describe(name, () => {
+      const expected = baseline[name];
+      const actual = parseSearchResults(loadFixture<NormalizedSearchResults>(name));
+
+      it('should keep every pre-existing top-level key byte-identical', () => {
+        for (const key of Object.keys(expected.parsed) as (keyof SearchResult)[]) {
+          if (key === 'documents') {
+            continue;
+          }
+          expect(actual[key], key).toEqual(expected.parsed[key]);
+        }
+      });
+
+      it('should keep every pre-existing document key byte-identical', () => {
+        expect(actual.documents).toHaveLength(expected.parsed.documents.length);
+
+        expected.parsed.documents.forEach((expectedDoc, index) => {
+          const actualDoc = actual.documents[index] as unknown as Record<string, unknown>;
+          for (const key of Object.keys(expectedDoc)) {
+            expect(actualDoc[key], `${expectedDoc.dokumentnummer}.${key}`).toEqual(
+              (expectedDoc as unknown as Record<string, unknown>)[key],
+            );
+          }
+        });
+      });
+
+      it('should render byte-identical markdown', () => {
+        expect(formatSearchResults(actual, 'markdown')).toBe(expected.markdown);
+      });
+
+      it('should render byte-identical json', () => {
+        expect(formatSearchResults(actual, 'json')).toBe(expected.json);
+      });
+    });
+  }
 });

@@ -1,0 +1,326 @@
+{
+  "hits": 259,
+  "page_number": 1,
+  "page_size": 10,
+  "documents": [
+    {
+      "Data": {
+        "Metadaten": {
+          "Technisch": {
+            "ID": "JJR_19901010_OGH0002_0020OB00535_9000000_001",
+            "Applikation": "Justiz",
+            "Organ": "OGH",
+            "ImportTimestamp": {
+              "@xsi:nil": "true",
+              "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
+            }
+          },
+          "Allgemein": {
+            "Veroeffentlicht": "1997-06-15",
+            "Geaendert": "2026-07-09",
+            "DokumentUrl": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Justiz&Dokumentnummer=JJR_19901010_OGH0002_0020OB00535_9000000_001"
+          },
+          "Judikatur": {
+            "Dokumenttyp": "Rechtssatz",
+            "Geschaeftszahl": {
+              "item": "2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h; 4Ob227/06w; 8Ob46/07h; 1Ob262/07x; 9Ob50/10h; 1Ob42/11z; 4Ob191/10g; 9Ob61/11b; 3Ob143/12v; 1Ob14/13k; 2Ob196/13g; 3Ob191/13d; 4Ob44/14w; 8Ob57/14m; 7Ob4/16p; 9Ob64/16a; 1Ob239/16b; 7Ob45/17v; 9Ob45/17h; 2Ob206/16g; 6Ob90/18f; 4Ob168/18m; 5Ob7/19v; 6Ob106/19k; 5Ob119/19i; 3Ob34/20a; 6Ob240/19s; 7Ob97/20w; 10Ob49/20h; 3Ob143/20f; 8Ob113/21g; 5Ob193/21z; 10Ob2/23a; 5Ob131/22h; 2Ob42/23z; 3Ob140/22t; 3Ob30/23t; 6Ob149/22p; 6Ob150/22k; 7Ob70/23d; 7Ob43/23h; 3Ob142/22m; 2Ob142/23f; 8Ob126/23x; 6Ob160/22f; 2Ob243/23h; 4ob215/23f; 4Ob96/24g; 5Ob53/24s; 5Ob57/24d; 5Ob132/24h; 5Ob200/24h; 6Ob9/25d; 3Ob200/25w; 2Ob210/25h; 3Ob73/26w"
+            },
+            "Normen": {
+              "item": "ABGB §922"
+            },
+            "Entscheidungsdatum": "2026-06-23",
+            "EuropeanCaseLawIdentifier": "ECLI:AT:OGH0002:1990:RS0018547",
+            "Justiz": {
+              "Rechtsgebiete": {
+                "item": "Zivilrecht"
+              },
+              "Gericht": "OGH",
+              "Rechtssatznummern": {
+                "item": "RS0018547"
+              },
+              "Entscheidungstexte": {
+                "item": [
+                  {
+                    "Geschaeftszahl": "2 Ob 535/90",
+                    "Dokumenttyp": "Text",
+                    "Gericht": "OGH",
+                    "Entscheidungsdatum": "1990-10-10",
+                    "Anmerkung": "Veröff: SZ 63/171 = JBl 1991,383",
+                    "DokumentUrl": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Justiz&Dokumentnummer=JJT_19901010_OGH0002_0020OB00535_9000000_000"
+                  },
+                  {
+                    "Geschaeftszahl": "1 Ob 564/95",
+                    "Dokumenttyp": "Text",
+                    "Gericht": "OGH",
+                    "Entscheidungsdatum": "1995-05-29",
+                    "Anmerkung": "Veröff: SZ 68/105",
+                    "DokumentUrl": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Justiz&Dokumentnummer=JJT_19950529_OGH0002_0010OB00564_9500000_000"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "Dokumentliste": {
+          "ContentReference": {
+            "ContentType": "MainDocument",
+            "Name": "Hauptdokument",
+            "Urls": {
+              "ContentUrl": [
+                {
+                  "DataType": "Xml",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.xml"
+                },
+                {
+                  "DataType": "Html",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.html"
+                },
+                {
+                  "DataType": "Rtf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.rtf"
+                },
+                {
+                  "DataType": "Pdf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.pdf"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "Data": {
+        "Metadaten": {
+          "Technisch": {
+            "ID": "JWR_2025090038_20260624L04",
+            "Applikation": "Vwgh",
+            "Organ": "Verwaltungsgerichtshof (VwGH)",
+            "ImportTimestamp": {
+              "@xsi:nil": "true",
+              "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
+            }
+          },
+          "Allgemein": {
+            "Veroeffentlicht": "2026-07-21",
+            "Geaendert": "2026-07-22",
+            "DokumentUrl": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Vwgh&Dokumentnummer=JWR_2025090038_20260624L04"
+          },
+          "Judikatur": {
+            "Dokumenttyp": "Rechtssatz",
+            "Geschaeftszahl": {
+              "item": "Ra 2025/09/0038"
+            },
+            "Normen": {
+              "item": [
+                "BVwGG 2014 §15 Abs3",
+                "BVwGG 2014 §15 Abs4",
+                "BVwGG 2014 §17 Abs3",
+                "BVwGG 2014 §23",
+                "BVwGG 2014 §3",
+                "MRK Art6",
+                "RStDG §57 Abs2"
+              ]
+            },
+            "Entscheidungsdatum": "2026-06-24",
+            "EuropeanCaseLawIdentifier": "ECLI:AT:VWGH:2026:RA2025090038.L04",
+            "Vwgh": {
+              "Rechtssatznummer": "4",
+              "Entscheidungsart": "Beschluss",
+              "DokumentnummerTyp": "L",
+              "Stammrechtssatznummer": "JWR_2025090038_20260624L04",
+              "Gericht": "Verwaltungsgerichtshof (VwGH)",
+              "Indizes": {
+                "item": [
+                  "10/07 Verfassungsgerichtshof",
+                  "10/07 Verwaltungsgerichtshof",
+                  "19/05 Menschenrechte",
+                  "64/05 Sonstiges besonderes Dienstrecht und Besoldungsrecht"
+                ]
+              },
+              "RechtssatzketteUrl": "https://www.ris.bka.gv.at/VwghRechtssatzkette.wxe?Abfrage=Vwgh&Dokumentnummer=JWR_2025090038_20260624L04"
+            },
+            "GesamteEntscheidungUrl": "https://www.ris.bka.gv.at/JudikaturEntscheidung.wxe?Abfrage=Vwgh&Dokumentnummer=JWR_2025090038_20260624L04",
+            "EntscheidungstextUrl": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Vwgh&Dokumentnummer=JWT_2025090038_20260624L00"
+          }
+        },
+        "Dokumentliste": {
+          "ContentReference": {
+            "ContentType": "MainDocument",
+            "Name": "Hauptdokument",
+            "Urls": {
+              "ContentUrl": [
+                {
+                  "DataType": "Xml",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.xml"
+                },
+                {
+                  "DataType": "Html",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.html"
+                },
+                {
+                  "DataType": "Rtf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.rtf"
+                },
+                {
+                  "DataType": "Pdf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.pdf"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "Data": {
+        "Metadaten": {
+          "Technisch": {
+            "ID": "LVWGT_TI_20260720_LVwG_2026_19_0064_4_00",
+            "Applikation": "Lvwg",
+            "Organ": "Landesverwaltungsgericht Tirol",
+            "ImportTimestamp": {
+              "@xsi:nil": "true",
+              "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
+            }
+          },
+          "Allgemein": {
+            "Geaendert": "2026-07-27",
+            "DokumentUrl": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Lvwg&Dokumentnummer=LVWGT_TI_20260720_LVwG_2026_19_0064_4_00"
+          },
+          "Judikatur": {
+            "Dokumenttyp": "Text",
+            "Geschaeftszahl": {
+              "item": "LVwG-2026/19/0064-4"
+            },
+            "Normen": {
+              "item": ["MSG Tir 2010 §2 Abs3", "MSG Tir 2010 §2 Abs4", "MSG Tir 2010 §5 Abs2"]
+            },
+            "Entscheidungsdatum": "2026-07-20",
+            "Schlagworte": "Bedarfsgemeinschaft<br/>Alleinerzieher<br/>Doppelehe<br/>Mehrfachehe<br/>",
+            "EuropeanCaseLawIdentifier": "ECLI:AT:LVWGTI:2026:LVwG.2026.19.0064.4",
+            "Lvwg": {
+              "Entscheidungsart": "Erkenntnis",
+              "Gericht": "Landesverwaltungsgericht Tirol",
+              "Indizes": {
+                "item": "L92007 Sozialhilfe Grundsicherung Mindestsicherung Tirol"
+              },
+              "Bundesland": "Tirol"
+            },
+            "GesamteEntscheidungUrl": "https://www.ris.bka.gv.at/JudikaturEntscheidung.wxe?Abfrage=Lvwg&Dokumentnummer=LVWGT_TI_20260720_LVwG_2026_19_0064_4_00",
+            "RechtssaetzeUrl": "https://www.ris.bka.gv.at/JudikaturRechtssaetze.wxe?Abfrage=Lvwg&Dokumentnummer=LVWGT_TI_20260720_LVwG_2026_19_0064_4_00"
+          }
+        },
+        "Dokumentliste": {
+          "ContentReference": {
+            "ContentType": "MainDocument",
+            "Name": "Hauptdokument",
+            "Urls": {
+              "ContentUrl": [
+                {
+                  "DataType": "Xml",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.xml"
+                },
+                {
+                  "DataType": "Html",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.html"
+                },
+                {
+                  "DataType": "Rtf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.rtf"
+                },
+                {
+                  "DataType": "Pdf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Lvwg/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00/LVWGT_TI_20260720_LVwG_2026_19_0064_4_00.pdf"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "Data": {
+        "Metadaten": {
+          "Technisch": {
+            "ID": "DSBT_20251219_2025_1_043_098_00",
+            "Applikation": "Dsk",
+            "Organ": "Datenschutzbehörde",
+            "ImportTimestamp": {
+              "@xsi:nil": "true",
+              "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"
+            }
+          },
+          "Allgemein": {
+            "Geaendert": "2026-07-01",
+            "DokumentUrl": "https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Dsk&Dokumentnummer=DSBT_20251219_2025_1_043_098_00"
+          },
+          "Judikatur": {
+            "Dokumenttyp": "Text",
+            "Geschaeftszahl": {
+              "item": "2025-1.043.098"
+            },
+            "Normen": {
+              "item": [
+                "GewO 1994 §94 Z36",
+                "GewO 1994 §118",
+                "BAO §132 Abs1",
+                "DSG §1 Abs1",
+                "DSG §1 Abs2",
+                "DSGVO Art4 Z1",
+                "DSGVO Art4 Z7",
+                "DSGVO Art5 Abs1 litc",
+                "DSGVO Art5 Abs1 litd",
+                "DSGVO Art6 Abs1 litc",
+                "DSGVO Art6 Abs1 litf",
+                "DSGVO Art14 Abs1",
+                "DSGVO Art14 Abs3 litb",
+                "DSGVO Art17 Abs3 litb"
+              ]
+            },
+            "Entscheidungsdatum": "2025-12-19",
+            "Schlagworte": "Geheimhaltung, Löschung, Information, Rechtmäßigkeit der Verarbeitung, Datenrichtigkeit, Datenminimierung, Unternehmen, Inkassounternehmen, Inkassoinstitut, Inkassobüro, legale unternehmerische Dienstleistung, keine manifestierte Datenschutzverletzung, berechtigte Interessen, Interessenabwägung, Erforderlichkeit, Zahlungsverzug, Mahnung, geeignetes Mittel, Fehlbuchung, zeitnahe Berichtigung, gesetzliche Verpflichtung, Verarbeitungsverpflichtung",
+            "EuropeanCaseLawIdentifier": "ECLI:AT:DSB:2025:2025.1.043.098",
+            "Dsk": {
+              "Entscheidungsart": "BescheidBeschwerde",
+              "Kurzinformation": "Geheimhaltung, Löschung, Information, Rechtmäßigkeit der Verarbeitung, Datenrichtigkeit, Datenmin...",
+              "EntscheidendeBehoerde": "Datenschutzbehörde",
+              "Anfechtung": "Dieser Bescheid ist rechtskräftig.",
+              "Staat": "AT",
+              "Sprache": "DE",
+              "Zugang": "PUBLIC"
+            },
+            "GesamteEntscheidungUrl": "https://www.ris.bka.gv.at/JudikaturEntscheidung.wxe?Abfrage=Dsk&Dokumentnummer=DSBT_20251219_2025_1_043_098_00",
+            "RechtssaetzeUrl": "https://www.ris.bka.gv.at/JudikaturRechtssaetze.wxe?Abfrage=Dsk&Dokumentnummer=DSBT_20251219_2025_1_043_098_00"
+          }
+        },
+        "Dokumentliste": {
+          "ContentReference": {
+            "ContentType": "MainDocument",
+            "Name": "Hauptdokument",
+            "Urls": {
+              "ContentUrl": [
+                {
+                  "DataType": "Xml",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.xml"
+                },
+                {
+                  "DataType": "Html",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.html"
+                },
+                {
+                  "DataType": "Rtf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.rtf"
+                },
+                {
+                  "DataType": "Pdf",
+                  "Url": "https://www.ris.bka.gv.at/Dokumente/Dsk/DSBT_20251219_2025_1_043_098_00/DSBT_20251219_2025_1_043_098_00.pdf"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

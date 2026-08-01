@@ -121,7 +121,7 @@ describe('tool output schema declarations', () => {
 
     const properties = bundesrecht?.outputSchema?.properties as Record<string, unknown>;
     expect(Object.keys(properties)).toEqual(
-      expect.arrayContaining(['total_hits', 'page', 'page_size', 'has_more', 'documents']),
+      expect.arrayContaining(['total_hits', 'page', 'page_size', 'has_more', 'documents', 'query']),
     );
   });
 
@@ -195,6 +195,90 @@ describe('search tool structured content', () => {
 
     expect(result.isError).not.toBe(true);
     expect(result.structuredContent).toMatchObject({ total_hits: 0, has_more: false });
+  });
+
+  it('should echo the validated search arguments under query', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => okResponse(searchBody([documentReference('NOR40052761', DOCUMENT_HTML_URL)]))),
+    );
+
+    const result = await client.callTool({
+      name: 'ris_bundesrecht',
+      arguments: { suchworte: 'Eigentum', seite: 2 },
+    });
+
+    expect(result.structuredContent).toMatchObject({
+      query: {
+        tool: 'ris_bundesrecht',
+        suchworte: 'Eigentum',
+        seite: 2,
+        // Zod defaults are part of the validated input, so the echo is
+        // sufficient on its own to re-issue the call for another page.
+        limit: 20,
+        applikation: 'BrKons',
+      },
+    });
+  });
+
+  it('should carry no undefined placeholders in the query echo', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => okResponse(searchBody([documentReference('NOR40052761', DOCUMENT_HTML_URL)]))),
+    );
+
+    const result = await client.callTool({
+      name: 'ris_bundesrecht',
+      arguments: { suchworte: 'Eigentum' },
+    });
+
+    const { query } = result.structuredContent as { query: Record<string, unknown> };
+    expect(Object.values(query).every((value) => value !== undefined)).toBe(true);
+    expect(query).not.toHaveProperty('titel');
+    expect(query).not.toHaveProperty('paragraph');
+  });
+
+  it('should echo the tool name for a different search tool', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => okResponse(searchBody([]))),
+    );
+
+    const result = await client.callTool({
+      name: 'ris_judikatur',
+      arguments: { suchworte: 'Gewaehrleistung' },
+    });
+
+    expect(result.structuredContent).toMatchObject({
+      query: { tool: 'ris_judikatur', suchworte: 'Gewaehrleistung' },
+    });
+  });
+
+  it('should give every document a non-empty citation_display', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        okResponse(
+          searchBody([
+            documentReference('NOR40052761', DOCUMENT_HTML_URL),
+            documentReference('NOR40052762', DOCUMENT_HTML_URL),
+          ]),
+        ),
+      ),
+    );
+
+    const result = await client.callTool({
+      name: 'ris_bundesrecht',
+      arguments: { suchworte: 'Eigentum' },
+    });
+
+    const { documents } = result.structuredContent as {
+      documents: { citation_display: string }[];
+    };
+    expect(documents).toHaveLength(2);
+    for (const doc of documents) {
+      expect(doc.citation_display).toBe('ABGB');
+    }
   });
 
   it('should omit structuredContent on an error result without failing validation', async () => {
