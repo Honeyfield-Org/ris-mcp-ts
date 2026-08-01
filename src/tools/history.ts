@@ -2,6 +2,7 @@
  * Tool 11: ris_history — Search document change history.
  */
 
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
@@ -21,9 +22,11 @@ import {
   SearchResultOutputShape,
   SeiteSchema,
 } from '../types.js';
+import { SEARCH_WIDGET_META } from '../widgets.js';
 
 export function registerHistoryTool(server: McpServer): void {
-  server.registerTool(
+  registerAppTool(
+    server,
     'ris_history',
     {
       title: 'Änderungshistorie durchsuchen',
@@ -64,7 +67,8 @@ Example queries:
           .describe('"markdown" (default) or "json"'),
       },
       outputSchema: SearchResultOutputShape,
-      annotations: { readOnlyHint: true, openWorldHint: true },
+      annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
+      _meta: SEARCH_WIDGET_META,
     },
     async (args, extra) => {
       const {

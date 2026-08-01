@@ -2,6 +2,7 @@
  * Tool: ris_landesgesetzblatt — Search Austrian State Law Gazettes (Landesgesetzblatt).
  */
 
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
@@ -21,9 +22,11 @@ import {
   SearchResultOutputShape,
   SeiteSchema,
 } from '../types.js';
+import { SEARCH_WIDGET_META } from '../widgets.js';
 
 export function registerLandesgesetzblattTool(server: McpServer): void {
-  server.registerTool(
+  registerAppTool(
+    server,
     'ris_landesgesetzblatt',
     {
       title: 'Landesgesetzblatt durchsuchen',
@@ -55,7 +58,8 @@ Example queries:
           .describe('"markdown" (default) or "json"'),
       },
       outputSchema: SearchResultOutputShape,
-      annotations: { readOnlyHint: true, openWorldHint: true },
+      annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
+      _meta: SEARCH_WIDGET_META,
     },
     async (args, extra) => {
       const {
