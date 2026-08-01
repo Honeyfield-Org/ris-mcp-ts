@@ -227,12 +227,21 @@ function emptyResults(): NormalizedSearchResults {
   return { hits: 0, page_number: 1, page_size: 20, documents: [] };
 }
 
+/** Stand-in for the echo a real handler builds via buildQueryEcho(). */
+const QUERY_ECHO = { tool: 'ris_bundesrecht', suchworte: 'test' };
+
 describe('executeSearchTool cancellation', () => {
   it('should pass the caller signal through to the search function', async () => {
     const searchFn = vi.fn().mockResolvedValue(emptyResults());
     const controller = new AbortController();
 
-    await executeSearchTool(searchFn, { Suchworte: 'test' }, 'markdown', controller.signal);
+    await executeSearchTool(
+      searchFn,
+      { Suchworte: 'test' },
+      'markdown',
+      controller.signal,
+      QUERY_ECHO,
+    );
 
     expect(searchFn).toHaveBeenCalledWith({ Suchworte: 'test' }, undefined, controller.signal);
   });
@@ -242,7 +251,9 @@ describe('executeSearchTool cancellation', () => {
     controller.abort();
     const searchFn = vi.fn().mockRejectedValue(controller.signal.reason);
 
-    const error = await rejection(executeSearchTool(searchFn, {}, 'markdown', controller.signal));
+    const error = await rejection(
+      executeSearchTool(searchFn, {}, 'markdown', controller.signal, QUERY_ECHO),
+    );
 
     expect((error as Error).name).toBe('AbortError');
   });
@@ -251,7 +262,13 @@ describe('executeSearchTool cancellation', () => {
     const controller = new AbortController();
     const searchFn = vi.fn().mockRejectedValue(new RISTimeoutError());
 
-    const response = await executeSearchTool(searchFn, {}, 'markdown', controller.signal);
+    const response = await executeSearchTool(
+      searchFn,
+      {},
+      'markdown',
+      controller.signal,
+      QUERY_ECHO,
+    );
 
     expect(response.isError).toBe(true);
     expect(response.content[0].text).toContain('**Fehler:**');

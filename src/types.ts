@@ -256,10 +256,15 @@ export const SearchResultOutputShape = {
   has_more: z.boolean().describe('Whether further result pages are available'),
   documents: z.array(DocumentSchema).describe('The documents on this page'),
   query: z
-    .record(z.string(), z.unknown())
+    .object({
+      tool: z
+        .string()
+        .describe('Name of the tool that produced this result — call it again to paginate'),
+    })
+    .catchall(z.unknown())
     .optional()
     .describe(
-      'Echo of the validated search parameters incl. tool name — reuse for pagination by re-issuing the call with an incremented "seite"',
+      'Echo of the validated search parameters alongside the tool name — re-issue the call with an incremented "seite" for the next page',
     ),
 };
 

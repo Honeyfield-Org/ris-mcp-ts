@@ -125,6 +125,18 @@ describe('tool output schema declarations', () => {
     );
   });
 
+  it('should declare the guaranteed tool key inside the query schema', async () => {
+    const { tools } = await client.listTools();
+    const bundesrecht = tools.find((tool) => tool.name === 'ris_bundesrecht');
+
+    const properties = bundesrecht?.outputSchema?.properties as Record<string, unknown>;
+    const query = properties.query as { properties?: Record<string, unknown>; required?: string[] };
+
+    // #49 reads query.tool — it belongs in the contract, not only in prose.
+    expect(Object.keys(query.properties ?? {})).toContain('tool');
+    expect(query.required).toContain('tool');
+  });
+
   it('should declare no outputSchema on ris_dokument', async () => {
     const { tools } = await client.listTools();
     const dokument = tools.find((tool) => tool.name === 'ris_dokument');

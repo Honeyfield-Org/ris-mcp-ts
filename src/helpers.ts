@@ -192,14 +192,16 @@ export type SearchFunction = (
  * since nobody is waiting to read it.
  *
  * `queryEcho` (see {@link buildQueryEcho}) is attached to the structured payload
- * so a client can page through the results without reconstructing the call.
+ * so a client can page through the results without reconstructing the call. It is
+ * required, not optional: a search tool added later could otherwise omit it and
+ * silently strand its clients without pagination for that one tool.
  */
 export async function executeSearchTool(
   searchFn: SearchFunction,
   params: Record<string, unknown>,
   responseFormat: 'markdown' | 'json',
-  signal?: AbortSignal,
-  queryEcho?: Record<string, unknown>,
+  signal: AbortSignal | undefined,
+  queryEcho: Record<string, unknown>,
 ): Promise<McpToolResponse<[TextContent]>> {
   try {
     const apiResponse = await searchFn(params, undefined, signal);
@@ -208,7 +210,7 @@ export async function executeSearchTool(
     const result = truncateResponse(formatted);
     return {
       ...createMcpResponse(result),
-      structuredContent: queryEcho ? { ...searchResult, query: queryEcho } : searchResult,
+      structuredContent: { ...searchResult, query: queryEcho },
     };
   } catch (e) {
     if (signal?.aborted) {
