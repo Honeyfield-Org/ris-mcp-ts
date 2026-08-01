@@ -190,6 +190,10 @@ export type Citation = z.infer<typeof CitationSchema>;
 
 /**
  * A single legal document from the RIS database.
+ *
+ * The four court fields are present on every Judikatur document and absent on
+ * laws and gazettes, so their presence identifies a court decision; `null` means
+ * RIS supplied no value for that particular decision.
  */
 export const DocumentSchema = z.object({
   dokumentnummer: z.string(),
@@ -197,9 +201,30 @@ export const DocumentSchema = z.object({
   titel: z.string(),
   kurztitel: z.string().nullable().optional(),
   citation: CitationSchema,
+  citation_display: z.string().describe('Preformatted citation line as shown in the text output'),
   content_urls: ContentUrlSchema,
   dokument_url: z.string().nullable().optional(),
   gesamte_rechtsvorschrift_url: z.string().nullable().optional(),
+  gericht: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Deciding court or authority (Judikatur documents only)'),
+  geschaeftszahl: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Case number(s), semicolon-separated when several (Judikatur documents only)'),
+  entscheidungsdatum: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Decision date as YYYY-MM-DD (Judikatur documents only)'),
+  rechtssatznummer: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Rechtssatz number, e.g. "RS0018547" (Judikatur Rechtssatz documents only)'),
 });
 export type Document = z.infer<typeof DocumentSchema>;
 
@@ -230,6 +255,12 @@ export const SearchResultOutputShape = {
   page_size: z.number().describe('Number of documents per page'),
   has_more: z.boolean().describe('Whether further result pages are available'),
   documents: z.array(DocumentSchema).describe('The documents on this page'),
+  query: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe(
+      'Echo of the validated search parameters incl. tool name — reuse for pagination by re-issuing the call with an incremented "seite"',
+    ),
 };
 
 // =============================================================================
@@ -281,6 +312,14 @@ export interface RawHitsInfo {
 export interface RawJudikaturCourtBlock {
   Leitsatz?: string;
   Kurzinformation?: string;
+  /**
+   * Rechtssatz identifier. RIS spells it two ways: Justiz and Pvak nest a list
+   * under `Rechtssatznummern.item`, Vwgh exposes a bare `Rechtssatznummer`.
+   * Courts that publish no Rechtssätze (Vfgh, Bvwg, Lvwg, Dsk, Gbk, Dok) have
+   * neither. Verified against the live API v2.6 on 2026-08-01.
+   */
+  Rechtssatznummern?: { item?: string | string[] };
+  Rechtssatznummer?: string;
 }
 
 /**
@@ -320,6 +359,13 @@ export interface RawDocumentReference {
       Technisch?: {
         ID?: string;
         Applikation?: string;
+        /**
+         * Issuing body. For Judikatur this is the deciding court or authority
+         * and matches the nested `Judikatur.<Applikation>.Gericht` wherever
+         * that exists; for Bundesrecht it names the publisher ("BKA
+         * (Bundeskanzleramt)"), so it is only a court in the Judikatur branch.
+         */
+        Organ?: string;
       };
       Allgemein?: {
         DokumentUrl?: string;

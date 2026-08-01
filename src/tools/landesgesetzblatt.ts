@@ -10,6 +10,7 @@ import { BUNDESLAND_MAPPING } from '../constants.js';
 import {
   addOptionalParams,
   buildBaseParams,
+  buildQueryEcho,
   createValidationErrorResponse,
   executeSearchTool,
   hasAnyParam,
@@ -94,7 +95,13 @@ Example queries:
         }
       }
 
-      return executeSearchTool(searchLandesrecht, params, response_format, extra.signal);
+      return executeSearchTool(
+        searchLandesrecht,
+        params,
+        response_format,
+        extra.signal,
+        buildQueryEcho('ris_landesgesetzblatt', args),
+      );
     },
   );
 }

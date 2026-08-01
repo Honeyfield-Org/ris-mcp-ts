@@ -9,6 +9,7 @@ import { searchHistory } from '../client.js';
 import { VALID_HISTORY_APPLICATIONS } from '../constants.js';
 import {
   addOptionalParams,
+  buildQueryEcho,
   createValidationErrorResponse,
   executeSearchTool,
   hasAnyParam,
@@ -96,7 +97,13 @@ Example queries:
       ]);
       if (include_deleted) params['IncludeDeletedDocuments'] = 'true';
 
-      return executeSearchTool(searchHistory, params, response_format, extra.signal);
+      return executeSearchTool(
+        searchHistory,
+        params,
+        response_format,
+        extra.signal,
+        buildQueryEcho('ris_history', args),
+      );
     },
   );
 }

@@ -239,6 +239,12 @@ function formatLawCitation(
 
 /**
  * Document to dictionary representation.
+ *
+ * Deliberately a whitelist, not a spread: this feeds the rendered text output,
+ * whose bytes are part of the tool contract. Fields added for structured
+ * consumers (citation_display, the Judikatur court fields) reach clients through
+ * `structuredContent` and are left out here — citation_display in particular is
+ * already the markdown heading below.
  */
 function documentToDict(doc: Document): Record<string, unknown> {
   return {

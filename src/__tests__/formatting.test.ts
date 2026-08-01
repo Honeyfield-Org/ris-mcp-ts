@@ -41,6 +41,7 @@ function createMockDocument(overrides: Partial<Document> = {}): Document {
       inkrafttreten: '2024-01-01',
       ausserkrafttreten: null,
     },
+    citation_display: '§ 1 TestDoc (BGBl. I Nr. 1/2024)',
     content_urls: {
       html: 'https://example.com/doc.html',
       xml: null,

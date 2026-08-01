@@ -10,6 +10,7 @@ import { VALID_VBL_BUNDESLAENDER } from '../constants.js';
 import {
   addOptionalParams,
   buildBaseParams,
+  buildQueryEcho,
   createValidationErrorResponse,
   executeSearchTool,
   hasAnyParam,
@@ -96,7 +97,13 @@ Example queries:
         [kundmachungsdatum_bis, 'Kundmachungsdatum.Bis'],
       ]);
 
-      return executeSearchTool(searchLandesrecht, params, response_format, extra.signal);
+      return executeSearchTool(
+        searchLandesrecht,
+        params,
+        response_format,
+        extra.signal,
+        buildQueryEcho('ris_verordnungen', args),
+      );
     },
   );
 }
