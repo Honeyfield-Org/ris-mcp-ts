@@ -2,6 +2,7 @@
  * Tool: ris_regierungsvorlagen — Search Austrian Government Bills (Regierungsvorlagen).
  */
 
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
@@ -15,9 +16,11 @@ import {
   hasAnyParam,
 } from '../helpers.js';
 import { DateSchema, LimitSchema, SearchResultOutputShape, SeiteSchema } from '../types.js';
+import { SEARCH_WIDGET_META } from '../widgets.js';
 
 export function registerRegierungsvorlagenTool(server: McpServer): void {
-  server.registerTool(
+  registerAppTool(
+    server,
     'ris_regierungsvorlagen',
     {
       title: 'Regierungsvorlagen durchsuchen',
@@ -81,7 +84,8 @@ Example queries:
           .describe('"markdown" (default) or "json"'),
       },
       outputSchema: SearchResultOutputShape,
-      annotations: { readOnlyHint: true, openWorldHint: true },
+      annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
+      _meta: SEARCH_WIDGET_META,
     },
     async (args, extra) => {
       const {

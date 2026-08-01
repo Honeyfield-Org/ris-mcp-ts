@@ -7,6 +7,8 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
+import { registerWidgetResources } from '../widgets.js';
+
 import { registerBezirkeTool } from './bezirke.js';
 import { registerBundesgesetzblattTool } from './bundesgesetzblatt.js';
 import { registerBundesrechtTool } from './bundesrecht.js';
@@ -21,9 +23,11 @@ import { registerSonstigeTool } from './sonstige.js';
 import { registerVerordnungenTool } from './verordnungen.js';
 
 /**
- * Register all 12 RIS tools on the given MCP server.
+ * Register all 12 RIS tools and the widget resources they reference.
  */
 export function registerAllTools(server: McpServer): void {
+  registerWidgetResources(server);
+
   registerBundesrechtTool(server);
   registerLandesrechtTool(server);
   registerJudikaturTool(server);

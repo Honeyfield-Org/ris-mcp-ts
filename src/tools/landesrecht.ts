@@ -2,6 +2,7 @@
  * Tool: ris_landesrecht — Search Austrian state/provincial laws (Landesrecht).
  */
 
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
@@ -23,6 +24,7 @@ import {
   SearchResultOutputShape,
   SeiteSchema,
 } from '../types.js';
+import { SEARCH_WIDGET_META } from '../widgets.js';
 
 /** Resolved arguments for building Landesrecht API params (after Zod defaults). */
 export interface LandesrechtParamsArgs {
@@ -84,7 +86,8 @@ export function buildLandesrechtParams(args: LandesrechtParamsArgs): Record<stri
 }
 
 export function registerLandesrechtTool(server: McpServer): void {
-  server.registerTool(
+  registerAppTool(
+    server,
     'ris_landesrecht',
     {
       title: 'Landesrecht durchsuchen',
@@ -130,7 +133,8 @@ Example queries:
           .describe('"markdown" or "json"'),
       },
       outputSchema: SearchResultOutputShape,
-      annotations: { readOnlyHint: true, openWorldHint: true },
+      annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
+      _meta: SEARCH_WIDGET_META,
     },
     async (args, extra) => {
       const {

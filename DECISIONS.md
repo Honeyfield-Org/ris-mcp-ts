@@ -13,6 +13,9 @@
 - MCP Apps werden umgesetzt — Trefferlisten-Widget (v1.4.0), dann Dokument-Viewer (v1.5.0) — über die offizielle `@modelcontextprotocol/ext-apps`-Extension auf der SDK-v1-Linie, komplett geplant und gestuft released, mit Rendering-Spike als hartem Gate und vollständigem Text-Fallback als Pflichtpfad — weil claude-ai-mcp#165 (Custom-Connector-Rendering flaky) offen ist und ein nicht-renderndes Widget nie Datenverlust bedeuten darf (Stand 2026-08-01).
 - `_meta.ui.domain` wird nicht gesetzt — Weglassen ist verifiziert sicher, ein falsch berechneter Wert killt das Rendering zu 100 %, und die RIS-API ist CORS-offen.
 - Widget-HTML wird als generierte String-Konstante ausgeliefert (Vite singlefile → `src/generated/`, gitignored, via `pre`-Scripts) statt per Laufzeit-`readFileSync` — eliminiert Pfadauflösung über npm/Docker/Dev als Fehlerquelle.
+- Mit der ersten registrierten Resource schaltet sich die `resources`-Capability im Initialize-Handshake ein — bewusst in Kauf genommen, weil Nicht-UI-Clients die Capability ignorieren und der Text-Pfad aller 12 Tools unverändert bleibt.
+- Die Widget-CSP wird mit explizit leeren Arrays (`connectDomains`, `resourceDomains`, `frameDomains`, `baseUriDomains`) an der **Resource** deklariert, nicht am Tool — `McpUiToolMeta.csp` ist in den ext-apps-Typings `never` (Hosts lesen die CSP aus `resources/read`, Fallback `resources/list`), und eine fehlende Deklaration erscheint im Host als "CSP aus" statt als "braucht nichts" (Befund Rendering-Gate #45). Die leeren Arrays setzen voraus, dass das Bundle self-contained bleibt — `ui-template.test.ts` hält das fest.
+- Alle 12 Tools tragen `destructiveHint: false`, obwohl die Annotation bei `readOnlyHint: true` spec-redundant ist — OpenAI listet sie als Pflicht-Annotation für App-Submissions; nicht als Rauschen wegkürzen.
 
 ## Offen
 

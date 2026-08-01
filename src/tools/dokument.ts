@@ -47,7 +47,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
       // For this tool the text block IS the payload, so any structured metadata
       // would replace the document text with a handful of fields and the model
       // would never see the document.
-      annotations: { readOnlyHint: true, openWorldHint: true },
+      annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
     },
     async (args, extra) => {
       const { dokumentnummer, url: inputUrl, response_format } = args;

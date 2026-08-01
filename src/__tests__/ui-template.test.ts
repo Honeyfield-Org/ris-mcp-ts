@@ -13,6 +13,18 @@ describe('generated widget template', () => {
     expect(TREFFERLISTE_HTML).not.toMatch(/href\s*=\s*["']https?:/i);
   });
 
+  it('names no external origin at all', () => {
+    // The widget resource declares an empty CSP (every domain list in
+    // src/widgets.ts is `[]`), which stays truthful only while the bundle
+    // reaches for nothing off-origin — including url(), fetch() and imports
+    // that the attribute checks above would miss.
+    //
+    // If this ever trips on a genuinely inert URL — an SVG `xmlns`, say, which
+    // browsers never fetch — narrow it to the fetching contexts rather than
+    // deleting it, and widen the CSP if the reference really is a network one.
+    expect(TREFFERLISTE_HTML).not.toMatch(/\bhttps?:\/\//i);
+  });
+
   it('inlines every script and stylesheet', () => {
     // The realistic break is not an http(s) URL but silent non-inlining: the
     // document keeps relative asset paths like src="/assets/main.js", renders
