@@ -79,7 +79,6 @@ export interface DocumentRow {
   /** Work title, empty when it would only repeat {@link title}. */
   subtitle: string;
   badge: string;
-  isCourtDecision: boolean;
   meta: RowMeta[];
   /** Case numbers of a Judikatur document, in the order RIS lists them. */
   caseNumbers: string[];
@@ -94,7 +93,6 @@ export interface ResultViewModel {
   queryLabel: string;
   hitsLabel: string;
   rangeLabel: string;
-  page: number;
   isEmpty: boolean;
   hasPrev: boolean;
   hasNext: boolean;
@@ -331,7 +329,6 @@ function toRow(doc: SearchDocument): DocumentRow {
     title,
     subtitle: subtitleFor(doc, title),
     badge: APPLICATION_LABELS[doc.applikation] ?? doc.applikation,
-    isCourtDecision: 'gericht' in doc,
     meta: metaFor(doc),
     caseNumbers,
     risUrl: text(doc.content_urls.html) || text(doc.dokument_url) || null,
@@ -374,7 +371,6 @@ export function toViewModel(result: SearchResultPayload): ResultViewModel {
       rows.length === 0
         ? ''
         : `${formatCount(first)}–${formatCount(last)} von ${formatCount(result.total_hits)}`,
-    page: result.page,
     isEmpty: rows.length === 0,
     hasPrev: nextQuery(result.query, -1) !== null,
     hasNext: result.has_more && nextQuery(result.query, 1) !== null,

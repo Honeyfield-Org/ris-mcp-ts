@@ -116,7 +116,6 @@ describe('toViewModel — pagination', () => {
   it('offers only the next page on page 1', () => {
     const model = toViewModel(LAW_RESULT);
 
-    expect(model.page).toBe(1);
     expect(model.hasPrev).toBe(false);
     expect(model.hasNext).toBe(true);
   });
@@ -165,7 +164,6 @@ describe('toViewModel — law rows', () => {
   });
 
   it('has no court metadata and no case chain', () => {
-    expect(row.isCourtDecision).toBe(false);
     expect(row.caseNumbers).toEqual([]);
     expect(row.meta.map((entry) => entry.label)).toEqual(['In Kraft seit', 'Dokumentnummer']);
   });
@@ -191,11 +189,6 @@ describe('toViewModel — court rows', () => {
   it('titles a chained Rechtssatz with its first case number instead of the document number', () => {
     expect(chain.title).toBe('2Ob535/90');
     expect(chain.caseNumbers).toEqual(['2Ob535/90', '1Ob564/95', '1Ob140/00w']);
-  });
-
-  it('marks court documents so the UI can show court metadata', () => {
-    expect(chain.isCourtDecision).toBe(true);
-    expect(vwgh.isCourtDecision).toBe(true);
   });
 
   it('lists court, decision date, case chain and Rechtssatz number as metadata', () => {
