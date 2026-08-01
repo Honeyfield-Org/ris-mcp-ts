@@ -7,9 +7,16 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <!-- Rendered when the bundle never executes; main.ts hides it on boot. -->
-    <div id="nojs-marker">RIS Trefferliste — statischer Marker</div>
-    <div id="app"></div>
+    <!--
+      Visible only when the bundle never executes; main.ts hides it as its first
+      act, so a still-visible marker means "the script never ran" rather than
+      "the widget mounted and found nothing".
+    -->
+    <p id="nojs-marker" class="ris-notice ris-notice-error">
+      Die Trefferliste konnte nicht geladen werden — die vollständige Antwort steht im Chat.
+    </p>
+    <main id="ris-view"></main>
+    <div id="ris-status"></div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

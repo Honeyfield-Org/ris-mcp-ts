@@ -19,10 +19,29 @@ describe('generated widget template', () => {
     // reaches for nothing off-origin — including url(), fetch() and imports
     // that the attribute checks above would miss.
     //
-    // If this ever trips on a genuinely inert URL — an SVG `xmlns`, say, which
-    // browsers never fetch — narrow it to the fetching contexts rather than
-    // deleting it, and widen the CSP if the reference really is a network one.
-    expect(TREFFERLISTE_HTML).not.toMatch(/\bhttps?:\/\//i);
+    // The literals below are the ones the dependency bundle carries as data
+    // rather than as a fetch target, verified one by one in their surrounding
+    // code. They are stripped instead of the assertion being relaxed, so any
+    // origin that is not on this list still fails. Before adding one, read the
+    // code around it: if the reference really is a network one, widen the CSP
+    // in src/widgets.ts instead.
+    const INERT_ORIGINS = [
+      // zod's JSON Schema dialect ids, assigned to a `$schema` property.
+      'http://json-schema.org/draft-04/schema#',
+      'http://json-schema.org/draft-07/schema#',
+      'https://json-schema.org/draft/2020-12/schema',
+      // Example value inside an ext-apps schema `.describe()` docstring.
+      'https://*.example.com',
+      // zod's IPv6 check, which parses `new URL("http://[…]")` to validate it.
+      'http://[${',
+    ];
+
+    const remaining = INERT_ORIGINS.reduce(
+      (html, origin) => html.split(origin).join(''),
+      TREFFERLISTE_HTML,
+    );
+
+    expect(remaining).not.toMatch(/\bhttps?:\/\//i);
   });
 
   it('inlines every script and stylesheet', () => {
