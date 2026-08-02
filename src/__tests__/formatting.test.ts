@@ -6,6 +6,8 @@
  * date formatting, HTML processing, citation formatting, and response truncation.
  */
 
+import { readFileSync } from 'node:fs';
+
 import { describe, it, expect } from 'vitest';
 
 import {
@@ -234,6 +236,124 @@ describe('htmlToText', () => {
     it('should handle empty HTML tags', () => {
       expect(htmlToText('<p></p><div></div>')).toBe('');
     });
+  });
+});
+
+// =============================================================================
+// htmlToText() against real RIS document HTML (issue #64)
+// =============================================================================
+
+/**
+ * RIS renders every structural marker twice: a visible form carrying
+ * `aria-hidden="true"` and a redundant spoken form in `class="sr-only"`
+ * ("Vorlesefassung"). It also emits adjacent block elements without any
+ * whitespace between them. The fixture is a trimmed but byte-exact excerpt of
+ * the live § 1295 ABGB document (NOR12019037) containing both.
+ */
+describe('htmlToText with real RIS document HTML (issue #64)', () => {
+  const html = readFileSync(
+    new URL('./fixtures/nor12019037-excerpt.html', import.meta.url),
+    'utf8',
+  );
+  const text = htmlToText(html);
+
+  function countOf(needle: string): number {
+    return text.split(needle).length - 1;
+  }
+
+  it('should keep each visible Absatz marker once and drop its spoken duplicate', () => {
+    expect(countOf('(1)')).toBe(1);
+    expect(countOf('(2)')).toBe(1);
+    expect(text).not.toContain('Absatz eins,');
+    expect(text).not.toContain('Absatz 2,');
+  });
+
+  it('should drop the spoken duplicates of the paragraph symbol', () => {
+    expect(text).not.toMatch(/Paragraph \d+,/);
+    expect(text).not.toContain('Paragraph/Artikel/Anlage');
+    expect(text).toContain('§ 1295');
+    expect(text).toContain('§/Artikel/Anlage');
+  });
+
+  it('should drop the spoken duplicate of the Kundmachungsorgan', () => {
+    expect(text).toContain('JGS Nr. 946/1811 zuletzt geändert durch RGBl. Nr. 69/1916');
+    expect(text).not.toContain('JGS Nr. 946 aus 1811');
+  });
+
+  it('should separate metadata labels from their values', () => {
+    expect(text).not.toContain('KurztitelAllgemeines');
+    expect(text).toMatch(/^Kurztitel$/m);
+    expect(text).toMatch(/^Allgemeines bürgerliches Gesetzbuch$/m);
+    expect(text).not.toContain('TypBG');
+    expect(text).not.toContain('AbkürzungABGB');
+    expect(text).not.toContain('DokumentnummerNOR12019037');
+  });
+
+  it('should preserve the visible legal text verbatim', () => {
+    expect(text).toContain(
+      'Jedermann ist berechtigt, von dem Beschädiger den Ersatz des Schadens, ' +
+        'welchen dieser ihm aus Verschulden zugefügt hat, zu fordern; der Schaden mag durch ' +
+        'Übertretung einer Vertragspflicht oder ohne Beziehung auf einen Vertrag verursacht ' +
+        'worden sein.',
+    );
+    expect(text).toContain(
+      'Auch wer in einer gegen die guten Sitten verstoßenden Weise absichtlich Schaden zufügt',
+    );
+    expect(text).toContain('Von der Verbindlichkeit zum Schadenersatze:');
+    expect(text).toContain('20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)');
+  });
+
+  it('should not leak stylesheet rules or the fixture provenance comment', () => {
+    expect(text).not.toContain('position: absolute');
+    expect(text).not.toContain('Fixture:');
+  });
+});
+
+// =============================================================================
+// formatDocument() against real RIS document HTML (issue #64)
+// =============================================================================
+
+describe('formatDocument with real RIS document HTML (issue #64)', () => {
+  const html = readFileSync(
+    new URL('./fixtures/nor12019037-excerpt.html', import.meta.url),
+    'utf8',
+  );
+  const metadata: DocumentMetadata = {
+    dokumentnummer: 'NOR12019037',
+    applikation: 'BrKons',
+    titel: '§ 1295 ABGB',
+    kurztitel: 'ABGB',
+    citation: {
+      kurztitel: 'ABGB',
+      langtitel: 'Allgemeines bürgerliches Gesetzbuch',
+      kundmachungsorgan: 'JGS Nr. 946/1811',
+      paragraph: '§ 1295',
+      inkrafttreten: '1917-01-01',
+    },
+  };
+
+  it('should keep the metadata block ahead of the content block', () => {
+    const output = formatDocument(html, metadata);
+
+    expect(output.indexOf('## Dokumentinformation')).toBeGreaterThan(-1);
+    expect(output.indexOf('## Dokumentinformation')).toBeLessThan(output.indexOf('## Inhalt'));
+    expect(output).toContain('**Dokumentnummer:** `NOR12019037`');
+  });
+
+  it('should render markdown content free of spoken duplicates and glued metadata', () => {
+    const output = formatDocument(html, metadata);
+
+    expect(output).not.toContain('Absatz eins,');
+    expect(output).not.toContain('KurztitelAllgemeines');
+    expect(output).toContain('Jedermann ist berechtigt');
+  });
+
+  it('should render json content free of spoken duplicates and glued metadata', () => {
+    const parsed = JSON.parse(formatDocument(html, metadata, 'json')) as { content: string };
+
+    expect(parsed.content).not.toContain('Absatz eins,');
+    expect(parsed.content).not.toContain('KurztitelAllgemeines');
+    expect(parsed.content).toContain('Jedermann ist berechtigt');
   });
 });
 

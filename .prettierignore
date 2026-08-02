@@ -4,3 +4,8 @@ docs/*.pdf
 coverage/
 dist-ui/
 src/generated/
+
+# HTML fixtures are captured byte-exact from live RIS responses. Reformatting
+# inserts whitespace between the adjacent tags whose gluing they exist to pin,
+# which would make them pass against the very bug they guard (issue #64).
+src/__tests__/fixtures/*.html
