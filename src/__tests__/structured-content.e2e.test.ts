@@ -331,10 +331,10 @@ describe('search tool structured content', () => {
 });
 
 // =============================================================================
-// 3. ris_dokument: Text + Resource Link
+// 3. ris_dokument: Text, and where the source URL lives instead of a link block
 // =============================================================================
 
-describe('ris_dokument text and resource link', () => {
+describe('ris_dokument text and source URL', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -440,9 +440,14 @@ describe('ris_dokument text and resource link', () => {
     });
 
     // The truncated case is the one where the pointer to the untruncated
-    // original matters most, so it is the one worth pinning twice.
+    // original matters most, so it is the one worth pinning twice — and the
+    // text carrier needs pinning here in particular, because `**Quelle:**` sits
+    // in the metadata header *before* `## Inhalt` (formatting.ts). That
+    // ordering is what keeps truncation from eating the link, and it is the
+    // invariant the dropped resource_link used to backstop.
     expect(result.isError).not.toBe(true);
     expect(getContent(result)[0].text).toContain('Antwort gekuerzt');
+    expect(getContent(result)[0].text).toContain('**Quelle:**');
     expect((result.structuredContent as { source_url: string }).source_url).toContain(
       'NOR40052761',
     );
