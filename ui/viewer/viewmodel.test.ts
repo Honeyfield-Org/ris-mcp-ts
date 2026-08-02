@@ -41,6 +41,8 @@ function state(overrides: Partial<ViewerState> = {}): ViewerState {
     sourceUrl: null,
     title: '',
     provisional: false,
+    failedOffset: null,
+    expired: false,
     ...overrides,
   };
 }
@@ -337,6 +339,46 @@ describe('buildDocumentView', () => {
     );
 
     expect(model.sentinelOffset).toBe(24_000);
+  });
+
+  it('turns a section that failed into a gap marker instead of a sentinel', () => {
+    // One automatic attempt per offset: an unchanged sentinel would ask for the
+    // failing section again the moment it scrolls back into view.
+    const model = buildDocumentView(
+      state({
+        totalLength: LONG_TOTAL,
+        chunks: [{ offset: 0, text: 'Anfang', nextOffset: 24_000 }],
+        failedOffset: 24_000,
+      }),
+    );
+
+    expect(model.sentinelOffset).toBeNull();
+    expect(model.runs.at(-1)?.gapOffset).toBe(24_000);
+  });
+
+  it('keeps the sentinel when a different offset failed', () => {
+    const model = buildDocumentView(
+      state({
+        totalLength: LONG_TOTAL,
+        chunks: [{ offset: 0, text: 'Anfang', nextOffset: 24_000 }],
+        failedOffset: 90_000,
+      }),
+    );
+
+    expect(model.sentinelOffset).toBe(24_000);
+  });
+
+  it('offers no sentinel once the session is gone', () => {
+    const model = buildDocumentView(
+      state({
+        expired: true,
+        totalLength: LONG_TOTAL,
+        chunks: [{ offset: 0, text: 'Anfang', nextOffset: 24_000 }],
+      }),
+    );
+
+    expect(model.sentinelOffset).toBeNull();
+    expect(model.expired).toBe(true);
   });
 
   it('offers no sentinel for a document it cannot name', () => {

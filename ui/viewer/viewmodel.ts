@@ -138,6 +138,14 @@ export interface DocumentView {
   runs: RunView[];
   /** Offset the sentinel fetches when it scrolls into view. */
   sentinelOffset: number | null;
+  /**
+   * True once the session is gone.
+   *
+   * Everything already read stays on screen; every control that would issue
+   * another call is rendered disabled, because they would all fail the same way
+   * and a button that cannot work is worse than none.
+   */
+  expired: boolean;
 }
 
 /** What the viewer knows about the document currently open. */
@@ -159,6 +167,16 @@ export interface ViewerState {
    * canonical series.
    */
   provisional: boolean;
+  /**
+   * Offset whose last load failed, or `null`.
+   *
+   * The automatic sentinel gets exactly one attempt per offset: re-arming it on
+   * the same offset would request the failing section again the moment it is
+   * back in view, forever. The retry becomes a gap marker the reader presses.
+   */
+  failedOffset: number | null;
+  /** Mirrors the session state, so the rendered controls follow from the model. */
+  expired: boolean;
 }
 
 const META_LINE = /^\*\*(.+?):\*\* ?(.*)$/;
@@ -417,12 +435,20 @@ export function buildDocumentView(state: ViewerState): DocumentView {
   const holds = (offset: number): boolean =>
     runs.some((run) => offset >= run.offset && offset < run.offset + run.text.length);
 
+  // While the text is the mount result the viewer does not know where it ends,
+  // so the continuation is the canonical first section rather than an offset it
+  // would have to guess at.
+  const continuation = state.provisional ? 0 : (runs[runs.length - 1]?.nextOffset ?? null);
+  // A continuation that already failed is offered as a gap marker instead: the
+  // reader decides whether to try again, and the sentinel cannot loop on it.
+  const stalled = state.failedOffset !== null && state.failedOffset === continuation;
+
   const views: RunView[] = runs.map((run, index) => ({
     offset: run.offset,
     blocks: buildBlocks(run.text, run.offset, state.outline),
     // Every run but the last is followed by text the viewer skipped over; the
-    // last one's continuation is the sentinel's job instead.
-    gapOffset: index < runs.length - 1 ? run.nextOffset : null,
+    // last one's continuation is the sentinel's job unless that failed.
+    gapOffset: index < runs.length - 1 ? run.nextOffset : stalled ? continuation : null,
   }));
 
   // The title is chrome, not body text: it goes in the header and is removed
@@ -453,14 +479,8 @@ export function buildDocumentView(state: ViewerState): DocumentView {
         : '',
     rail: buildOutline(state.outline, state.totalLength, holds),
     runs: views,
-    // While the text is the mount result the viewer does not know where it ends,
-    // so the sentinel fetches the canonical first section rather than a
-    // continuation it would have to guess at.
-    sentinelOffset: !addressable
-      ? null
-      : state.provisional
-        ? 0
-        : (runs[runs.length - 1]?.nextOffset ?? null),
+    sentinelOffset: addressable && !stalled && !state.expired ? continuation : null,
+    expired: state.expired,
   };
 }
 

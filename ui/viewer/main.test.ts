@@ -9,7 +9,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DECISION_OUTLINE, LONG_TOTAL, NORM_MARKDOWN } from '../__fixtures__/document-chunks.js';
+import {
+  DECISION_OUTLINE,
+  GAZETTE_OUTLINE,
+  GAZETTE_TOTAL,
+  LONG_TOTAL,
+  NORM_MARKDOWN,
+} from '../__fixtures__/document-chunks.js';
 import type { Bridge, BridgeOptions, ToolPayload } from '../shared/bridge.js';
 
 import { COPY } from './copy.js';
@@ -79,18 +85,54 @@ class TestIntersectionObserver {
   }
 }
 
-/** Scroll the sentinel into view, the way reading to the end of the text does. */
-async function scrollToEnd(): Promise<void> {
-  const live = observers.filter((observer) => observer.active);
-  const observer = live[live.length - 1];
-  if (!observer) throw new Error('nothing is watching for the end of the text');
+/**
+ * Observers still watching something inside the widget on screen.
+ *
+ * Scoped to the current shell on purpose: `vi.resetModules()` leaves every
+ * earlier module instance subscribed to the same jsdom `document`, and their
+ * `visibilitychange` handlers still create observers over their own detached
+ * elements. Only the ones watching the live shell are this widget's.
+ */
+function liveObservers(): FakeObserver[] {
+  const shell = view();
+  return observers.filter(
+    (observer) => observer.active && observer.targets.some((target) => shell.contains(target)),
+  );
+}
 
+function fire(observer: FakeObserver): void {
   observer.callback(
     observer.targets.map(
       (target) => ({ isIntersecting: true, target }) as unknown as IntersectionObserverEntry,
     ),
     observer as unknown as IntersectionObserver,
   );
+}
+
+/** Scroll the sentinel into view, the way reading to the end of the text does. */
+async function scrollToEnd(): Promise<void> {
+  const observer = liveObservers().at(-1);
+  if (!observer) throw new Error('nothing is watching for the end of the text');
+
+  fire(observer);
+  await settle();
+}
+
+/**
+ * Deliver another intersection from whatever is still watching.
+ *
+ * A real host keeps calling back for as long as the sentinel is in view, so an
+ * observer the widget re-armed on the same offset would fire again here.
+ */
+async function scrollAgain(): Promise<void> {
+  for (const observer of liveObservers()) fire(observer);
+  await settle();
+}
+
+/** Put the tab in the background, or bring it back. */
+async function setVisibility(state: 'hidden' | 'visible'): Promise<void> {
+  Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+  document.dispatchEvent(new Event('visibilitychange'));
   await settle();
 }
 
@@ -175,6 +217,31 @@ function answersWith(payload: ToolPayload | Error): void {
   else mock.mockResolvedValue(payload);
 }
 
+/** Hold the next call open, so a second one can be attempted while it runs. */
+function answersWhenTold(): (payload: ToolPayload) => Promise<void> {
+  let release: (payload: ToolPayload) => void;
+  const held = new Promise<ToolPayload>((resolve) => {
+    release = resolve;
+  });
+
+  (bridge.callTool as ReturnType<typeof vi.fn>).mockReturnValue(held);
+
+  return async (payload) => {
+    release(payload);
+    await settle();
+  };
+}
+
+/** A payload that is not a section, which the viewer reports and does not adopt. */
+function nonsense(): ToolPayload {
+  return {
+    structuredContent: { nichts: 'brauchbar' },
+    source: 'toolresult',
+    text: '',
+    isError: false,
+  };
+}
+
 beforeEach(() => {
   document.body.innerHTML =
     '<p id="nojs-marker"></p><main id="ris-view"></main><div id="ris-status"></div>';
@@ -194,6 +261,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete (globalThis as Record<string, unknown>).openai;
+  Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -381,17 +449,126 @@ describe('loading further sections', () => {
   it('leaves the section on screen unchanged when a payload is not a section', async () => {
     await openDocument();
 
-    answersWith({
-      structuredContent: { nichts: 'brauchbar' },
-      source: 'toolresult',
-      text: '',
-      isError: false,
-    });
+    answersWith(nonsense());
     await scrollToEnd();
 
     expect(text()).toContain('Erster Abschnitt.');
     expect(noticeTitle()).toBe(COPY.invalidPayloadTitle);
     expect(document.querySelector('.ris-notice-detail')?.textContent).toBe(COPY.sectionUnchanged);
+  });
+
+  it('asks for a failing section exactly once, and offers a manual retry', async () => {
+    await openDocument();
+
+    answersWith(nonsense());
+    await scrollToEnd();
+    expect(calls()).toHaveLength(2);
+
+    // The sentinel is gone, so there is nothing left to fire; a host that kept
+    // reporting the old one in view must not produce a second attempt either.
+    expect(liveObservers()).toHaveLength(0);
+    await scrollAgain();
+
+    expect(calls()).toHaveLength(2);
+    expect(view().querySelector('.ris-doc-gap button')).not.toBeNull();
+  });
+
+  it('retries the failed section when the reader presses the gap marker', async () => {
+    await openDocument();
+    answersWith(nonsense());
+    await scrollToEnd();
+
+    answersWith(section({ text: 'Doch noch da.', next_offset: null, outline: undefined }));
+    view().querySelector<HTMLButtonElement>('.ris-doc-gap button')?.click();
+    await settle();
+
+    expect(calls()).toHaveLength(3);
+    expect(calls()[2]).toMatchObject({ arguments: { offset: 37 } });
+    expect(text()).toContain('Doch noch da.');
+    expect(view().querySelector('.ris-doc-gap')).toBeNull();
+  });
+
+  it('stops watching while a section is in flight', async () => {
+    await openDocument();
+    const finish = answersWhenTold();
+
+    await scrollToEnd();
+    // Nothing is left to report an intersection during the call, which is what
+    // keeps fast scrolling from turning into a burst of requests.
+    expect(liveObservers()).toHaveLength(0);
+    await scrollAgain();
+    expect(calls()).toHaveLength(2);
+
+    await finish(section({ text: 'Zweiter Abschnitt.', next_offset: null, outline: undefined }));
+    expect(text()).toContain('Zweiter Abschnitt.');
+  });
+
+  it('asks for one section at a time, however often the reader presses', async () => {
+    await openDocument();
+    answersWith(nonsense());
+    await scrollToEnd();
+
+    const gap = (): HTMLButtonElement | null =>
+      view().querySelector<HTMLButtonElement>('.ris-doc-gap button');
+    const finish = answersWhenTold();
+
+    gap()?.click();
+    await settle();
+    expect(calls()).toHaveLength(3);
+
+    // A second press while the first request is still open. Only the in-flight
+    // guard stands between this and two concurrent calls for the same section —
+    // the observer is not involved at all here.
+    gap()?.click();
+    await settle();
+    expect(calls()).toHaveLength(3);
+
+    await finish(section({ text: 'Doch noch da.', next_offset: null, outline: undefined }));
+    expect(text()).toContain('Doch noch da.');
+  });
+
+  it('stops watching while the tab is in the background and resumes after', async () => {
+    await openDocument();
+    expect(liveObservers()).toHaveLength(1);
+
+    await setVisibility('hidden');
+    expect(liveObservers()).toHaveLength(0);
+
+    await setVisibility('visible');
+    expect(liveObservers()).toHaveLength(1);
+    expect(calls()).toHaveLength(1);
+  });
+});
+
+describe('jumping while a section is loading', () => {
+  const railed = {
+    text: '# Titel\n\n## Inhalt\n\nErster Abschnitt.',
+    total_length: GAZETTE_TOTAL,
+    next_offset: 37,
+    outline: GAZETTE_OUTLINE,
+  };
+
+  it('runs the jump the reader pressed once the call in flight settles', async () => {
+    await mount();
+    deliverInput?.({ dokumentnummer: 'NOR1' });
+    deliver(emptyPayload());
+    answersWith(section(railed));
+    await connect();
+
+    const finish = answersWhenTold();
+    await scrollToEnd();
+
+    // The click lands while the prefetch is open: dropping it would leave a
+    // button that does nothing, and a stale target that scrolls the reader away
+    // when an unrelated section arrives later.
+    view().querySelectorAll<HTMLButtonElement>('.ris-outline-jump')[3].click();
+    await settle();
+    expect(calls()).toHaveLength(2);
+
+    await finish(section({ ...railed, text: 'Nachgeladen.', next_offset: null }));
+
+    expect(calls()).toHaveLength(3);
+    expect(calls()[2]).toMatchObject({ arguments: { offset: GAZETTE_OUTLINE[3].offset } });
   });
 });
 
@@ -503,6 +680,57 @@ describe('reopening a conversation', () => {
     expect(noticeTitle()).toBe(COPY.connectFailedTitle);
     expect(view().querySelector('.ris-doc-title')).toBeNull();
   });
+
+  it('returns to the stored position even when the host also names the document', async () => {
+    // The host that stores snapshots is the same one that delivers the
+    // arguments, so taking rung 2 blindly would make the reading position
+    // unreachable in the only host that has one.
+    hostHolding(snapshot);
+    answersWith(section({ text: 'Der Spruch.', next_offset: null, outline: undefined }));
+
+    await mount();
+    deliverInput?.({ dokumentnummer: 'NOR12019037' });
+    deliver(emptyPayload());
+    await connect();
+
+    expect(view().querySelector('.ris-doc-title')?.textContent).toBe('BVwG W176 2342256-1');
+    expect(calls()).toEqual([
+      { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'NOR12019037', offset: 737 } },
+    ]);
+  });
+
+  it('ignores a stored position that belongs to a different document', async () => {
+    hostHolding(snapshot);
+
+    await mount();
+    deliverInput?.({ dokumentnummer: 'NOR99999999' });
+    deliver(emptyPayload());
+    await connect();
+
+    // Fresh data wins: the new document opens at its first section and the old
+    // title never appears.
+    expect(calls()).toEqual([
+      { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'NOR99999999', offset: 0 } },
+    ]);
+    expect(view().querySelector('.ris-doc-title')?.textContent).toBe('Titel');
+  });
+});
+
+describe('a handshake that fails after the document is on screen', () => {
+  it('says so under the text and stops offering sections it cannot load', async () => {
+    handshake = Promise.reject(new Error('kein Host'));
+    handshake.catch(() => undefined);
+
+    await mount();
+    deliverInput?.({ dokumentnummer: 'NOR1' });
+    deliver(payload());
+    await settle();
+
+    // The text stays; what goes is the promise that more of it can be fetched.
+    expect(text()).toContain('§ 1295.');
+    expect(noticeTitle()).toBe(COPY.connectFailedTitle);
+    expect(view().querySelector('.ris-doc-sentinel')).toBeNull();
+  });
 });
 
 // =============================================================================
@@ -534,6 +762,24 @@ describe('storing what is on screen', () => {
         },
       },
     });
+  });
+
+  it('does not write again for a section that changes nothing it stores', async () => {
+    const setWidgetState = vi.fn();
+    hostHolding(null, { setWidgetState });
+
+    await mount();
+    deliverInput?.({ dokumentnummer: 'NOR12019037' });
+    deliver(emptyPayload());
+    await connect();
+    const afterFirstRender = setWidgetState.mock.calls.length;
+
+    answersWith(section({ text: 'Zweiter Abschnitt.', next_offset: 55, outline: undefined }));
+    await scrollToEnd();
+
+    // Appending a section changes the text on screen and nothing in the
+    // snapshot, which stores structure and a reading position.
+    expect(setWidgetState.mock.calls.length).toBe(afterFirstRender);
   });
 
   it('drops the outline rather than the whole snapshot when it does not fit', async () => {

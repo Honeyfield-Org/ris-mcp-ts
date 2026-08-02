@@ -57,6 +57,13 @@ export default defineConfig({
     // A single-file bundle can never carry modulepreload links, so the
     // polyfill would only ship dead code and a MutationObserver.
     modulePreload: { polyfill: false },
-    rollupOptions: { input: { [widget]: join(uiRoot, widget, 'index.html') } },
+    rollupOptions: {
+      input: { [widget]: join(uiRoot, widget, 'index.html') },
+      // One entry per pass makes this legal (Rollup rejects it outright for
+      // several), and it is what closes the last hole in the bundle: ext-apps
+      // reaches for zod's JSON-Schema converter through a dynamic import, which
+      // otherwise stays a reference to a chunk that is never written.
+      output: { inlineDynamicImports: true },
+    },
   },
 });

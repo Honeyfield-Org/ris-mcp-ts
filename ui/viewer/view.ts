@@ -161,11 +161,18 @@ function renderHeader(model: DocumentView, handlers: ViewerHandlers): HTMLElemen
   return header;
 }
 
-function renderOutlineRow(row: OutlineRow, handlers: ViewerHandlers): HTMLElement {
+function renderOutlineRow(
+  row: OutlineRow,
+  handlers: ViewerHandlers,
+  expired: boolean,
+): HTMLElement {
   const item = element('li', `ris-outline-item ris-outline-level-${Math.min(row.level, 6)}`);
 
   const jump = button('ris-outline-jump', row.label, () => handlers.onJump(row.offset));
   jump.dataset.offset = String(row.offset);
+  // A jump to a section already on screen is pure scrolling and keeps working
+  // after the session is gone; one that would have to fetch cannot.
+  jump.disabled = expired && !row.loaded;
   // The share is a progress affordance, not a table of contents entry: it is
   // what tells a reader that `Text` covers most of the document.
   jump.append(element('span', 'ris-outline-share', row.shareLabel));
@@ -182,7 +189,11 @@ function renderOutlineRow(row: OutlineRow, handlers: ViewerHandlers): HTMLElemen
  * CSS, so a rail the user collapsed while narrow cannot stay hidden when the
  * container grows.
  */
-export function renderOutline(model: OutlineRow[], handlers: ViewerHandlers): HTMLElement {
+export function renderOutline(
+  model: OutlineRow[],
+  handlers: ViewerHandlers,
+  expired = false,
+): HTMLElement {
   const disclosure = document.createElement('details');
   disclosure.className = 'ris-outline';
   disclosure.open = true;
@@ -192,7 +203,7 @@ export function renderOutline(model: OutlineRow[], handlers: ViewerHandlers): HT
   nav.setAttribute('aria-label', COPY.outlineLabel);
 
   const list = element('ol', 'ris-outline-list');
-  for (const row of model) list.append(renderOutlineRow(row, handlers));
+  for (const row of model) list.append(renderOutlineRow(row, handlers, expired));
 
   nav.append(list);
   disclosure.append(nav);
@@ -284,7 +295,7 @@ export function renderDocument(
 ): RenderedDocument {
   const body = element('div', 'ris-doc-body');
 
-  if (model.rail) body.append(renderOutline(model.rail, handlers));
+  if (model.rail) body.append(renderOutline(model.rail, handlers, model.expired));
 
   const textPane = element('article', 'ris-doc-text');
   textPane.tabIndex = 0;
@@ -296,8 +307,11 @@ export function renderDocument(
       const offset = run.gapOffset;
       const gap = element('div', 'ris-doc-gap');
       // The gap marker doubles as the retry for a section that failed to load,
-      // so a failure needs no recovery UI of its own.
-      gap.append(button('ris-action', COPY.gapMarker, () => handlers.onLoadGap(offset)));
+      // so a failure needs no recovery UI of its own — and it is the only way
+      // back once the automatic sentinel has spent its one attempt.
+      const retry = button('ris-action', COPY.gapMarker, () => handlers.onLoadGap(offset));
+      retry.disabled = model.expired;
+      gap.append(retry);
       textPane.append(gap);
     }
   }
@@ -351,24 +365,4 @@ export function focusAfterJump(container: HTMLElement, offset: number): boolean 
   }
 
   return true;
-}
-
-/**
- * Take every control that would issue a tool call out of service.
- *
- * Used when the session is gone: every further call fails the same way, and a
- * button that cannot work is worse than none. The text stays exactly as it is.
- */
-export function disableLoading(container: HTMLElement): void {
-  container.querySelector('.ris-doc-sentinel')?.remove();
-
-  for (const gap of container.querySelectorAll<HTMLButtonElement>('.ris-doc-gap button')) {
-    gap.disabled = true;
-  }
-
-  for (const jump of container.querySelectorAll<HTMLButtonElement>('.ris-outline-jump')) {
-    if (!container.querySelector(`#${sectionId(Number(jump.dataset.offset))}`)) {
-      jump.disabled = true;
-    }
-  }
 }

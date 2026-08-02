@@ -48,19 +48,24 @@ function widgetStateHost(globals: unknown): WidgetStateHost | null {
 }
 
 /**
- * Everything stored under a key other than `key`, so a write preserves it.
+ * Another widget's snapshot, so a write preserves it instead of clearing it.
  *
  * Reads from either level for the same reason the restore does: a host may hand
- * back the envelope it was given or only the state inside it.
+ * back the envelope it was given or only the state inside it. Only entries
+ * shaped like a snapshot are carried over — reading at the outer level means
+ * anything else the host keeps there is its own state, and moving that under
+ * `privateContent` would relocate data this store has no business touching.
  */
-function foreignEntries(state: unknown, key: string): Record<string, unknown> {
+function foreignSnapshots(state: unknown, key: string): Record<string, unknown> {
   if (!isRecord(state)) return {};
 
   const container = isRecord(state.privateContent) ? state.privateContent : state;
   const rest: Record<string, unknown> = {};
 
   for (const [name, value] of Object.entries(container)) {
-    if (name !== key) rest[name] = value;
+    if (name !== key && isRecord(value) && typeof value.version === 'number') {
+      rest[name] = value;
+    }
   }
 
   return rest;
@@ -107,7 +112,7 @@ export function createSnapshotStore(key: string, version: number): SnapshotStore
         // Measured against this widget's own entry: the budget belongs to the
         // payload being written, not to whatever a second widget stored.
         const storable = JSON.stringify(snapshot).length <= SNAPSHOT_LIMIT;
-        const kept = foreignEntries(host.widgetState, key);
+        const kept = foreignSnapshots(host.widgetState, key);
 
         // `privateContent` is the documented slot for state the model must not
         // read: the result reaches it once as the tool result, and a rendered

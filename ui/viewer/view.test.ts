@@ -12,7 +12,6 @@ import type { ToolPayload } from '../shared/bridge.js';
 
 import { COPY } from './copy.js';
 import {
-  disableLoading,
   focusAfterJump,
   interpretPayload,
   renderDocument,
@@ -35,6 +34,8 @@ function state(overrides: Partial<ViewerState> = {}): ViewerState {
     sourceUrl: SHORT_CHUNK.source_url ?? null,
     title: '',
     provisional: false,
+    failedOffset: null,
+    expired: false,
     ...overrides,
   };
 }
@@ -353,9 +354,10 @@ describe('renderNotice', () => {
   });
 });
 
-describe('disableLoading', () => {
+describe('an expired session', () => {
   it('takes every control out of service that would call the tool again', () => {
     const [container] = render({
+      expired: true,
       totalLength: LONG_TOTAL,
       outline: GAZETTE_OUTLINE,
       chunks: [
@@ -364,8 +366,6 @@ describe('disableLoading', () => {
       ],
     });
 
-    disableLoading(container);
-
     expect(container.querySelector('.ris-doc-sentinel')).toBeNull();
     expect(container.querySelector<HTMLButtonElement>('.ris-doc-gap button')?.disabled).toBe(true);
     // The text already read stays exactly as it was.
@@ -373,20 +373,40 @@ describe('disableLoading', () => {
   });
 
   it('leaves a jump to a loaded section usable', () => {
-    // Every outline entry sits past the one short run on screen, so only the
-    // section planted here counts as loaded.
+    // A jump inside the text on screen is pure scrolling; one that would have
+    // to fetch cannot work any more.
     const [container] = render({
+      expired: true,
       totalLength: GAZETTE_TOTAL,
       outline: GAZETTE_OUTLINE,
-      chunks: [{ offset: 0, text: 'Anfang.', nextOffset: 7 }],
+      chunks: [{ offset: GAZETTE_OUTLINE[0].offset, text: 'Anfang.', nextOffset: 307 }],
     });
-    const target = container.querySelector<HTMLElement>('.ris-doc-p');
-    if (target) target.id = sectionId(GAZETTE_OUTLINE[0].offset);
-
-    disableLoading(container);
 
     const jumps = container.querySelectorAll<HTMLButtonElement>('.ris-outline-jump');
     expect(jumps[0].disabled).toBe(false);
     expect(jumps[1].disabled).toBe(true);
+  });
+
+  it('keeps every jump usable while the session is alive', () => {
+    const [container] = render({ totalLength: GAZETTE_TOTAL, outline: GAZETTE_OUTLINE });
+    const jumps = [...container.querySelectorAll<HTMLButtonElement>('.ris-outline-jump')];
+
+    expect(jumps.every((jump) => !jump.disabled)).toBe(true);
+  });
+});
+
+describe('a section that failed to load', () => {
+  it('offers the gap marker as the retry, with no sentinel to loop on', () => {
+    const [container, actions] = render({
+      totalLength: LONG_TOTAL,
+      outline: [],
+      chunks: [{ offset: 0, text: 'Anfang.', nextOffset: 7 }],
+      failedOffset: 7,
+    });
+
+    expect(container.querySelector('.ris-doc-sentinel')).toBeNull();
+    buttonLabelled(container, COPY.gapMarker).click();
+
+    expect(actions.onLoadGap).toHaveBeenCalledWith(7);
   });
 });

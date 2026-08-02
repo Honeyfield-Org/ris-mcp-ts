@@ -135,6 +135,23 @@ describe('two widgets on one host', () => {
     expect(store.restore(globals)).toEqual(LAW_RESULT);
   });
 
+  it('leaves state that is not a snapshot where the host put it', () => {
+    const openai: Record<string, unknown> = {
+      widgetState: { selectedId: 3 },
+      setWidgetState: vi.fn((next: unknown) => {
+        openai.widgetState = next;
+      }),
+    };
+
+    store.persist(LAW_RESULT, { openai });
+
+    // The host's own state is not this store's to carry around; relocating it
+    // under `privateContent` would move data nothing here understands.
+    expect(openai.widgetState).toEqual({
+      privateContent: { risTrefferliste: { version: 1, payload: LAW_RESULT } },
+    });
+  });
+
   it('leaves a foreign snapshot in place when its own is dropped', () => {
     const { globals } = hostWithMemory();
     const viewer = createSnapshotStore('risViewer', 1);

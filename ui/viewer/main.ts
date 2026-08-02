@@ -18,7 +18,6 @@ import { createSnapshotStore } from '../shared/widget-state.js';
 
 import { COPY } from './copy.js';
 import {
-  disableLoading,
   focusAfterJump,
   interpretPayload,
   renderDocument,
@@ -34,6 +33,7 @@ import {
   relocateAnchor,
   type DocumentChunk,
   type DocumentKey,
+  type ViewerSnapshot,
   type ViewerState,
 } from './viewmodel.js';
 
@@ -77,9 +77,15 @@ let observer: IntersectionObserver | null = null;
 let pendingAnchor: number | null = null;
 /** Label of the section to scroll to after the offsets shifted under us. */
 let pendingLabel: string | null = null;
+/** A jump the reader asked for while a section was still loading. */
+let queuedJump: number | null = null;
 /** Reading position, in characters into the document text. */
 let anchorOffset = 0;
 let anchorTimer: ReturnType<typeof setTimeout> | undefined;
+/** Fingerprint of the snapshot last handed to the host. */
+let persisted: string | null = null;
+/** Why nothing more can be loaded, re-asserted on every later render. */
+let failure: { title: string; detail?: string } | null = null;
 
 // =============================================================================
 // Notices
@@ -124,14 +130,15 @@ function render(): void {
   const scrollTop = rendered?.textPane.scrollTop ?? 0;
 
   stopObserving();
+  // The session state belongs to the module, but every control that follows from
+  // it is rendered rather than reached back into afterwards.
+  state.expired = expired;
   const model = buildDocumentView(state);
   state.title = model.title;
   rendered = renderDocument(view, model, handlers, height);
   rendered.textPane.scrollTop = scrollTop;
   rendered.textPane.addEventListener('scroll', onScroll, { passive: true });
-
-  if (expired) disableLoading(view);
-  else observeSentinel();
+  observeSentinel();
 
   if (pendingAnchor !== null && focusAfterJump(view, pendingAnchor)) {
     anchorOffset = pendingAnchor;
@@ -139,6 +146,12 @@ function render(): void {
   }
 
   persist();
+
+  // A session that died stays reported. Text arriving afterwards — a host
+  // replaying the mounting result, say — re-renders the document, and dropping
+  // the one notice that explains why nothing more will load would leave a
+  // viewer that silently stops halfway down.
+  if (failure) showStatus('error', failure.title, failure.detail);
 }
 
 async function openExternal(url: string): Promise<void> {
@@ -158,6 +171,14 @@ function jumpTo(offset: number): void {
   if (focusAfterJump(view, offset)) {
     anchorOffset = offset;
     persist();
+    return;
+  }
+
+  // A jump pressed while a section is still loading is queued rather than
+  // dropped: only one call may be in flight, and silently ignoring the click
+  // would leave the reader pressing a button that does nothing.
+  if (pending) {
+    queuedJump = offset;
     return;
   }
 
@@ -204,6 +225,8 @@ function adoptChunk(offset: number, chunk: DocumentChunk, key: DocumentKey): boo
       sourceUrl: null,
       title: state?.title ?? '',
       provisional: false,
+      failedOffset: null,
+      expired,
     };
   }
 
@@ -218,6 +241,9 @@ function adoptChunk(offset: number, chunk: DocumentChunk, key: DocumentKey): boo
   if (chunk.outline) state.outline = chunk.outline;
   if (chunk.source_url) state.sourceUrl = chunk.source_url;
   state.chunks.push({ offset, text: chunk.text, nextOffset: chunk.next_offset });
+  // Whatever failed before, this offset answered — the automatic sentinel gets
+  // its attempt back.
+  state.failedOffset = null;
   restored = false;
 
   return shifted;
@@ -271,7 +297,14 @@ async function loadSection(offset: number, mode: 'append' | 'replace'): Promise<
     }
 
     if (outcome.kind === 'notice') {
+      pendingAnchor = null;
+
       if (state) {
+        // One automatic attempt per offset. Re-arming the sentinel here would
+        // request the failing section again the moment it scrolls back into
+        // view — forever, and hardest against a server that is rate-limiting.
+        // The offset becomes a gap marker the reader may press instead.
+        state.failedOffset = offset;
         render();
         statusArea.replaceChildren(outcome.node);
       } else {
@@ -283,12 +316,21 @@ async function loadSection(offset: number, mode: 'append' | 'replace'): Promise<
     // Everything already read stays on screen; only the controls that would
     // fail the same way are taken out of service.
     expired = true;
+    failure = { title: COPY.sessionExpired };
     pendingAnchor = null;
     pendingLabel = null;
+    queuedJump = null;
+
     if (state) render();
-    showStatus('error', COPY.sessionExpired);
+    else showStatus('error', COPY.sessionExpired);
   } finally {
     pending = false;
+
+    // A jump the reader pressed while this call ran, now that the section it
+    // waited for is on screen — which may even be the one it wanted.
+    const queued = queuedJump;
+    queuedJump = null;
+    if (queued !== null && !expired) jumpTo(queued);
   }
 }
 
@@ -366,6 +408,10 @@ function onScroll(): void {
 /**
  * Remember the document and the place in it, never its text.
  *
+ * Writes only when what would be stored actually changed — the first render of
+ * a document, and afterwards a reading position that moved. Appending a section
+ * changes the text on screen and nothing in the snapshot, so it is not a write.
+ *
  * The outline is the elastic element: a long one is dropped rather than losing
  * the whole snapshot, because the document, its title and the reading position
  * are what make a reopen recognisable at all.
@@ -380,6 +426,21 @@ function persist(): void {
     anchorOffset,
     anchorLabel: anchorLabelFor(state.outline, anchorOffset),
   };
+
+  // Every field the snapshot carries, plus the outline by length — the only
+  // thing that can change about it is arriving or being replaced wholesale.
+  const signature = [
+    snapshot.dokumentnummer ?? '',
+    snapshot.url ?? '',
+    snapshot.title,
+    snapshot.totalLength,
+    snapshot.anchorOffset,
+    snapshot.anchorLabel ?? '',
+    state.outline.length,
+  ].join('|');
+
+  if (signature === persisted) return;
+  persisted = signature;
 
   if (state.outline.length > 0 && snapshots.persist({ ...snapshot, outline: state.outline })) {
     return;
@@ -406,6 +467,8 @@ function adoptMountText(text: string): void {
     sourceUrl: null,
     title: '',
     provisional: true,
+    failedOffset: null,
+    expired,
   };
   restored = false;
   clearStatus();
@@ -446,10 +509,7 @@ function takeMountInput(args: Record<string, unknown>): void {
 }
 
 /** Rung 3: this widget's own last render, as structure without its text. */
-function restorePrevious(): boolean {
-  const snapshot = parseSnapshot(snapshots.restore());
-  if (!snapshot) return false;
-
+function restoreFrom(snapshot: ViewerSnapshot): void {
   state = {
     key: documentKey(snapshot.dokumentnummer, snapshot.url),
     chunks: [],
@@ -458,6 +518,8 @@ function restorePrevious(): boolean {
     sourceUrl: null,
     title: snapshot.title,
     provisional: false,
+    failedOffset: null,
+    expired,
   };
   restored = true;
   anchorOffset = snapshot.anchorOffset;
@@ -466,7 +528,16 @@ function restorePrevious(): boolean {
   render();
 
   void loadSection(snapshot.anchorOffset, 'replace');
-  return true;
+}
+
+/** Whether a stored snapshot describes the document the mounting call named. */
+function sameDocument(snapshot: ViewerSnapshot, key: DocumentKey): boolean {
+  if (snapshot.dokumentnummer && key.dokumentnummer) {
+    return snapshot.dokumentnummer === key.dokumentnummer;
+  }
+  if (snapshot.url && key.url) return snapshot.url === key.url;
+
+  return false;
 }
 
 /**
@@ -484,12 +555,28 @@ function advanceLadder(): void {
     if (args) takeMountInput(args);
   }
 
+  const snapshot = parseSnapshot(snapshots.restore());
+
   if (mountKey) {
+    // The two rungs are not exclusive, and the host that stores snapshots is
+    // also the one that delivers the arguments: taking rung 2 blindly would
+    // reopen every conversation at the top of the document and make the stored
+    // reading position unreachable in the only host that has one. A snapshot of
+    // a *different* document is stale — fresh data wins and rung 2 starts the
+    // new document from its first section.
+    if (snapshot && sameDocument(snapshot, mountKey)) {
+      restoreFrom(snapshot);
+      return;
+    }
+
     void loadSection(0, 'append');
     return;
   }
 
-  if (restorePrevious()) return;
+  if (snapshot) {
+    restoreFrom(snapshot);
+    return;
+  }
 
   showEmpty(createNotice('info', COPY.degradedTitle, COPY.textInChat));
 }
@@ -520,9 +607,13 @@ connectBridge({
     advanceLadder();
   })
   .catch(() => {
-    // A handshake that never completed means no tool result ever arrived, so
-    // this is always the mount case.
-    if (!state) {
-      renderNotice(view, createNotice('error', COPY.connectFailedTitle, COPY.textInChat));
-    }
+    // Without a handshake no section can ever be loaded, so the controls that
+    // would try are taken out of service exactly as they are for an evicted
+    // session. The notice holds either way: a document rendered from the mount
+    // text alone would otherwise quietly stop working halfway down.
+    expired = true;
+    failure = { title: COPY.connectFailedTitle, detail: COPY.textInChat };
+
+    if (state) render();
+    else renderNotice(view, createNotice('error', COPY.connectFailedTitle, COPY.textInChat));
   });

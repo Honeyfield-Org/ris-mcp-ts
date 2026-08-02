@@ -64,7 +64,12 @@ describe.each(BUNDLES)('generated widget template: %s', (_widget, html) => {
     // directly, and the bundle ships `from"./widget-state-<hash>.js"` for a file
     // that is never written. The script tag is inline, so every assertion above
     // passes while the widget fails to start in every host.
-    expect(html).not.toMatch(/\b(?:from|import)\s*["']\.[^"']*["']/);
+    //
+    // Dynamic imports count: ext-apps reaches for zod's JSON-Schema converter
+    // through `import("./index-<hash>.js")`, which is just as unloadable. No
+    // allowlist — `inlineDynamicImports` in vite.ui.config.ts is what makes this
+    // hold, and a reference that survives it is one nothing can resolve.
+    expect(html).not.toMatch(/\b(?:from|import)\s*\(?\s*["']\.[^"']*["']/);
   });
 
   it('carries the SDK it needs to talk to a host', () => {

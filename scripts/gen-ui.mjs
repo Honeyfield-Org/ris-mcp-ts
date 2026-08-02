@@ -51,10 +51,14 @@ for (const widget of widgets) {
 
   const html = readFileSync(bundle, 'utf8');
 
-  // A leftover cross-chunk import means the bundle is not self-contained: the
-  // file it names is never written, so the widget would fail to start in every
-  // host while still passing every "no external URL" check.
-  const dangling = /\bfrom\s*["']\.[^"']*["']/.exec(html);
+  // A leftover cross-chunk reference means the bundle is not self-contained:
+  // the file it names is never written, so the widget would fail to start in
+  // every host while still passing every "no external URL" check. Static and
+  // dynamic both — ext-apps reaches for zod's JSON-Schema converter through
+  // `import("…")`, which `inlineDynamicImports` in vite.ui.config.ts is what
+  // resolves. There is deliberately no allowlist: a reference that survives
+  // here is one nothing can load at runtime.
+  const dangling = /\b(?:from|import)\s*\(?\s*["']\.[^"']*["']/.exec(html);
   if (dangling) {
     throw new Error(`Widget "${widget}" was not fully inlined — it still imports ${dangling[0]}`);
   }
