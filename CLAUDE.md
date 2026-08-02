@@ -15,19 +15,31 @@ pnpm run build
 pnpm run dev             # Start with tsx (hot reload, stdio)
 pnpm run dev:http        # Start HTTP server with tsx (hot reload)
 pnpm run build           # Compile TypeScript (runs typecheck first)
+pnpm run gen:ui          # Build the widget bundles → src/generated/<widget>-html.ts
 pnpm start               # Run compiled version (stdio)
 pnpm run start:http      # Run HTTP server (Streamable HTTP transport)
-pnpm run check           # Run typecheck + lint + format:check + tests
+pnpm run check           # typecheck + lint + format:check + test + test:ui
 ```
+
+**Node floor: ≥ 20.19** (`engines` in package.json) — required by vite 7, which
+builds the widget bundles. `gen:ui` runs automatically as a `pre*` hook of
+`dev`, `dev:http`, `typecheck`, `test`, `test:coverage` and `test:watch`, so the
+generated sources are never stale; you rarely call it by hand.
 
 ## Testing
 
 ```bash
-pnpm test                # Run all unit tests (844 tests, 16 files)
+pnpm test                # Server unit tests (886 tests, 18 files) — node env
+pnpm run test:ui         # Widget tests under ui/ (131 tests, 4 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
 ```
+
+Two separate vitest projects, because the widget needs a DOM and the server must
+not have one: `vitest.config.ts` (node, excludes `ui/**`) and
+`vitest.ui.config.ts` (jsdom, only `ui/**/*.test.ts`). `pnpm run check` runs
+both.
 
 ### Manual Testing with MCP Inspector
 
@@ -61,6 +73,8 @@ src/
 ├── helpers.ts         # Shared helper functions for tool handlers
 ├── constants.ts       # Static mappings, enum values, configuration
 ├── version.ts         # Shared VERSION constant (read from package.json)
+├── widgets.ts         # MCP Apps: widget resource + the tools' _meta.ui
+├── generated/         # gitignored, written by gen:ui — widget HTML as TS constants
 ├── tools/
 │   ├── index.ts       # registerAllTools() barrel file
 │   ├── bundesrecht.ts
@@ -76,19 +90,56 @@ src/
 │   ├── history.ts
 │   └── verordnungen.ts
 └── __tests__/
+    ├── cancellation.test.ts / cancellation.e2e.test.ts
     ├── client.test.ts
     ├── document-matching.test.ts
-    ├── http.test.ts
     ├── edge-cases.test.ts
     ├── formatting.test.ts
+    ├── helpers.test.ts
     ├── history.test.ts
+    ├── http.test.ts / http-transport.e2e.test.ts
     ├── parser.test.ts
     ├── security.e2e.test.ts
     ├── server.test.ts
+    ├── structured-content.e2e.test.ts
+    ├── tool-errors.e2e.test.ts
     ├── types.test.ts
+    ├── ui-resource.e2e.test.ts   # widget resource + tool _meta over a real Client
+    ├── ui-template.test.ts       # the generated bundle is self-contained
     └── integration/
         └── smoke.test.ts
+
+ui/                    # Widget sources — browser code, own tsconfig (DOM lib)
+├── trefferliste/      # The result-list widget
+│   ├── index.html     # Shell with the nojs marker; vite build entry
+│   ├── main.ts        # Entry: owns page state, delegates the rest
+│   ├── viewmodel.ts   # Pure structuredContent → display model (no DOM)
+│   ├── view.ts        # Model → elements, payload interpretation
+│   └── style.css
+├── shared/
+│   ├── bridge.ts      # Host protocol: ext-apps App class, result acquisition
+│   ├── states.ts      # German copy + notice/skeleton elements
+│   └── theme.css
+└── __fixtures__/      # Search-result fixtures for the widget tests
+
+vite.ui.config.ts      # Widget build: every ui/<widget>/index.html is an entry
+scripts/gen-ui.mjs     # dist-ui/<widget>/index.html → src/generated/<widget>-html.ts
 ```
+
+### Widget Build Pipeline
+
+`gen:ui` = `vite build --config vite.ui.config.ts && node scripts/gen-ui.mjs`.
+Vite inlines each widget into one self-contained `index.html`
+(`vite-plugin-singlefile`, all assets inlined regardless of size), then
+`gen-ui.mjs` writes that HTML as a TypeScript string constant to
+`src/generated/<widget>-html.ts`. The server imports the constant, so it never
+resolves a file path at runtime — one less thing to break between npm install,
+Docker and dev.
+
+Both the vite config and `gen-ui.mjs` derive the widget list from the sources
+(`ui/<name>/index.html`), so a new widget means a new directory, not a config
+edit. `src/generated/` is gitignored and rebuilt by the `pre*` hooks; a widget
+that failed to build raises a named error instead of producing a missing export.
 
 ## Key Patterns
 
@@ -96,11 +147,13 @@ src/
 
 Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(server)` function. Pattern:
 
-1. Register with `server.registerTool(name, { title, description, inputSchema, outputSchema, annotations }, handler)` — `title` is a German display name, `description`/`inputSchema` are English, `annotations` is `{ readOnlyHint: true, openWorldHint: true }` for these read-only tools. (The deprecated `server.tool(...)` overload is no longer used.) Search tools declare `SearchResultOutputShape` (types.ts) as `outputSchema`; successful results carry the parsed result as `structuredContent` (emitted centrally in `executeSearchTool()`), error results (`isError: true`) carry none.
-2. For `limit`/`seite`, reuse `LimitSchema`/`SeiteSchema` from `types.ts` instead of raw `z.number()`
-3. Use `helpers.ts` functions: `hasAnyParam()`, `buildBaseParams()`, `addOptionalParams()`, `executeSearchTool()`
-4. Call client search functions from `client.ts`
-5. Register in `src/tools/index.ts` if adding a new tool
+1. The 11 search tools register with `registerAppTool(server, name, { title, description, inputSchema, outputSchema, annotations, _meta }, handler)` from `@modelcontextprotocol/ext-apps/server` — same config object as `server.registerTool()` plus `_meta: SEARCH_WIDGET_META` (`src/widgets.ts`), which is what points the tool at the Trefferliste widget. `ris_dokument` uses plain `server.registerTool()`: no widget, and deliberately no `outputSchema` either (see below). The deprecated `server.tool(...)` overload is no longer used.
+2. `title` is a German display name, `description`/`inputSchema` are English. `annotations` is `{ readOnlyHint: true, openWorldHint: true, destructiveHint: false }` on **all 12** tools — `destructiveHint` is spec-redundant once `readOnlyHint` is true, but OpenAI lists it as a required annotation for app submissions; do not drop it as noise.
+3. Search tools declare `SearchResultOutputShape` (types.ts) as `outputSchema`; successful results carry the parsed result plus the `query` echo as `structuredContent` (emitted centrally in `executeSearchTool()`), error results (`isError: true`) carry none. `executeSearchTool()` takes the echo from `buildQueryEcho(toolName, args)` as a required argument, so a new search tool cannot silently ship without pagination support.
+4. For `limit`/`seite`, reuse `LimitSchema`/`SeiteSchema` from `types.ts` instead of raw `z.number()`
+5. Use `helpers.ts` functions: `hasAnyParam()`, `buildBaseParams()`, `addOptionalParams()`, `executeSearchTool()`
+6. Call client search functions from `client.ts`
+7. Register in `src/tools/index.ts` if adding a new tool
 
 ### Helper Functions (helpers.ts)
 
@@ -134,6 +187,70 @@ Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(serve
 - **Types**: Use `type` imports (`import type { ... }`), no explicit `any`
 - **Unused vars**: Must be prefixed with `_`
 - **ESM**: Project uses ES modules (`"type": "module"` in package.json, `.js` extensions in imports)
+
+## MCP Apps (Trefferliste Widget)
+
+Since v1.4.0 the 11 search tools can render their results as an interactive
+result list in hosts that support the MCP Apps extension
+(`@modelcontextprotocol/ext-apps`). The mechanism, in the order it happens:
+
+1. `registerWidgetResources()` (`src/widgets.ts`) registers one resource,
+   `ui://ris-mcp/trefferliste`, whose content is the generated single-file HTML.
+2. Each search tool carries `_meta: SEARCH_WIDGET_META`, i.e.
+   `_meta.ui.resourceUri` → that URI. `registerAppTool` additionally mirrors it
+   onto the legacy flat key `ui/resourceUri` for older hosts. `ris_dokument`
+   carries no UI metadata — its payload is the document text, not a list.
+3. A supporting host loads that HTML and delivers the tool result to it;
+   `ui/shared/bridge.ts` wraps the ext-apps `App` class for the handshake,
+   theming, `callServerTool`, `openLink` and `sendMessage`.
+
+**The `resources` capability is now part of the initialize handshake.** The
+first registered resource switches it on for every client, including those that
+will never render anything. Accepted deliberately: non-UI clients ignore the
+capability and the text path of all 12 tools is unchanged.
+
+**CSP lives on the resource, not on the tool.** `McpUiToolMeta` types `csp` and
+`permissions` as `never` because hosts read the policy from the `resources/read`
+content item (falling back to the `resources/list` entry) and ignore it on the
+tool — so `src/widgets.ts` declares it in both of those places and nowhere else.
+All four domain lists (`connectDomains`, `resourceDomains`, `frameDomains`,
+`baseUriDomains`) are declared as explicitly empty arrays rather than omitted: a
+missing declaration shows up in a host as "CSP off", not as "needs nothing".
+That only stays truthful while the bundle really reaches for nothing off-origin,
+which `ui-template.test.ts` enforces. `_meta.ui.domain` is deliberately unset.
+
+**Cross-host data acquisition** (`readMountResult` in `ui/shared/bridge.ts`),
+in order: (1) `structuredContent` on the `toolresult` notification — what
+claude.ai delivers; (2) `window.openai.toolOutput`, ChatGPT's own Apps SDK
+global and the *normal* path there, feature-detected rather than host-sniffed;
+(3) nothing, which becomes a visible German notice. A result the widget
+requested itself (pagination) reads step 1 only — the host global holds the
+result of the call that *mounted* the widget, so falling back to it would
+silently re-render the page the user just left.
+
+**Never lose data.** The widget is progressive enhancement over a chat answer
+that always exists: the text block of every tool stays complete and unchanged,
+and every non-result state is a visible German notice (`ui/shared/states.ts`)
+instead of an empty box. A failed page request keeps the list on screen and puts
+the notice underneath it. Any change here must preserve that.
+
+**Host support** (measured in the rendering gate, #45/#49):
+
+| Host | Status |
+|------|--------|
+| claude.ai | Fully functional — widget, pagination, `openLink` |
+| ChatGPT | Renders via the `window.openai.toolOutput` fallback |
+| Claude Code, API clients | Unchanged text output, no regression |
+
+Known issues and follow-ups: `claude-ai-mcp#165` (custom-connector rendering
+flaky — never reproduced here), `ext-apps#696`, and issue **#60** for
+ChatGPT pagination and the CSP badge.
+
+**Dev workflow for host testing:** claude.ai needs a public HTTPS endpoint, so
+run `pnpm run dev:http` and expose it with
+`cloudflared tunnel --url http://localhost:3000 --protocol http2` — the default
+QUIC transport dies in some networks. Connector URLs in claude.ai are **not
+editable**: a new tunnel URL means deleting the connector and adding it again.
 
 ## CI/CD
 
@@ -186,10 +303,27 @@ Direct pushes to main are blocked — version-bump commits go through a PR as we
 
 ## MCP Tools (12)
 
-Each tool is registered via `server.registerTool()` with a German `title`, an
-English `description`/schema, and `annotations: { readOnlyHint, openWorldHint }`
+Each tool has a German `title`, an English `description`/schema and
+`annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false }`
 (all 12 are read-only against an external API). Numeric `limit`/`seite` params
 are validated by the shared `LimitSchema` (10/20/50/100) and `SeiteSchema` (≥1).
+Every tool except `ris_dokument` is a *search* tool: those 11 declare
+`SearchResultOutputShape` as `outputSchema` and carry the widget `_meta` (see
+[MCP Apps](#mcp-apps-trefferliste-widget)).
+
+Their `structuredContent` holds the pagination fields (`total_hits`, `page`,
+`page_size`, `has_more`), the `documents` array and a `query` echo — the tool's
+own name plus the validated arguments, so a client (or the widget) can page by
+re-issuing the call with an incremented `seite`. Each document carries
+`citation_display`, the preformatted citation line as it appears in the text
+output, and Judikatur hits additionally carry `gericht`, `geschaeftszahl`,
+`entscheidungsdatum` and `rechtssatznummer`. All of these live in
+`structuredContent` only — the markdown text is unchanged by them, and
+`structuredContent` is not subject to the 25,000-character text limit.
+`ris_dokument` deliberately declares no `outputSchema`: clients may treat the
+text block as a mere serialization of `structuredContent` and render only the
+latter, which once made the document text disappear (v1.3.0 live finding, see
+DECISIONS.md).
 
 | Tool | Description | API Endpoint |
 |------|-------------|--------------|
@@ -264,7 +398,7 @@ Unknown prefixes fall back to a Justiz search.
 | File | Purpose |
 |------|---------|
 | `src/http.ts` | Express + Streamable HTTP entry point |
-| `src/__tests__/http.test.ts` | HTTP transport tests (9 tests) |
+| `src/__tests__/http.test.ts` | HTTP transport tests |
 | `Dockerfile` | Multi-stage build (node:22-alpine) |
 | `.dockerignore` | Docker build excludes |
 | `.github/workflows/release.yml` | CI/CD: release + Lightsail deploy |
@@ -272,5 +406,6 @@ Unknown prefixes fall back to a Justiz search.
 ## Documentation
 
 - API Docs: `docs/Dokumentation_OGD-RIS_API.md` (Markdown) / `docs/Dokumentation_OGD-RIS_API.pdf`
-- Deployment Spec: `specs/AWS_LIGHTSAIL_DEPLOYMENT.md`
+- Deployment Spec: `specs/done/AWS_LIGHTSAIL_DEPLOYMENT.md` — local only, `specs/` is gitignored
+- Decisions log: `DECISIONS.md` (Aktiv / Offen / Verworfen) — read it before changing anything structural
 - RIS API v2.6: https://data.bka.gv.at/ris/api/v2.6/

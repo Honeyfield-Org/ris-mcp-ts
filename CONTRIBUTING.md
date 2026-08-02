@@ -4,7 +4,7 @@ Thank you for your interest in contributing to the RIS MCP Server! This guide wi
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) >= 20.0.0
+- [Node.js](https://nodejs.org/) >= 20.19.0
 - [pnpm](https://pnpm.io/)
 
 ## Getting Started
