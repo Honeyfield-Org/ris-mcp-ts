@@ -8,9 +8,27 @@ import { z } from 'zod';
 
 import type { DocumentCache } from '../document-cache.js';
 import { loadDocument } from '../document-loader.js';
-import { extractOutline, truncateResponse } from '../formatting.js';
+import {
+  CHARACTER_LIMIT,
+  extractOutline,
+  truncateResponse,
+  type OutlineEntry,
+} from '../formatting.js';
 import { createErrorResponse, formatErrorResponse } from '../helpers.js';
+import { DocumentOutputShape } from '../types.js';
 import { VIEWER_WIDGET_META } from '../widgets.js';
+
+/**
+ * Characters of outline a response may carry alongside the document excerpt.
+ *
+ * Measured against the live API: a court decision's outline serialises to 361
+ * characters, a consolidated statute's (ElWG, 612 650 characters, 499 headings)
+ * to 38 123 — half again the excerpt it would travel with, in every client,
+ * including every one that will never draw a navigation rail. Past this budget
+ * the viewer earns the outline from the section call it is about to make anyway,
+ * which carries it at no extra cost.
+ */
+const OUTLINE_BUDGET = CHARACTER_LIMIT / 4;
 
 export function registerDokumentTool(server: McpServer, cache: DocumentCache): void {
   // registerAppTool only normalises the UI metadata on the descriptor — it
@@ -38,11 +56,12 @@ Note: For long documents, content may be truncated. Use specific searches to nar
           .default('markdown')
           .describe('"markdown" (default) or "json"'),
       },
-      // Deliberately no outputSchema: the spec lets a client treat the text block
-      // as a mere serialization of structuredContent and render only the latter.
-      // For this tool the text block IS the payload, so any structured metadata
-      // would replace the document text with a handful of fields and the model
-      // would never see the document.
+      // The structured payload carries the document text itself, byte for byte
+      // the same string as the text block below. That is what makes declaring it
+      // safe: a client that renders `structuredContent` in place of the text
+      // block — the v1.3.0 finding — shows the same document rather than a
+      // handful of metadata fields. See DocumentOutputShape.
+      outputSchema: DocumentOutputShape,
       annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
       _meta: VIEWER_WIDGET_META,
     },
@@ -61,15 +80,29 @@ Note: For long documents, content may be truncated. Use specific searches to nar
 
         const { text, html, contentUrl, metadata } = loaded.document;
 
+        // Offsets in an outline address the markdown rendering, and the viewer
+        // shows a rail only for a document too long for one response — so the
+        // outline is worth carrying in exactly that case, within the budget
+        // above, and is dead payload in every other.
+        let outline: OutlineEntry[] | undefined;
+
         // Hand the viewer the very string this response was cut from, so its
         // first chunk call is a hit and its offsets address the text the reader
         // is looking at. Only the markdown rendering: the JSON one has a
         // completely different character distribution.
         if (response_format === 'markdown') {
           try {
+            const extracted = extractOutline(html, text);
+            if (
+              text.length > CHARACTER_LIMIT &&
+              JSON.stringify(extracted).length <= OUTLINE_BUDGET
+            ) {
+              outline = extracted;
+            }
+
             cache.set(
               dokumentnummer ?? contentUrl,
-              { text, outline: extractOutline(html, text), sourceUrl: contentUrl },
+              { text, outline: extracted, sourceUrl: contentUrl },
               contentUrl,
             );
           } catch (e) {
@@ -94,6 +127,18 @@ Note: For long documents, content may be truncated. Use specific searches to nar
               mimeType: 'text/html',
             },
           ],
+          // `text` is `result`, not a second rendering of it: the two blocks are
+          // the same string, which is the whole safety argument for declaring an
+          // outputSchema here at all. The identifiers let the viewer address the
+          // document for further sections on a host that delivers neither the
+          // content blocks nor the tool input to a widget.
+          structuredContent: {
+            ...(dokumentnummer === undefined ? {} : { dokumentnummer }),
+            text: result,
+            total_length: text.length,
+            ...(outline === undefined ? {} : { outline }),
+            source_url: contentUrl,
+          },
         };
       } catch (e) {
         // A cancelled call has no reader left for a German error message; let the

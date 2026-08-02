@@ -18,10 +18,13 @@ import { createNotice } from '../shared/states.js';
 import { COPY } from './copy.js';
 import {
   parseChunkResult,
+  parseDocumentResult,
   sectionId,
+  toMountDocument,
   type Block,
   type DocumentChunk,
   type DocumentView,
+  type MountDocument,
   type OutlineRow,
   type RunView,
 } from './viewmodel.js';
@@ -51,7 +54,7 @@ export interface RenderedDocument {
  * yielded nothing and the caller should try the next one.
  */
 export type Outcome =
-  | { kind: 'text'; text: string }
+  | { kind: 'document'; document: MountDocument }
   | { kind: 'chunk'; chunk: DocumentChunk }
   | { kind: 'empty' }
   | { kind: 'notice'; node: HTMLElement };
@@ -66,8 +69,32 @@ export type Outcome =
  */
 export type ResultContext = 'mount' | 'section';
 
-/** Fallback height when the host says nothing about its container. */
+/** The height the viewer asks for when nothing else decides it. */
 const FALLBACK_HEIGHT = 640;
+
+/**
+ * Floor under any height a host proposes.
+ *
+ * ChatGPT was measured collapsing the widget to about two lines with the
+ * document text rendering behind it. Whatever produces that number, a reading
+ * pane that shows two lines is worse than one that overflows its container by a
+ * little, so a degenerate value loses to this floor.
+ */
+const MIN_HEIGHT = 320;
+
+/**
+ * Ceiling over any height a host proposes.
+ *
+ * The viewer is a pane inside a conversation, not a page. A host that reports
+ * its container as thousands of pixels tall — or that echoes back the size the
+ * widget itself last reported, which would grow without bound — gets a reading
+ * pane rather than a wall of text.
+ */
+const MAX_HEIGHT = 1200;
+
+function clampHeight(height: number): number {
+  return Math.min(Math.max(Math.round(height), MIN_HEIGHT), MAX_HEIGHT);
+}
 
 function element(tag: string, className?: string, text?: string): HTMLElement {
   const node = document.createElement(tag);
@@ -94,20 +121,33 @@ function isPositiveNumber(value: unknown): value is number {
 }
 
 /**
- * The height the viewer may occupy, from the host's own container.
+ * The height the viewer occupies, from the host's own container.
  *
- * Deliberately a pixel fallback rather than a viewport unit: inside an
- * auto-sized iframe `vh` resolves against a height this widget itself
- * determines, which is circular. A too-short reading pane still scrolls and
- * still shows everything; an unbounded one grows to tens of thousands of pixels
- * and takes the lazy loading down with it.
+ * `containerDimensions` carries two different statements and they must not be
+ * read the same way. `height` is a container the host has already sized, so the
+ * viewer fills it. `maxHeight` is a *ceiling* — "you may be this tall" — and
+ * answering it with "then I am this tall" is what made the widget 4 000 pixels
+ * tall in the reference host, which reports `{ maxHeight: 4000 }`: a wall of
+ * text where a reading pane belongs, and every lazy-loading sentinel in view at
+ * once. Under a ceiling the viewer asks for its own preferred height instead.
+ *
+ * Both are clamped, because a host number is input like any other: see
+ * {@link MIN_HEIGHT} and {@link MAX_HEIGHT}.
+ *
+ * Deliberately a pixel value rather than a viewport unit: inside an auto-sized
+ * iframe `vh` resolves against a height this widget itself determines, which is
+ * circular. A too-short reading pane still scrolls and still shows everything;
+ * an unbounded one grows to tens of thousands of pixels and takes the lazy
+ * loading down with it.
  */
 export function viewportHeight(context: unknown): number {
   const dimensions = isRecord(context) ? context.containerDimensions : undefined;
   if (!isRecord(dimensions)) return FALLBACK_HEIGHT;
 
-  if (isPositiveNumber(dimensions.height)) return dimensions.height;
-  if (isPositiveNumber(dimensions.maxHeight)) return dimensions.maxHeight;
+  if (isPositiveNumber(dimensions.height)) return clampHeight(dimensions.height);
+  if (isPositiveNumber(dimensions.maxHeight)) {
+    return clampHeight(Math.min(FALLBACK_HEIGHT, dimensions.maxHeight));
+  }
 
   return FALLBACK_HEIGHT;
 }
@@ -127,9 +167,26 @@ export function interpretPayload(payload: ToolPayload, context: ResultContext): 
   }
 
   if (context === 'mount') {
-    // `ris_dokument` declares no structured content by design: its text block is
-    // the payload, and up to 25 000 characters of it arrive with the mount.
-    return payload.text ? { kind: 'text', text: payload.text } : { kind: 'empty' };
+    // Two sources for one string. `ris_dokument` puts the same text in its
+    // structured payload and in its text block, and hosts differ in which of the
+    // two they hand a widget: claude.ai delivers only the structured one, the
+    // reference host only the blocks. The structured one is preferred where both
+    // exist because it also names the document and describes its length.
+    const structured = parseDocumentResult(payload.structuredContent);
+    if (structured) return { kind: 'document', document: toMountDocument(structured) };
+
+    if (!payload.text) return { kind: 'empty' };
+
+    return {
+      kind: 'document',
+      document: {
+        text: payload.text,
+        totalLength: null,
+        outline: null,
+        key: {},
+        sourceUrl: null,
+      },
+    };
   }
 
   const chunk = parseChunkResult(payload.structuredContent);

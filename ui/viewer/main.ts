@@ -7,8 +7,9 @@
  * to `viewmodel.ts`, elements to `view.ts`.
  *
  * The first render walks a four-rung ladder and takes the first rung that
- * yields content: the mounting result's text block, the document named by the
- * tool *input*, this widget's own last snapshot, and finally an honest notice.
+ * yields content: the mounting result — its text block *or* its structured
+ * payload, whichever the host delivered — then the document named by the tool
+ * *input*, then this widget's own last snapshot, and finally an honest notice.
  * The chat keeps the complete text and the resource link in every one of them.
  */
 
@@ -33,6 +34,7 @@ import {
   relocateAnchor,
   type DocumentChunk,
   type DocumentKey,
+  type MountDocument,
   type ViewerSnapshot,
   type ViewerState,
 } from './viewmodel.js';
@@ -457,18 +459,32 @@ function persist(): void {
 // The first-render ladder
 // =============================================================================
 
-/** Rung 1: the text block of the result that mounted the widget. */
-function adoptMountText(text: string): void {
+/**
+ * Rung 1: the mounting `ris_dokument` result, from whichever channel carried it.
+ *
+ * The text is a *truncated* rendering with a German notice appended, so the run
+ * stays provisional however much the payload said about it: where this text ends
+ * is not where the document continues, and the canonical series replaces it
+ * whole on the first scroll. What the structured payload adds is everything
+ * around the text — the document's real length, its outline, and the identifier
+ * without which no further section could be fetched at all.
+ */
+function adoptMountDocument(mount: MountDocument): void {
   // Fresh text always wins over a restored snapshot, and never over the
   // canonical sections the viewer has already loaded for itself.
   if (state && !state.provisional && !restored) return;
 
+  // The payload's own identifier when it carried one — this is the whole reason
+  // the structured channel matters, because a host may deliver it and nothing
+  // else. Otherwise whatever the tool-input channel or an earlier render knew.
+  const named = Boolean(mount.key.dokumentnummer ?? mount.key.url);
+
   state = {
-    key: state?.key ?? mountKey ?? {},
-    chunks: [{ offset: 0, text, nextOffset: null }],
-    totalLength: null,
-    outline: [],
-    sourceUrl: null,
+    key: named ? mount.key : (state?.key ?? mountKey ?? {}),
+    chunks: [{ offset: 0, text: mount.text, nextOffset: null }],
+    totalLength: mount.totalLength,
+    outline: mount.outline ?? [],
+    sourceUrl: mount.sourceUrl,
     title: '',
     provisional: true,
     failedOffset: null,
@@ -483,17 +499,25 @@ function adoptMountText(text: string): void {
 /**
  * Take the result the host delivered by itself.
  *
- * A host that reopens a conversation replays the mounting result stripped of
- * its content; complaining about that underneath a document restored from this
- * widget's own snapshot would be noise about a problem the user does not have.
+ * A reopened conversation replays the mounting result, and how much of it
+ * survives the replay is the host's business: one that kept the structured
+ * payload replays the document itself, which then wins over anything restored
+ * from this widget's own snapshot; one that replays it stripped of both
+ * channels says nothing the viewer does not already know better.
  */
 function presentMount(payload: ToolPayload): void {
-  if (restored && !payload.text && !payload.isError) return;
-
   const outcome = interpretPayload(payload, 'mount');
 
-  if (outcome.kind === 'text') {
-    adoptMountText(outcome.text);
+  if (outcome.kind === 'empty') {
+    // Neither channel carried anything. Under a document already on screen that
+    // is the stripped replay above, and complaining about it would be noise
+    // about a problem the user does not have; with nothing on screen the ladder
+    // has further rungs to try.
+    return;
+  }
+
+  if (outcome.kind === 'document') {
+    adoptMountDocument(outcome.document);
     return;
   }
 

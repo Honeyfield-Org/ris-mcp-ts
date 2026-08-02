@@ -75,13 +75,37 @@ function buttonLabelled(container: HTMLElement, label: string): HTMLButtonElemen
 describe('viewportHeight', () => {
   it.each([
     ['a fixed height', { containerDimensions: { height: 520, width: 700 } }, 520],
-    ['a maximum height', { containerDimensions: { maxHeight: 480 } }, 480],
     ['a host that sends only a width', { containerDimensions: { width: 700 } }, 640],
     ['a host that sends no dimensions', { theme: 'dark' }, 640],
     ['no host context at all', undefined, 640],
     ['a nonsensical height', { containerDimensions: { height: 0 } }, 640],
+    // A ceiling below the preferred height is the one case where maxHeight
+    // decides the number.
+    ['a maximum height that binds', { containerDimensions: { maxHeight: 480 } }, 480],
   ])('takes %s', (_label, context, expected) => {
     expect(viewportHeight(context)).toBe(expected);
+  });
+
+  it('reads maxHeight as a ceiling rather than as a height', () => {
+    // The reference host reports exactly this, and reading it as a height is
+    // what made the widget 4 000 pixels tall: a wall of text instead of a
+    // reading pane, with every lazy-loading sentinel in view at once.
+    expect(viewportHeight({ containerDimensions: { maxHeight: 4000 } })).toBe(640);
+  });
+
+  it.each([
+    ['a container collapsed to two lines', { height: 90 }, 320],
+    ['a ceiling too low to read under', { maxHeight: 120 }, 320],
+  ])('floors %s', (_label, containerDimensions, expected) => {
+    // ChatGPT was measured collapsing the widget to about two lines. A pane that
+    // overflows its container slightly beats one that shows nothing.
+    expect(viewportHeight({ containerDimensions })).toBe(expected);
+  });
+
+  it('caps a container reported as a whole page', () => {
+    // Also the guard against a host that echoes back the size the widget last
+    // reported, which would otherwise grow on every measurement.
+    expect(viewportHeight({ containerDimensions: { height: 9000 } })).toBe(1200);
   });
 });
 
@@ -91,12 +115,75 @@ describe('viewportHeight', () => {
 
 describe('interpretPayload', () => {
   it('takes the text block of the mounting result as the first render', () => {
-    // The whole first-render thesis: `ris_dokument` declares no structured
-    // content, and its text block is the payload.
+    // The reference host's channel: content blocks, nothing structured. A text
+    // block says nothing about the document it was cut from, so nothing around
+    // it is invented.
     expect(interpretPayload(payload({ structuredContent: null }), 'mount')).toEqual({
-      kind: 'text',
-      text: NORM_MARKDOWN,
+      kind: 'document',
+      document: {
+        text: NORM_MARKDOWN,
+        totalLength: null,
+        outline: null,
+        key: {},
+        sourceUrl: null,
+      },
     });
+  });
+
+  it('takes the structured payload of the mounting result, text and all', () => {
+    // claude.ai's only measured channel to a widget. Everything the text block
+    // alone cannot say arrives here: the real length, the outline, and the
+    // identifier the viewer fetches further sections with.
+    const outcome = interpretPayload(
+      payload({
+        text: '',
+        structuredContent: {
+          dokumentnummer: 'NOR12019037',
+          text: NORM_MARKDOWN,
+          total_length: 259_284,
+          outline: SHORT_CHUNK.outline,
+          source_url: 'https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html',
+        },
+      }),
+      'mount',
+    );
+
+    expect(outcome).toEqual({
+      kind: 'document',
+      document: {
+        text: NORM_MARKDOWN,
+        totalLength: 259_284,
+        outline: SHORT_CHUNK.outline,
+        key: { dokumentnummer: 'NOR12019037' },
+        sourceUrl: 'https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html',
+      },
+    });
+  });
+
+  it('addresses a document that has no Dokumentnummer by its source URL', () => {
+    const url = 'https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html';
+    const outcome = interpretPayload(
+      payload({
+        structuredContent: { text: NORM_MARKDOWN, total_length: 1000, source_url: url },
+      }),
+      'mount',
+    );
+
+    if (outcome.kind !== 'document') throw new Error('expected a document');
+    // Never both: `ris_dokument_abschnitt` given a url resolves through the URL
+    // branch of the loader even when a Dokumentnummer is present, which builds a
+    // different metadata header and shifts every offset the viewer holds.
+    expect(outcome.document.key).toEqual({ url });
+  });
+
+  it('falls back to the text block when the structured payload is unusable', () => {
+    const outcome = interpretPayload(
+      payload({ structuredContent: { text: '', total_length: 12 } }),
+      'mount',
+    );
+
+    if (outcome.kind !== 'document') throw new Error('expected a document');
+    expect(outcome.document.text).toBe(NORM_MARKDOWN);
   });
 
   it('reports an empty mount so the caller can try the next rung', () => {

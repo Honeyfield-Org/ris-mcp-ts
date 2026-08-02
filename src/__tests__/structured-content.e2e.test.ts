@@ -8,10 +8,11 @@
  * proves the payload round-trips and matches the declaration — a mismatch
  * surfaces as a thrown McpError.
  *
- * `ris_dokument` deliberately declares neither: a client is free to render
- * `structuredContent` in place of the text block, which for that tool would hide
- * the document text behind a few metadata fields. It returns text plus a
- * `resource_link` to the canonical RIS document instead.
+ * The two document tools declare a different shape rather than none: their
+ * structured payload *is* the document text, so the client that renders
+ * `structuredContent` in place of the text block — the v1.3.0 finding — shows
+ * the same document. `ris_dokument` additionally keeps its `resource_link` to
+ * the canonical RIS document.
  */
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -108,8 +109,8 @@ describe('tool output schema declarations', () => {
     const { tools } = await client.listTools();
 
     expect(tools).toHaveLength(13);
-    // Both document tools are excluded: ris_dokument declares no outputSchema at
-    // all, and ris_dokument_abschnitt declares a chunk rather than a result list.
+    // Both document tools are excluded: they declare a document shape rather
+    // than a result list.
     const searchTools = tools.filter(
       (tool) => tool.name !== 'ris_dokument' && tool.name !== 'ris_dokument_abschnitt',
     );
@@ -141,12 +142,19 @@ describe('tool output schema declarations', () => {
     expect(query.required).toContain('tool');
   });
 
-  it('should declare no outputSchema on ris_dokument', async () => {
+  it('should declare a text-carrying outputSchema on ris_dokument', async () => {
     const { tools } = await client.listTools();
     const dokument = tools.find((tool) => tool.name === 'ris_dokument');
 
-    expect(dokument).toBeDefined();
-    expect(dokument?.outputSchema).toBeUndefined();
+    const properties = dokument?.outputSchema?.properties as Record<string, unknown>;
+    expect(Object.keys(properties)).toEqual(
+      expect.arrayContaining(['text', 'total_length', 'dokumentnummer', 'source_url', 'outline']),
+    );
+    // The one field that makes the schema safe to declare at all.
+    expect(dokument?.outputSchema?.required).toContain('text');
+    // Not `next_offset`: the text block is a truncated rendering with a notice
+    // appended, so its length is not an offset into the document.
+    expect(Object.keys(properties)).not.toContain('next_offset');
   });
 });
 
@@ -336,7 +344,7 @@ describe('ris_dokument text and resource link', () => {
     );
   }
 
-  it('should return no structuredContent on a successful retrieval', async () => {
+  it('should round-trip a structuredContent that repeats the text block', async () => {
     stubDocument('<html><body><p>Kurzer Text</p></body></html>');
 
     const result = await client.callTool({
@@ -344,8 +352,12 @@ describe('ris_dokument text and resource link', () => {
       arguments: { dokumentnummer: 'NOR40052761' },
     });
 
+    // Reaching here at all proves the payload validates against the schema the
+    // client read from tools/list — a mismatch throws an McpError.
     expect(result.isError).not.toBe(true);
-    expect(result.structuredContent).toBeUndefined();
+    expect((result.structuredContent as { text: string }).text).toBe(
+      (result.content as { text: string }[])[0].text,
+    );
   });
 
   it('should deliver the document text itself in the text block', async () => {

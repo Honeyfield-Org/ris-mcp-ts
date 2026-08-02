@@ -167,8 +167,8 @@ error instead of producing a missing export.
 
 Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(server)` function. Pattern:
 
-1. The 11 search tools and `ris_dokument` register with `registerAppTool(server, name, { title, description, inputSchema, outputSchema, annotations, _meta }, handler)` from `@modelcontextprotocol/ext-apps/server` — same config object as `server.registerTool()` plus a `_meta` from `src/widgets.ts` that points the tool at its widget: `SEARCH_WIDGET_META` → Trefferliste, `VIEWER_WIDGET_META` → document viewer. `ris_dokument` still declares no `outputSchema` (see below); the wrapper only touches the descriptor. `ris_dokument_abschnitt` uses plain `server.registerTool()` because it sets no `resourceUri` — it feeds the viewer that is already open. The deprecated `server.tool(...)` overload is no longer used.
-2. `title` is a German display name, `description`/`inputSchema` are English. `annotations` is `{ readOnlyHint: true, openWorldHint: true, destructiveHint: false }` on **all 12** tools — `destructiveHint` is spec-redundant once `readOnlyHint` is true, but OpenAI lists it as a required annotation for app submissions; do not drop it as noise.
+1. The 11 search tools and `ris_dokument` register with `registerAppTool(server, name, { title, description, inputSchema, outputSchema, annotations, _meta }, handler)` from `@modelcontextprotocol/ext-apps/server` — same config object as `server.registerTool()` plus a `_meta` from `src/widgets.ts` that points the tool at its widget: `SEARCH_WIDGET_META` → Trefferliste, `VIEWER_WIDGET_META` → document viewer. `ris_dokument` declares `DocumentOutputShape` rather than the search shape (see below); the wrapper only touches the descriptor. `ris_dokument_abschnitt` uses plain `server.registerTool()` because it sets no `resourceUri` — it feeds the viewer that is already open. The deprecated `server.tool(...)` overload is no longer used.
+2. `title` is a German display name, `description`/`inputSchema` are English. `annotations` is `{ readOnlyHint: true, openWorldHint: true, destructiveHint: false }` on **all 13** tools — `destructiveHint` is spec-redundant once `readOnlyHint` is true, but OpenAI lists it as a required annotation for app submissions; do not drop it as noise.
 3. Search tools declare `SearchResultOutputShape` (types.ts) as `outputSchema`; successful results carry the parsed result plus the `query` echo as `structuredContent` (emitted centrally in `executeSearchTool()`), error results (`isError: true`) carry none. `executeSearchTool()` takes the echo from `buildQueryEcho(toolName, args)` as a required argument, so a new search tool cannot silently ship without pagination support.
 4. For `limit`/`seite`, reuse `LimitSchema`/`SeiteSchema` from `types.ts` instead of raw `z.number()`
 5. Use `helpers.ts` functions: `hasAnyParam()`, `buildBaseParams()`, `addOptionalParams()`, `executeSearchTool()`
@@ -229,22 +229,41 @@ document viewer. The mechanism, in the order it happens:
 
 ### The viewer's first render
 
-`ris_dokument` declares no `structuredContent` by design, so the viewer takes
-the first of four rungs that yields content: **(1)** the text block of the
-mounting result (up to 25 000 characters of markdown — the normal path, and it
-costs no tool call); **(2)** the `dokumentnummer`/`url` from the `toolinput`
-notification or `window.openai.toolInput`, followed by one
+The viewer takes the first of four rungs that yields content: **(1)** the
+mounting result, from *either* channel — the text block, or
+`structuredContent.text`, which is the same string plus the document's real
+length, its `dokumentnummer`/`source_url` and (within budget) its outline. This
+is the normal path and it costs no tool call. **(2)** the `dokumentnummer`/`url`
+from the `toolinput` notification or `window.openai.toolInput`, followed by one
 `ris_dokument_abschnitt` call at offset 0; **(3)** this widget's own snapshot,
 which stores structure and a reading position but never text; **(4)** a German
 notice. There is no host-global stale-data path — the chat keeps the complete
 text and the `resource_link` in every rung.
 
-Further sections load through `ris_dokument_abschnitt` as the reader scrolls:
-one call in flight at a time, an `IntersectionObserver` rooted on the text pane
-with a 600px prefetch margin, paused while the tab is hidden. The viewer is the
-one widget that sets a height (from `hostContext.containerDimensions`, 640px
-fallback) and scrolls internally — without a real scroll container every
-sentinel intersects at once and lazy loading fetches the whole document.
+**Both mount channels are load-bearing, measured 2026-08-02 (#52):** claude.ai
+delivers a widget neither `content[]` nor `toolinput`, only `structuredContent`
+— which is why `ris_dokument` declares an `outputSchema` at all. The reference
+host (`mcp-app-debug`) delivers the content blocks and the input, and no
+structured payload for a tool that used to declare none. A rung that reads only
+one of the two is blind in one of the two hosts.
+
+The mount run stays *provisional* however much the payload said about it: that
+text is the truncated rendering with a German notice appended, so where it ends
+is not where the document continues. Further sections load through
+`ris_dokument_abschnitt` as the reader scrolls: one call in flight at a time, an
+`IntersectionObserver` rooted on the text pane with a 600px prefetch margin,
+paused while the tab is hidden. The viewer is the one widget that sets a height
+and scrolls internally — without a real scroll container every sentinel
+intersects at once and lazy loading fetches the whole document.
+
+**`containerDimensions` carries two different statements** and `viewportHeight()`
+must not read them the same way: `height` is a container the host has already
+sized, `maxHeight` is a *ceiling*. Answering a ceiling with "then I am that tall"
+made the widget 4 000px tall in the reference host, which reports
+`{ maxHeight: 4000 }`. Under a ceiling the viewer asks for its own 640px
+preference instead, and both numbers are clamped to 320…1200px so a host that
+reports a collapsed container (ChatGPT, ~90px) cannot shrink the reading pane to
+two lines.
 
 Document text is rendered by a line classifier, never a markdown parser, and
 always through `textContent`. Section anchors come from the server's
@@ -289,9 +308,17 @@ the notice underneath it. Any change here must preserve that.
 | ChatGPT | Renders via the `window.openai.toolOutput` fallback |
 | Claude Code, API clients | Unchanged text output, no regression |
 
-The viewer's behaviour in both hosts is **not yet measured** — see the open
-questions in `.superpowers/sdd/v150-plan/v150-design-widget.md` §9, above all
-whether `toolinput` fires at all and what `containerDimensions` each host sends.
+The viewer's live pass (2026-08-02, #52) answered two of the open questions in
+`.superpowers/sdd/v150-plan/v150-design-widget.md` §9 and closed both findings:
+
+| Host | Viewer finding | Status |
+|------|----------------|--------|
+| claude.ai | delivers neither `content[]` nor `toolinput` to the widget | fixed — `ris_dokument` now carries the text in `structuredContent` |
+| ChatGPT | widget collapsed to ~2 lines with text rendering behind it | mitigated — host heights are clamped to 320…1200px; **not re-measured in ChatGPT** |
+| mcp-app-debug | reported `946×4024`; sends `containerDimensions: { maxHeight: 4000 }` | fixed — `946×664`, 6/6 checks |
+
+The remaining §9 questions are open: the eviction branch (Q6), the rate limit
+under real scrolling (Q7), and fullscreen (Q5, not implemented).
 
 Known issues and follow-ups: `claude-ai-mcp#165` (custom-connector rendering
 flaky — never reproduced here), `ext-apps#696`, and issue **#60** for
@@ -372,12 +399,19 @@ output, and Judikatur hits additionally carry `gericht`, `geschaeftszahl`,
 `entscheidungsdatum` and `rechtssatznummer`. All of these live in
 `structuredContent` only — the markdown text is unchanged by them, and
 `structuredContent` is not subject to the 25,000-character text limit.
-`ris_dokument` deliberately declares no `outputSchema`: clients may treat the
-text block as a mere serialization of `structuredContent` and render only the
-latter, which once made the document text disappear (v1.3.0 live finding, see
-DECISIONS.md). `ris_dokument_abschnitt` *does* declare one, because there the
-chunk text is itself part of `structuredContent` — a client that renders only
-the structured payload loses nothing.
+Both document tools declare an `outputSchema` whose payload *carries the
+document text itself*. That is what makes it safe: clients may treat the text
+block as a mere serialization of `structuredContent` and render only the latter,
+which in v1.3.0 made the document text disappear behind metadata — a
+text-carrying payload cannot lose it by construction (see DECISIONS.md).
+`ris_dokument`'s `structuredContent.text` is byte-identical to its text block,
+alongside `total_length`, `dokumentnummer?`, `source_url?` and an optional
+`outline`. It carries no `next_offset`: the text block is truncated with a
+German notice appended, so its length is not an offset into the document. The
+outline rides along only for a truncated document and only while it stays under
+`CHARACTER_LIMIT / 4` — measured, a court decision's outline is 361 characters
+and a consolidated statute's 38 123, half again the excerpt it would travel with
+in every client.
 
 | Tool | Description | API Endpoint |
 |------|-------------|--------------|

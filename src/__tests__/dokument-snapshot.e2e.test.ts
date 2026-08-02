@@ -1,16 +1,19 @@
 /**
- * Byte-identity snapshot of the `ris_dokument` response (issue #51).
+ * Byte-identity snapshot of the `ris_dokument` response (issues #51, #52).
  *
- * The recorded decision is that this tool's response does not change: no
- * `outputSchema`, no `structuredContent`, the same text block and the same
- * `resource_link`. #51 moves its entire load path into `document-loader.ts` and
- * adds a cache write to the handler, so the claim "the response is untouched"
- * needs something stronger than a reading of the diff.
+ * The `content` array of this tool does not change: the same text block and the
+ * same `resource_link`, whatever else the handler grows. The snapshots below
+ * were generated from the pre-#51 handler and committed unchanged; a byte that
+ * moves fails this file. The long-document case is pinned by length and digest
+ * instead of by its 25 000 characters, which is the same guarantee in a
+ * reviewable size.
  *
- * The snapshots below were generated from the pre-#51 handler and committed
- * unchanged; a byte that moves fails this file. The long-document case is
- * pinned by length and digest instead of by its 25 000 characters, which is the
- * same guarantee in a reviewable size.
+ * The `structuredContent` pin flipped in #52, deliberately: the tool now
+ * declares an `outputSchema` whose payload *carries the text block*, so the
+ * v1.3.0 failure mode — a client rendering structured metadata in place of the
+ * document — cannot recur. What the assertions below pin is exactly that
+ * property, `structuredContent.text === content[0].text`, plus the shape around
+ * it.
  */
 
 import { createHash } from 'node:crypto';
@@ -141,7 +144,7 @@ async function dokument(args: Record<string, unknown>): Promise<unknown> {
 // =============================================================================
 
 describe('ris_dokument response identity', () => {
-  it('should return text plus resource_link and nothing structured', async () => {
+  it('should return text plus resource_link', async () => {
     serve(NORM_HTML);
 
     const result = await client.callTool({
@@ -149,11 +152,109 @@ describe('ris_dokument response identity', () => {
       arguments: { dokumentnummer: 'NOR12019037' },
     });
 
-    expect(result.structuredContent).toBeUndefined();
     expect((result.content as { type: string }[]).map((block) => block.type)).toEqual([
       'text',
       'resource_link',
     ]);
+  });
+
+  it('should carry the text block itself in structuredContent', async () => {
+    serve(NORM_HTML);
+
+    const result = await client.callTool({
+      name: 'ris_dokument',
+      arguments: { dokumentnummer: 'NOR12019037' },
+    });
+
+    const text = (result.content as { text: string }[])[0].text;
+
+    // The property the whole reversal rests on: a client that renders only the
+    // structured payload renders the same document, not metadata about it.
+    expect(result.structuredContent).toEqual({
+      dokumentnummer: 'NOR12019037',
+      text,
+      total_length: text.length,
+      source_url: 'https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html',
+    });
+  });
+
+  it('should omit the Dokumentnummer for a document addressed by URL', async () => {
+    serve(NORM_HTML);
+
+    const url = 'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html';
+    const result = await client.callTool({ name: 'ris_dokument', arguments: { url } });
+
+    // Echoing an invented number would hand the viewer a key that resolves to
+    // nothing; `source_url` is what addresses these documents.
+    expect(result.structuredContent).not.toHaveProperty('dokumentnummer');
+    expect((result.structuredContent as { source_url: string }).source_url).toBe(url);
+  });
+
+  it('should carry the outline and the untruncated length for a long document', async () => {
+    serve(
+      `<html><body><h1>Titel</h1><h2>Erster Abschnitt</h2>${'<p>Ein Absatz mit Text zum Kuerzen.</p>'.repeat(2000)}</body></html>`,
+    );
+
+    const result = await client.callTool({
+      name: 'ris_dokument',
+      arguments: { dokumentnummer: 'NOR12019037' },
+    });
+
+    const text = (result.content as { text: string }[])[0].text;
+    const structured = result.structuredContent as {
+      text: string;
+      total_length: number;
+      outline: { label: string }[];
+    };
+
+    expect(structured.text).toBe(text);
+    // The length of the whole document, not of the truncated rendering — it is
+    // what tells the viewer there is more and gates its outline rail.
+    expect(structured.total_length).toBeGreaterThan(text.length);
+    expect(structured.outline.map((entry) => entry.label)).toContain('Erster Abschnitt');
+  });
+
+  it('should carry no outline for a document that fits in one response', async () => {
+    serve(NORM_HTML);
+
+    const result = await client.callTool({
+      name: 'ris_dokument',
+      arguments: { dokumentnummer: 'NOR12019037' },
+    });
+
+    // Nothing to navigate to, so the entries would be payload nobody reads.
+    expect(result.structuredContent).not.toHaveProperty('outline');
+  });
+
+  it('should carry no outline when it would outweigh the excerpt it travels with', async () => {
+    // A consolidated statute: measured at 499 headings serialising to 38 123
+    // characters against a 24 686-character excerpt. Every client would pay for
+    // it; the viewer instead gets it from the section call it is about to make.
+    const headings = Array.from(
+      { length: 600 },
+      (_unused, index) =>
+        `<h2>Abschnitt ${index} mit einer Ueberschrift von realistischer Laenge</h2>` +
+        '<p>Ein Absatz mit Text zum Kuerzen.</p>'.repeat(3),
+    ).join('');
+    serve(`<html><body><h1>Titel</h1>${headings}</body></html>`);
+
+    const result = await client.callTool({
+      name: 'ris_dokument',
+      arguments: { dokumentnummer: 'NOR12019037' },
+    });
+
+    const structured = result.structuredContent as { total_length: number };
+    expect(structured.total_length).toBeGreaterThan(25_000);
+    expect(result.structuredContent).not.toHaveProperty('outline');
+  });
+
+  it('should carry no structured payload on an error', async () => {
+    serve(NORM_HTML);
+
+    const result = await client.callTool({ name: 'ris_dokument', arguments: {} });
+
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent).toBeUndefined();
   });
 
   it('should freeze the markdown response for a norm document', async () => {
