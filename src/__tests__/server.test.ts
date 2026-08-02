@@ -40,6 +40,7 @@ describe('registered tool metadata', () => {
     title?: string;
     description?: string;
     annotations?: { readOnlyHint?: boolean; openWorldHint?: boolean };
+    inputSchema?: { shape: Record<string, { description?: string }> };
   }
 
   const registeredTools = (
@@ -83,6 +84,45 @@ describe('registered tool metadata', () => {
     const tool = registeredTools[name];
     expect(tool.annotations?.openWorldHint).toBe(true);
   });
+
+  // Search-steering hints (issue #54): models reflexively reach for the
+  // full-text parameter, whose hits the RIS API sorts alphabetically by law
+  // title. The descriptions have to point them at titel/paragraph instead.
+  const steeredToolNames = ['ris_bundesrecht', 'ris_landesrecht'];
+
+  // The descriptions are hard-wrapped in the source, so collapse whitespace
+  // before matching a sentence that may straddle a line break.
+  const describedAs = (name: string): string =>
+    (registeredTools[name].description ?? '').replace(/\s+/g, ' ');
+
+  it.each(steeredToolNames)(
+    'tool %s should name titel/paragraph as the precise entry points',
+    (name) => {
+      expect(describedAs(name)).toContain('"titel" and "paragraph"');
+      expect(describedAs(name)).toContain('precise entry points');
+    },
+  );
+
+  it.each(steeredToolNames)(
+    'tool %s should warn that suchworte hits are sorted alphabetically',
+    (name) => {
+      expect(describedAs(name)).toContain('alphabetically by law title, not by relevance');
+    },
+  );
+
+  it.each(steeredToolNames)('tool %s should cross-reference VGG and ABGB warranty law', (name) => {
+    expect(describedAs(name)).toContain('VGG');
+    expect(describedAs(name)).toContain('§§ 922 ff ABGB');
+  });
+
+  it.each(steeredToolNames)(
+    'tool %s should repeat the ordering caveat on the suchworte parameter itself',
+    (name) => {
+      const suchworte = registeredTools[name].inputSchema?.shape.suchworte;
+      expect(suchworte?.description).toContain('alphabetically by law title, not by relevance');
+      expect(suchworte?.description).toContain('"titel" and/or "paragraph"');
+    },
+  );
 });
 
 // =============================================================================

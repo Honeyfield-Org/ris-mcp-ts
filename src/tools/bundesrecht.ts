@@ -85,6 +85,14 @@ export function registerBundesrechtTool(server: McpServer): void {
 
 Use this tool to find Austrian federal legislation like ABGB, StGB, UGB, etc.
 
+Search strategy: "titel" and "paragraph" are the precise entry points — prefer them
+whenever the law or the section is known. "suchworte" runs a broad full-text search
+and the RIS API returns those hits ordered alphabetically by law title, not by
+relevance, so a common term buries the relevant law under thousands of results.
+Austrian law often splits one topic across several statutes, so look for a companion
+law: warranty, for example, is covered both by the VGG (consumer sales, B2C, in force
+since 2022) and by §§ 922 ff ABGB (general warranty law, including B2B).
+
 Example queries:
   - suchworte="Mietrecht" -> Find laws mentioning rent law
   - titel="ABGB", paragraph="1295" -> Find specific ABGB section
@@ -96,7 +104,9 @@ Example queries:
           .string()
           .max(1000)
           .optional()
-          .describe('Full-text search terms (e.g., "Mietrecht", "Schadenersatz")'),
+          .describe(
+            'Broad full-text search terms (e.g., "Mietrecht", "Schadenersatz"). Hits come back ordered alphabetically by law title, not by relevance — prefer "titel" and/or "paragraph" whenever the law or the section is known.',
+          ),
         titel: z
           .string()
           .max(500)
