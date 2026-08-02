@@ -11,8 +11,10 @@
  * The two document tools declare a different shape rather than none: their
  * structured payload *is* the document text, so the client that renders
  * `structuredContent` in place of the text block — the v1.3.0 finding — shows
- * the same document. `ris_dokument` additionally keeps its `resource_link` to
- * the canonical RIS document.
+ * the same document. Neither emits anything but text blocks: a `resource_link`
+ * on `ris_dokument` was measured to cost the widget its tool-result event in
+ * claude.ai entirely (#52), and the URL it carried lives on in the text block
+ * and in `structuredContent.source_url`.
  */
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -376,7 +378,7 @@ describe('ris_dokument text and resource link', () => {
     );
   });
 
-  it('should emit a resource_link pointing at the canonical document URL', async () => {
+  it('should emit no resource_link, whatever the document', async () => {
     stubDocument('<html><body><p>Kurzer Text</p></body></html>');
 
     const result = await client.callTool({
@@ -384,12 +386,26 @@ describe('ris_dokument text and resource link', () => {
       arguments: { dokumentnummer: 'NOR40052761' },
     });
 
-    const link = getResourceLink(result);
-    expect(link).toBeDefined();
-    expect(link?.uri).toContain('NOR40052761');
-    expect(link?.uri?.startsWith('https://')).toBe(true);
-    expect(link?.name).toBe('NOR40052761');
-    expect(link?.mimeType).toBe('text/html');
+    // Measured live: claude.ai delivers a widget no tool-result event at all
+    // when the result carries a resource_link, so the viewer sat on its
+    // degradation notice while the trefferliste rendered in the same
+    // conversation. Reversible once the host stops swallowing it.
+    expect(getResourceLink(result)).toBeUndefined();
+    expect(getContent(result).map((block) => block.type)).toEqual(['text']);
+  });
+
+  it('should name the canonical document URL in both surviving carriers', async () => {
+    stubDocument('<html><body><p>Kurzer Text</p></body></html>');
+
+    const result = await client.callTool({
+      name: 'ris_dokument',
+      arguments: { dokumentnummer: 'NOR40052761' },
+    });
+
+    const url = (result.structuredContent as { source_url: string }).source_url;
+    expect(url).toContain('NOR40052761');
+    expect(url.startsWith('https://')).toBe(true);
+    expect(getContent(result)[0].text).toContain(`**Quelle:** [${url}](${url})`);
   });
 
   it('should keep the text block first so text-only clients are unaffected', async () => {
@@ -404,18 +420,18 @@ describe('ris_dokument text and resource link', () => {
     expect(getContent(result)[0].text).toContain('## Inhalt');
   });
 
-  it('should link to the requested URL when the document was requested by URL', async () => {
+  it('should echo the requested URL when the document was requested by URL', async () => {
     stubDocument('<html><body><p>Kurzer Text</p></body></html>');
     const url = 'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12345678/inhalt.html';
 
     const result = await client.callTool({ name: 'ris_dokument', arguments: { url } });
 
     expect(result.isError).not.toBe(true);
-    expect(getResourceLink(result)?.uri).toBe(url);
-    expect(getResourceLink(result)?.name).toBe(url);
+    expect((result.structuredContent as { source_url: string }).source_url).toBe(url);
+    expect(getResourceLink(result)).toBeUndefined();
   });
 
-  it('should still link to the full document when the text was truncated', async () => {
+  it('should still name the full document when the text was truncated', async () => {
     stubDocument(`<html><body><p>${'Paragraf. '.repeat(4000)}</p></body></html>`);
 
     const result = await client.callTool({
@@ -423,9 +439,14 @@ describe('ris_dokument text and resource link', () => {
       arguments: { dokumentnummer: 'NOR40052761' },
     });
 
+    // The truncated case is the one where the pointer to the untruncated
+    // original matters most, so it is the one worth pinning twice.
     expect(result.isError).not.toBe(true);
     expect(getContent(result)[0].text).toContain('Antwort gekuerzt');
-    expect(getResourceLink(result)?.uri).toContain('NOR40052761');
+    expect((result.structuredContent as { source_url: string }).source_url).toContain(
+      'NOR40052761',
+    );
+    expect(getResourceLink(result)).toBeUndefined();
   });
 
   it('should return text only — no link — on an error', async () => {
