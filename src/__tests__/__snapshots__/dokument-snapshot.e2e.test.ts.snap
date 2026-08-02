@@ -1,0 +1,371 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ris_dokument response identity > should freeze the error response for a URL outside the RIS domains 1`] = `
+[
+  {
+    "text": "**Fehler:** Die angegebene URL ist nicht erlaubt.
+
+Nur HTTPS-URLs zu offiziellen RIS-Domains sind zulaessig (data.bka.gv.at, www.ris.bka.gv.at, ris.bka.gv.at).",
+    "type": "text",
+  },
+]
+`;
+
+exports[`ris_dokument response identity > should freeze the error response when no identifier is given 1`] = `
+[
+  {
+    "text": "**Fehler:** Bitte gib entweder eine \`dokumentnummer\` oder eine \`url\` an.
+
+Die Dokumentnummer findest du in den Suchergebnissen von \`ris_bundesrecht\`, \`ris_landesrecht\` oder \`ris_judikatur\`.",
+    "type": "text",
+  },
+]
+`;
+
+exports[`ris_dokument response identity > should freeze the json response 1`] = `
+[
+  {
+    "text": "{
+  "metadata": {
+    "dokumentnummer": "NOR12019037",
+    "applikation": "Unbekannt",
+    "titel": "NOR12019037",
+    "kurztitel": null,
+    "citation": {},
+    "dokument_url": "https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html"
+  },
+  "content": "Kurztitel\\n\\nAllgemeines bürgerliches Gesetzbuch\\n\\nKundmachungsorgan\\n\\nJGS Nr. 946/1811 zuletzt geändert durch RGBl. Nr. 69/1916\\n\\nTyp\\n\\nBG\\n\\n§/Artikel/Anlage\\n\\n§ 1295\\n\\nInkrafttretensdatum\\n\\n01.01.1917\\n\\nAbkürzung\\n\\nABGB\\n\\nIndex\\n\\n20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)\\n\\nText\\n\\nVon der Verbindlichkeit zum Schadenersatze:\\n\\n1) von dem Schaden aus Verschulden;\\n\\n§ 1295.\\n\\n(1) Jedermann ist berechtigt, von dem Beschädiger den Ersatz des Schadens, welchen dieser ihm aus Verschulden zugefügt hat, zu fordern; der Schaden mag durch Übertretung einer Vertragspflicht oder ohne Beziehung auf einen Vertrag verursacht worden sein.\\n\\n(2) Auch wer in einer gegen die guten Sitten verstoßenden Weise absichtlich Schaden zufügt, ist dafür verantwortlich, jedoch falls dies in Ausübung eines Rechtes geschah, nur dann, wenn die Ausübung des Rechtes offenbar den Zweck hatte, den anderen zu schädigen.\\n\\nSchlagworte\\n\\nVertragsverletzung, Delikt, Schikane\\n\\nZuletzt aktualisiert am\\n\\n21.11.2017\\n\\nGesetzesnummer\\n\\n10001622\\n\\nDokumentnummer\\n\\nNOR12019037\\n\\nalte Dokumentnummer\\n\\nN2181111519Z"
+}",
+    "type": "text",
+  },
+  {
+    "mimeType": "text/html",
+    "name": "NOR12019037",
+    "type": "resource_link",
+    "uri": "https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html",
+  },
+]
+`;
+
+exports[`ris_dokument response identity > should freeze the markdown response for a gazette document 1`] = `
+[
+  {
+    "text": "# BGBLA_2012_II_371
+
+## Dokumentinformation
+
+**Titel:** BGBLA_2012_II_371
+**Dokumentnummer:** \`BGBLA_2012_II_371\`
+**Quelle:** [https://ris.bka.gv.at/Dokumente/BgblAuth/BGBLA_2012_II_371/BGBLA_2012_II_371.html](https://ris.bka.gv.at/Dokumente/BgblAuth/BGBLA_2012_II_371/BGBLA_2012_II_371.html)
+
+## Inhalt
+
+BUNDESGESETZBLATT
+FÜR DIE REPUBLIK ÖSTERREICH
+
+Jahrgang 2012 Ausgegeben am 9. November 2012 Teil II
+
+371. Verordnung: Änderung der Pflanzenschutzverordnung 2011
+
+371. Verordnung des Bundesministers für Land- und Forstwirtschaft, Umwelt und Wasserwirtschaft, mit der die Pflanzenschutzverordnung 2011 geändert wird
+
+Auf Grund der §§ 35 Abs. 4 sowie 38 Abs. 1 des Pflanzenschutzgesetzes 2011, BGBl. I Nr. 10/2011, wird – hinsichtlich des Anhangs 3 im Einvernehmen mit dem Bundesminister für Finanzen- verordnet:
+
+Die Pflanzenschutzverordnung 2011, BGBl. II Nr. 299/2011, wird wie folgt geändert:
+
+1. Dem Text des § 23 wird die Absatzbezeichnung „(1)“ vorangestellt; folgender Abs. 2 wird angefügt:
+
+„(2) Die Bezeichnung des § 23 Abs. 1 sowie Anhang 3 in der Fassung der Verordnung BGBl. II Nr. 371/2012 treten mit 1. Jänner 2013 in Kraft.“
+
+2. Anhang 3 lautet:
+
+Anhang 3 Gebührentarif Für Tätigkeiten der Behörde sind gemäß § 20 Abs. 1 die nachstehenden Gebühren in Euro einzuheben: I. Gebühren anlässlich der Vollziehung des 3. Abschnittes des Pflanzenschutzgesetzes 2011
+
+Tarifpost Art der Tätigkeit Pauschalgebühr Zuzüglich Zeitgebühr je angefangener halben Stunde Untersuchungsdauer
+
+1 Verfahren zur Aufnahme von Betrieben in das amtliche Verzeichnis gemäß § 14 Pflanzenschutzgesetz 2011 (Registrierung) 152,60 26,20
+
+2 Verfahren zur Autorisierung von Betrieben zur Verwendung von Pflanzenpässen gemäß § 18 Pflanzenschutzgesetz 2011 152,60 26,20
+
+3 Kombiniertes Registrierungs- und Autorisierungsverfahren 178,80 26,20
+
+Berlakovich",
+    "type": "text",
+  },
+  {
+    "mimeType": "text/html",
+    "name": "BGBLA_2012_II_371",
+    "type": "resource_link",
+    "uri": "https://ris.bka.gv.at/Dokumente/BgblAuth/BGBLA_2012_II_371/BGBLA_2012_II_371.html",
+  },
+]
+`;
+
+exports[`ris_dokument response identity > should freeze the markdown response for a norm document 1`] = `
+[
+  {
+    "text": "# NOR12019037
+
+## Dokumentinformation
+
+**Titel:** NOR12019037
+**Dokumentnummer:** \`NOR12019037\`
+**Quelle:** [https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html](https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html)
+
+## Inhalt
+
+Kurztitel
+
+Allgemeines bürgerliches Gesetzbuch
+
+Kundmachungsorgan
+
+JGS Nr. 946/1811 zuletzt geändert durch RGBl. Nr. 69/1916
+
+Typ
+
+BG
+
+§/Artikel/Anlage
+
+§ 1295
+
+Inkrafttretensdatum
+
+01.01.1917
+
+Abkürzung
+
+ABGB
+
+Index
+
+20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)
+
+Text
+
+Von der Verbindlichkeit zum Schadenersatze:
+
+1) von dem Schaden aus Verschulden;
+
+§ 1295.
+
+(1) Jedermann ist berechtigt, von dem Beschädiger den Ersatz des Schadens, welchen dieser ihm aus Verschulden zugefügt hat, zu fordern; der Schaden mag durch Übertretung einer Vertragspflicht oder ohne Beziehung auf einen Vertrag verursacht worden sein.
+
+(2) Auch wer in einer gegen die guten Sitten verstoßenden Weise absichtlich Schaden zufügt, ist dafür verantwortlich, jedoch falls dies in Ausübung eines Rechtes geschah, nur dann, wenn die Ausübung des Rechtes offenbar den Zweck hatte, den anderen zu schädigen.
+
+Schlagworte
+
+Vertragsverletzung, Delikt, Schikane
+
+Zuletzt aktualisiert am
+
+21.11.2017
+
+Gesetzesnummer
+
+10001622
+
+Dokumentnummer
+
+NOR12019037
+
+alte Dokumentnummer
+
+N2181111519Z",
+    "type": "text",
+  },
+  {
+    "mimeType": "text/html",
+    "name": "NOR12019037",
+    "type": "resource_link",
+    "uri": "https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html",
+  },
+]
+`;
+
+exports[`ris_dokument response identity > should freeze the markdown response the search fallback produces 1`] = `
+[
+  {
+    "text": "# § 1295 ABGB (JGS Nr. 946/1811)
+
+## Dokumentinformation
+
+**Titel:** Allgemeines buergerliches Gesetzbuch
+**Paragraph:** § 1295
+**Kundmachungsorgan:** JGS Nr. 946/1811
+**In Kraft seit:** 01.01.1917
+**ELI:** eli/jgs/1811/946/P1295/NOR12019037
+**Dokumentnummer:** \`NOR12019037\`
+**Quelle:** [https://www.ris.bka.gv.at/eli/jgs/1811/946/P1295/NOR12019037](https://www.ris.bka.gv.at/eli/jgs/1811/946/P1295/NOR12019037)
+**Gesamte Rechtsvorschrift:** [https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622](https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622)
+
+## Inhalt
+
+Kurztitel
+
+Allgemeines bürgerliches Gesetzbuch
+
+Kundmachungsorgan
+
+JGS Nr. 946/1811 zuletzt geändert durch RGBl. Nr. 69/1916
+
+Typ
+
+BG
+
+§/Artikel/Anlage
+
+§ 1295
+
+Inkrafttretensdatum
+
+01.01.1917
+
+Abkürzung
+
+ABGB
+
+Index
+
+20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)
+
+Text
+
+Von der Verbindlichkeit zum Schadenersatze:
+
+1) von dem Schaden aus Verschulden;
+
+§ 1295.
+
+(1) Jedermann ist berechtigt, von dem Beschädiger den Ersatz des Schadens, welchen dieser ihm aus Verschulden zugefügt hat, zu fordern; der Schaden mag durch Übertretung einer Vertragspflicht oder ohne Beziehung auf einen Vertrag verursacht worden sein.
+
+(2) Auch wer in einer gegen die guten Sitten verstoßenden Weise absichtlich Schaden zufügt, ist dafür verantwortlich, jedoch falls dies in Ausübung eines Rechtes geschah, nur dann, wenn die Ausübung des Rechtes offenbar den Zweck hatte, den anderen zu schädigen.
+
+Schlagworte
+
+Vertragsverletzung, Delikt, Schikane
+
+Zuletzt aktualisiert am
+
+21.11.2017
+
+Gesetzesnummer
+
+10001622
+
+Dokumentnummer
+
+NOR12019037
+
+alte Dokumentnummer
+
+N2181111519Z",
+    "type": "text",
+  },
+  {
+    "mimeType": "text/html",
+    "name": "NOR12019037",
+    "type": "resource_link",
+    "uri": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037_fallback.html",
+  },
+]
+`;
+
+exports[`ris_dokument response identity > should freeze the response for a document addressed by URL 1`] = `
+[
+  {
+    "text": "# https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html
+
+## Dokumentinformation
+
+**Titel:** https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html
+**Dokumentnummer:** \`Unbekannt\`
+**Quelle:** [https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html](https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html)
+
+## Inhalt
+
+Kurztitel
+
+Allgemeines bürgerliches Gesetzbuch
+
+Kundmachungsorgan
+
+JGS Nr. 946/1811 zuletzt geändert durch RGBl. Nr. 69/1916
+
+Typ
+
+BG
+
+§/Artikel/Anlage
+
+§ 1295
+
+Inkrafttretensdatum
+
+01.01.1917
+
+Abkürzung
+
+ABGB
+
+Index
+
+20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)
+
+Text
+
+Von der Verbindlichkeit zum Schadenersatze:
+
+1) von dem Schaden aus Verschulden;
+
+§ 1295.
+
+(1) Jedermann ist berechtigt, von dem Beschädiger den Ersatz des Schadens, welchen dieser ihm aus Verschulden zugefügt hat, zu fordern; der Schaden mag durch Übertretung einer Vertragspflicht oder ohne Beziehung auf einen Vertrag verursacht worden sein.
+
+(2) Auch wer in einer gegen die guten Sitten verstoßenden Weise absichtlich Schaden zufügt, ist dafür verantwortlich, jedoch falls dies in Ausübung eines Rechtes geschah, nur dann, wenn die Ausübung des Rechtes offenbar den Zweck hatte, den anderen zu schädigen.
+
+Schlagworte
+
+Vertragsverletzung, Delikt, Schikane
+
+Zuletzt aktualisiert am
+
+21.11.2017
+
+Gesetzesnummer
+
+10001622
+
+Dokumentnummer
+
+NOR12019037
+
+alte Dokumentnummer
+
+N2181111519Z",
+    "type": "text",
+  },
+  {
+    "mimeType": "text/html",
+    "name": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html",
+    "type": "resource_link",
+    "uri": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html",
+  },
+]
+`;
+
+exports[`ris_dokument response identity > should freeze the truncated response for a long document 1`] = `
+{
+  "length": 24915,
+  "sha256": "78db9d0a1bb7a7914afb1e5d9bd84320743230cb168eafe8ed07a8e6a2af1595",
+  "tail": "bsatz mit Text zum Kuerzen.
+
+Ein Absatz mit Text zum Kuerzen.
+
+Ein Absatz mit Text zum Kuerzen.
+
+---
+Antwort gekuerzt (68276 -> 24790 Zeichen). Verwende spezifischere Suchparameter oder ris_dokument fuer Einzeldokumente.",
+}
+`;

@@ -69,7 +69,9 @@ src/
 ├── client.ts          # HTTP client for RIS API, error classes, URL construction
 ├── types.ts           # Zod schemas + TypeScript types
 ├── parser.ts          # JSON parsing and response normalization
-├── formatting.ts      # Output formatting (markdown/json), character truncation
+├── formatting.ts      # Output formatting (markdown/json), truncation, chunking, outline
+├── document-loader.ts # Shared resolve+fetch+format path for the two document tools
+├── document-cache.ts  # Bounded LRU cache backing the viewer's chunk tool
 ├── helpers.ts         # Shared helper functions for tool handlers
 ├── constants.ts       # Static mappings, enum values, configuration
 ├── version.ts         # Shared VERSION constant (read from package.json)
@@ -84,6 +86,7 @@ src/
 │   ├── landesgesetzblatt.ts
 │   ├── regierungsvorlagen.ts
 │   ├── dokument.ts    # Full document retrieval (largest handler)
+│   ├── dokument-abschnitt.ts  # Chunk tool for the document viewer (app-only)
 │   ├── bezirke.ts
 │   ├── gemeinden.ts
 │   ├── sonstige.ts    # 8 sub-applications (second largest)
@@ -92,7 +95,10 @@ src/
 └── __tests__/
     ├── cancellation.test.ts / cancellation.e2e.test.ts
     ├── client.test.ts
+    ├── document-cache.test.ts
     ├── document-matching.test.ts
+    ├── dokument-abschnitt.e2e.test.ts  # chunk tool: _meta, paging, cache hit counting
+    ├── dokument-snapshot.e2e.test.ts   # ris_dokument response frozen byte-for-byte
     ├── edge-cases.test.ts
     ├── formatting.test.ts
     ├── helpers.test.ts
@@ -176,7 +182,8 @@ Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(serve
 ### Constants
 
 - **Timeout**: 30,000ms (30 seconds)
-- **Character limit**: 25,000 characters (formatting.ts `CHARACTER_LIMIT`)
+- **Character limit**: 25,000 characters (formatting.ts `CHARACTER_LIMIT`, exported — it is also the chunk size of `ris_dokument_abschnitt`)
+- **Document cache**: 10 entries / 1,000,000 characters / 10 min TTL per `registerAllTools()` call (document-cache.ts)
 - **Pagination**: 10/20/50/100 documents per page (mapped via `limitToDokumenteProSeite()` in types.ts)
 - **Allowed document hosts**: `data.bka.gv.at`, `www.ris.bka.gv.at`, `ris.bka.gv.at` (SSRF protection in client.ts)
 
@@ -207,7 +214,7 @@ result list in hosts that support the MCP Apps extension
 **The `resources` capability is now part of the initialize handshake.** The
 first registered resource switches it on for every client, including those that
 will never render anything. Accepted deliberately: non-UI clients ignore the
-capability and the text path of all 12 tools is unchanged.
+capability and the text path of all 13 tools is unchanged.
 
 **CSP lives on the resource, not on the tool.** `McpUiToolMeta` types `csp` and
 `permissions` as `never` because hosts read the policy from the `resources/read`
@@ -301,13 +308,14 @@ Direct pushes to main are blocked — version-bump commits go through a PR as we
 - Origin validation middleware on `/mcp`: requests without an Origin header pass (non-browser MCP clients); a present Origin must be in the `ALLOWED_ORIGINS` env var (comma-separated, exact match) or the request gets 403. Unset = no browser origin allowed (server-to-server default). Configured in the compose file on the host, not in this repo.
 - Dockerfile uses `HUSKY=0` env + `--frozen-lockfile` for production pnpm install
 
-## MCP Tools (12)
+## MCP Tools (13)
 
 Each tool has a German `title`, an English `description`/schema and
 `annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false }`
-(all 12 are read-only against an external API). Numeric `limit`/`seite` params
+(all 13 are read-only against an external API). Numeric `limit`/`seite` params
 are validated by the shared `LimitSchema` (10/20/50/100) and `SeiteSchema` (≥1).
-Every tool except `ris_dokument` is a *search* tool: those 11 declare
+Every tool except `ris_dokument` and `ris_dokument_abschnitt` is a *search* tool:
+those 11 declare
 `SearchResultOutputShape` as `outputSchema` and carry the widget `_meta` (see
 [MCP Apps](#mcp-apps-trefferliste-widget)).
 
@@ -323,7 +331,9 @@ output, and Judikatur hits additionally carry `gericht`, `geschaeftszahl`,
 `ris_dokument` deliberately declares no `outputSchema`: clients may treat the
 text block as a mere serialization of `structuredContent` and render only the
 latter, which once made the document text disappear (v1.3.0 live finding, see
-DECISIONS.md).
+DECISIONS.md). `ris_dokument_abschnitt` *does* declare one, because there the
+chunk text is itself part of `structuredContent` — a client that renders only
+the structured payload loses nothing.
 
 | Tool | Description | API Endpoint |
 |------|-------------|--------------|
@@ -334,6 +344,7 @@ DECISIONS.md).
 | `ris_landesgesetzblatt` | State Law Gazettes | /Landesrecht |
 | `ris_regierungsvorlagen` | Government Bills | /Sonstige |
 | `ris_dokument` | Full document text | Direct URL + fallback |
+| `ris_dokument_abschnitt` | One section of an open document, by character offset; app-only (`_meta.ui.visibility: ["app"]`), feeds the document viewer widget | cache, else same path as `ris_dokument` |
 | `ris_bezirke` | District authority decisions | /Bezirke |
 | `ris_gemeinden` | Municipal law | /Gemeinden |
 | `ris_sonstige` | Misc collections (8 apps) | /Sonstige |

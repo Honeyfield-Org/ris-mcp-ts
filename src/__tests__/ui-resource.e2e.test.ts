@@ -186,7 +186,7 @@ describe('tool ui metadata', () => {
   it('should point every search tool at the widget resource', async () => {
     const { tools } = await client.listTools();
 
-    expect(tools).toHaveLength(12);
+    expect(tools).toHaveLength(13);
     for (const name of SEARCH_TOOLS) {
       const tool = tools.find((candidate) => candidate.name === name);
       expect(uiMeta(tool)?.resourceUri, `${name} is missing _meta.ui.resourceUri`).toBe(WIDGET_URI);
@@ -254,10 +254,10 @@ describe('tool ui metadata', () => {
 // =============================================================================
 
 describe('tool annotations', () => {
-  it('should mark all 12 tools read-only, open-world and non-destructive', async () => {
+  it('should mark all 13 tools read-only, open-world and non-destructive', async () => {
     const { tools } = await client.listTools();
 
-    expect(tools).toHaveLength(12);
+    expect(tools).toHaveLength(13);
     for (const tool of tools) {
       expect(tool.annotations, `${tool.name} has wrong annotations`).toMatchObject({
         readOnlyHint: true,

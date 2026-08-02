@@ -14,7 +14,8 @@ import type { Document, SearchResult } from './types.js';
 // Constants
 // =============================================================================
 
-const CHARACTER_LIMIT = 25000;
+/** Hard limit for a single text response, in characters. */
+export const CHARACTER_LIMIT = 25000;
 
 /**
  * All RIS Judikatur applikationen (court systems). Documents from these are
@@ -574,8 +575,241 @@ function formatDocumentMarkdown(content: string, metadata: DocumentMetadata): st
 }
 
 // =============================================================================
-// Response Truncation
+// Document Outline
 // =============================================================================
+
+/** One jump target in a document, as offered by the viewer's outline. */
+export interface OutlineEntry {
+  /**
+   * Heading level 1–6, taken from the RIS source markup. Level 1 is the RIS
+   * record layer (field labels plus, in gazettes, the masthead); levels 2 and
+   * below are structure inside the document text.
+   */
+  level: number;
+  /** Heading text, whitespace-normalised exactly as the document text is. */
+  label: string;
+  /** Character offset of the heading's line in the document text. */
+  offset: number;
+  /**
+   * Characters up to the next heading, or to the end of the text for the last
+   * entry. The only reliable way to tell a one-line metadata field from a real
+   * section: RIS gives both the same element and the same class.
+   */
+  span: number;
+}
+
+/** A heading as read from the markup, before it is located in the text. */
+interface SourceHeading {
+  level: number;
+  /** Display text: every line of the heading, joined by spaces. */
+  label: string;
+  /** Search key: the heading's first line, which is a line of its own in the text. */
+  key: string;
+}
+
+/**
+ * Normalise a heading segment to the whitespace contract of {@link htmlToText}.
+ *
+ * Only spaces and tabs collapse — U+00A0 survives, because it does in the text
+ * as well: RIS writes `§&#160;1295.`, and folding it here would make the label
+ * `§ 1295.` and stop it matching its own line forever.
+ */
+function normaliseHeadingSegment(segment: string): string {
+  return segment.replace(/[ \t]+/g, ' ').trim();
+}
+
+/**
+ * Read the `h1`–`h6` elements of a RIS document in document order.
+ *
+ * The three preparation steps are the ones {@link htmlToText} performs, and all
+ * three are load-bearing: without `.sr-only` removal a heading reads as its
+ * visible and its spoken form glued together, and without `br` → `\n` the two
+ * lines of the gazette masthead come out as one word.
+ */
+function readSourceHeadings(html: string): SourceHeading[] {
+  const $ = cheerio.load(html);
+
+  $('script, style, head').remove();
+  $('.sr-only').remove();
+  $('br').replaceWith('\n');
+
+  const headings: SourceHeading[] = [];
+
+  $('h1, h2, h3, h4, h5, h6').each((_, element) => {
+    const segments = $(element)
+      .text()
+      .split('\n')
+      .map(normaliseHeadingSegment)
+      .filter((segment) => segment.length > 0);
+
+    if (segments.length === 0) {
+      return;
+    }
+
+    headings.push({
+      level: Number(element.tagName.slice(1)),
+      label: segments.join(' '),
+      key: segments[0],
+    });
+  });
+
+  return headings;
+}
+
+/** Offsets of every line of `text`, keyed by the line's trimmed content. */
+function indexLines(text: string): Map<string, number[]> {
+  const index = new Map<string, number[]>();
+  let offset = 0;
+
+  for (const line of text.split('\n')) {
+    const key = line.trim();
+    const offsets = index.get(key);
+    if (offsets) {
+      offsets.push(offset);
+    } else {
+      index.set(key, [offset]);
+    }
+    offset += line.length + 1; // the '\n' that split() consumed
+  }
+
+  return index;
+}
+
+/**
+ * Extract the jump targets of a document.
+ *
+ * `html` is the RIS source, `text` the markdown rendering it produced. The
+ * headings are read from the markup — the rendered text carries no structure
+ * beyond the three headings formatDocument() writes itself — and then located in
+ * `text` by their own line.
+ *
+ * A document without headings yields `[]`. That is a valid outline, not an
+ * error: the viewer stays navigable through plain offset paging.
+ */
+export function extractOutline(html: string, text: string): OutlineEntry[] {
+  if (!html || !text) {
+    return [];
+  }
+
+  const headings = readSourceHeadings(html);
+  if (headings.length === 0) {
+    return [];
+  }
+
+  const lines = indexLines(text);
+  const entries: OutlineEntry[] = [];
+
+  // Headings appear in the text in the order they appear in the markup, so each
+  // one is looked up behind its predecessor — that is what tells two occurrences
+  // of the same wording apart. A heading that cannot be located is dropped
+  // *without* moving the cursor: otherwise one miss would swallow every
+  // following entry.
+  let cursor = -1;
+  for (const heading of headings) {
+    const offset = lines.get(heading.key)?.find((candidate) => candidate > cursor);
+    if (offset === undefined) {
+      continue;
+    }
+    cursor = offset;
+    entries.push({ level: heading.level, label: heading.label, offset, span: 0 });
+  }
+
+  for (let i = 0; i < entries.length; i++) {
+    const end = i + 1 < entries.length ? entries[i + 1].offset : text.length;
+    entries[i].span = end - entries[i].offset;
+  }
+
+  return entries;
+}
+
+// =============================================================================
+// Response Truncation and Chunking
+// =============================================================================
+
+/**
+ * Index to cut `slice` at, so the cut lands on a paragraph or sentence boundary.
+ *
+ * Returns `slice.length` when neither boundary sits late enough to be worth
+ * keeping — the caller then cuts hard. `budget` is the space the caller had
+ * available, which is what the two thresholds are measured against; it differs
+ * from `slice.length` for callers that reserve part of their budget.
+ */
+function boundaryCut(slice: string, budget: number): number {
+  const lastPara = slice.lastIndexOf('\n\n');
+  if (lastPara > budget * 0.7) {
+    return lastPara;
+  }
+
+  const lastSentence = Math.max(
+    slice.lastIndexOf('. '),
+    slice.lastIndexOf('.\n'),
+    slice.lastIndexOf('? '),
+    slice.lastIndexOf('! '),
+  );
+  if (lastSentence > budget * 0.8) {
+    return lastSentence + 1;
+  }
+
+  return slice.length;
+}
+
+/** True for a lone high surrogate, which would render as U+FFFD on its own. */
+function isHighSurrogate(code: number): boolean {
+  return code >= 0xd800 && code <= 0xdbff;
+}
+
+/** One slice of a document text, addressed by character offset. */
+export interface ResponseChunk {
+  /** The slice starting at the requested offset, at most `limit` characters. */
+  text: string;
+  /** Length of the complete text this chunk was cut from. */
+  total_length: number;
+  /** Offset for the following chunk, or null when this chunk ends the text. */
+  next_offset: number | null;
+}
+
+/**
+ * Cut one chunk out of `text`, starting at `offset`.
+ *
+ * Chunk boundaries follow the same paragraph-then-sentence rule as
+ * {@link truncateResponse}; unlike that function nothing is appended and nothing
+ * is dropped — consecutive chunks concatenate back to `text`.
+ *
+ * Offsets are character offsets into the complete text, i.e. the unit of
+ * `String.length` and `String.slice`. They stay valid as long as the same text
+ * does, which is why every chunk carries `total_length`: a caller whose text was
+ * re-fetched in between sees the length change and restarts at offset 0.
+ */
+export function chunkResponse(text: string, offset = 0, limit = CHARACTER_LIMIT): ResponseChunk {
+  const totalLength = text.length;
+
+  // Defense in depth — the tool's schema already enforces a non-negative
+  // integer, so anything else is a programming error and reading from the start
+  // is the answer that cannot lose text.
+  const start = Number.isInteger(offset) && offset > 0 ? offset : 0;
+
+  if (start >= totalLength) {
+    // Reading past the end is the natural end of a paging loop, not an error.
+    return { text: '', total_length: totalLength, next_offset: null };
+  }
+
+  if (totalLength - start <= limit) {
+    return { text: text.slice(start), total_length: totalLength, next_offset: null };
+  }
+
+  const slice = text.slice(start, start + limit);
+  let cut = boundaryCut(slice, limit);
+
+  if (cut > 1 && isHighSurrogate(slice.charCodeAt(cut - 1))) {
+    cut -= 1;
+  }
+
+  return {
+    text: slice.slice(0, cut),
+    total_length: totalLength,
+    next_offset: start + cut,
+  };
+}
 
 /**
  * Truncate response if too long.
@@ -590,25 +824,9 @@ export function truncateResponse(text: string, limit = CHARACTER_LIMIT): string 
   // Reserve space for the warning message
   const truncateAt = limit - 200;
 
-  // Try to truncate at a paragraph boundary
-  let truncated = text.slice(0, truncateAt);
-
-  // Find last paragraph break
-  const lastPara = truncated.lastIndexOf('\n\n');
-  if (lastPara > truncateAt * 0.7) {
-    truncated = truncated.slice(0, lastPara);
-  } else {
-    // Try sentence boundary
-    const lastSentence = Math.max(
-      truncated.lastIndexOf('. '),
-      truncated.lastIndexOf('.\n'),
-      truncated.lastIndexOf('? '),
-      truncated.lastIndexOf('! '),
-    );
-    if (lastSentence > truncateAt * 0.8) {
-      truncated = truncated.slice(0, lastSentence + 1);
-    }
-  }
+  // Try to truncate at a paragraph or sentence boundary
+  const budgeted = text.slice(0, truncateAt);
+  const truncated = budgeted.slice(0, boundaryCut(budgeted, truncateAt));
 
   const newLen = truncated.length;
 

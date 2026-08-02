@@ -55,6 +55,7 @@ describe('registered tool metadata', () => {
     'ris_landesgesetzblatt',
     'ris_regierungsvorlagen',
     'ris_dokument',
+    'ris_dokument_abschnitt',
     'ris_bezirke',
     'ris_gemeinden',
     'ris_sonstige',
@@ -62,8 +63,8 @@ describe('registered tool metadata', () => {
     'ris_verordnungen',
   ];
 
-  it('should register all 12 RIS tools', () => {
-    expect(Object.keys(registeredTools)).toHaveLength(12);
+  it('should register all 13 RIS tools', () => {
+    expect(Object.keys(registeredTools)).toHaveLength(13);
     for (const name of expectedToolNames) {
       expect(registeredTools).toHaveProperty(name);
     }

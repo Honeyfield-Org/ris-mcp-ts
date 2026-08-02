@@ -130,7 +130,7 @@ describe('HTTP transport against the real MCP SDK', () => {
       expect(notification.text).toBe('');
     });
 
-    it('lists all 12 ris_* tools', async () => {
+    it('lists all 13 ris_* tools', async () => {
       const sessionId = await initializeSession();
 
       const res = await request(app)
@@ -149,6 +149,7 @@ describe('HTTP transport against the real MCP SDK', () => {
         'ris_bundesgesetzblatt',
         'ris_bundesrecht',
         'ris_dokument',
+        'ris_dokument_abschnitt',
         'ris_gemeinden',
         'ris_history',
         'ris_judikatur',

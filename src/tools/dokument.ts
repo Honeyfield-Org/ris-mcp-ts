@@ -5,23 +5,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
-import {
-  getDocumentByNumber,
-  getDocumentContent,
-  getDocumentRoute,
-  isAllowedUrl,
-  searchBezirke,
-  searchBundesrecht,
-  searchJudikatur,
-  searchLandesrecht,
-  searchSonstige,
-} from '../client.js';
-import { formatDocument, truncateResponse, type DocumentMetadata } from '../formatting.js';
+import type { DocumentCache } from '../document-cache.js';
+import { loadDocument } from '../document-loader.js';
+import { extractOutline, truncateResponse } from '../formatting.js';
 import { createErrorResponse, formatErrorResponse } from '../helpers.js';
-import { findDocumentByDokumentnummer } from '../parser.js';
-import type { NormalizedSearchResults } from '../types.js';
 
-export function registerDokumentTool(server: McpServer): void {
+export function registerDokumentTool(server: McpServer, cache: DocumentCache): void {
   server.registerTool(
     'ris_dokument',
     {
@@ -52,164 +41,38 @@ Note: For long documents, content may be truncated. Use specific searches to nar
     async (args, extra) => {
       const { dokumentnummer, url: inputUrl, response_format } = args;
 
-      if (!dokumentnummer && !inputUrl) {
-        return createErrorResponse(
-          '**Fehler:** Bitte gib entweder eine `dokumentnummer` oder eine `url` an.\n\n' +
-            'Die Dokumentnummer findest du in den Suchergebnissen von `ris_bundesrecht`, ' +
-            '`ris_landesrecht` oder `ris_judikatur`.',
-        );
-      }
-
-      // SSRF protection: validate user-supplied URLs against domain allowlist
-      if (inputUrl && !isAllowedUrl(inputUrl)) {
-        return createErrorResponse(
-          '**Fehler:** Die angegebene URL ist nicht erlaubt.\n\n' +
-            'Nur HTTPS-URLs zu offiziellen RIS-Domains sind zulaessig ' +
-            '(data.bka.gv.at, www.ris.bka.gv.at, ris.bka.gv.at).',
-        );
-      }
-
       try {
-        let contentUrl = inputUrl;
-        let htmlContent: string | undefined;
-        let metadata: DocumentMetadata;
+        const loaded = await loadDocument(
+          { dokumentnummer, url: inputUrl, responseFormat: response_format },
+          extra.signal,
+        );
 
-        if (dokumentnummer && !inputUrl) {
-          // Strategy: Try direct URL construction first, fallback to search API
-          const directResult = await getDocumentByNumber(dokumentnummer, undefined, extra.signal);
+        if (!loaded.success) {
+          return createErrorResponse(loaded.error);
+        }
 
-          if (directResult.success) {
-            // Direct fetch succeeded - use minimal metadata
-            htmlContent = directResult.html;
-            contentUrl = directResult.url;
-            metadata = {
-              dokumentnummer,
-              applikation: 'Unbekannt',
-              titel: dokumentnummer,
-              kurztitel: null,
-              citation: {},
-              dokument_url: directResult.url,
-            };
-          } else {
-            // Direct fetch failed - fallback to search API. Routing (endpoint +
-            // Applikation) comes from the shared registry in client.ts so it stays
-            // consistent with the direct-URL construction. Unknown prefixes default
-            // to a Justiz search.
-            const route = getDocumentRoute(dokumentnummer);
-            const searchParams = {
-              Applikation: route?.applikation ?? 'Justiz',
-              Dokumentnummer: dokumentnummer,
-              DokumenteProSeite: 'Ten',
-            };
+        const { text, html, contentUrl, metadata } = loaded.document;
 
-            let apiResponse: NormalizedSearchResults;
-            switch (route?.endpoint) {
-              case 'Bundesrecht':
-                apiResponse = await searchBundesrecht(searchParams, undefined, extra.signal);
-                break;
-              case 'Landesrecht':
-                apiResponse = await searchLandesrecht(searchParams, undefined, extra.signal);
-                break;
-              case 'Sonstige':
-                apiResponse = await searchSonstige(searchParams, undefined, extra.signal);
-                break;
-              case 'Bezirke':
-                apiResponse = await searchBezirke(searchParams, undefined, extra.signal);
-                break;
-              case 'Judikatur':
-              default:
-                apiResponse = await searchJudikatur(searchParams, undefined, extra.signal);
-                break;
-            }
-
-            // Find the document with matching dokumentnummer (don't blindly take first result)
-            const findResult = findDocumentByDokumentnummer(apiResponse.documents, dokumentnummer);
-
-            if (!findResult.success) {
-              // Both direct fetch and search failed - provide helpful error
-              const directError = directResult.error;
-              if (findResult.error === 'no_documents') {
-                return createErrorResponse(
-                  `**Fehler:** Kein Dokument mit der Nummer \`${dokumentnummer}\` gefunden.\n\n` +
-                    `Direkter Abruf: ${directError}\n` +
-                    `Suche: Keine Ergebnisse.\n\n` +
-                    'Bitte pruefe die Dokumentnummer oder verwende eine Suche, ' +
-                    'um das gewuenschte Dokument zu finden.',
-                );
-              } else {
-                return createErrorResponse(
-                  `**Fehler:** Dokument \`${dokumentnummer}\` nicht gefunden.\n\n` +
-                    `Direkter Abruf: ${directError}\n` +
-                    `Suche: ${findResult.totalResults} Ergebnisse, aber keines mit dieser Dokumentnummer.\n\n` +
-                    `Bitte verwende eine alternative Suche oder die direkte URL.`,
-                );
-              }
-            }
-
-            const doc = findResult.document;
-            contentUrl = doc.content_urls.html ?? undefined;
-
-            if (!contentUrl) {
-              return createErrorResponse(
-                `**Fehler:** Keine Inhalts-URL fuer Dokument \`${dokumentnummer}\` verfuegbar.\n\n` +
-                  'Das Dokument hat moeglicherweise keinen abrufbaren Volltext.',
-              );
-            }
-
-            // SSRF protection: this URL comes straight from the search API response
-            // and would otherwise be fetched unchecked. Validate it against the same
-            // domain allowlist used for user-supplied URLs.
-            if (!isAllowedUrl(contentUrl)) {
-              return createErrorResponse(
-                '**Fehler:** Die Inhalts-URL des Dokuments ist nicht erlaubt.\n\n' +
-                  'Nur HTTPS-URLs zu offiziellen RIS-Domains sind zulaessig ' +
-                  '(data.bka.gv.at, www.ris.bka.gv.at, ris.bka.gv.at).',
-              );
-            }
-
-            // Build metadata from search result
-            metadata = {
-              dokumentnummer: doc.dokumentnummer,
-              applikation: doc.applikation,
-              titel: doc.titel,
-              kurztitel: doc.kurztitel,
-              citation: {
-                kurztitel: doc.citation.kurztitel,
-                langtitel: doc.citation.langtitel,
-                kundmachungsorgan: doc.citation.kundmachungsorgan,
-                paragraph: doc.citation.paragraph,
-                eli: doc.citation.eli,
-                inkrafttreten: doc.citation.inkrafttreten,
-                ausserkrafttreten: doc.citation.ausserkrafttreten,
-              },
-              dokument_url: doc.dokument_url,
-              gesamte_rechtsvorschrift_url: doc.gesamte_rechtsvorschrift_url,
-            };
+        // Hand the viewer the very string this response was cut from, so its
+        // first chunk call is a hit and its offsets address the text the reader
+        // is looking at. Only the markdown rendering: the JSON one has a
+        // completely different character distribution.
+        if (response_format === 'markdown') {
+          try {
+            cache.set(
+              dokumentnummer ?? contentUrl,
+              { text, outline: extractOutline(html, text), sourceUrl: contentUrl },
+              contentUrl,
+            );
+          } catch (e) {
+            // The text path is mandatory: a failed cache write costs a later
+            // cache miss and nothing else, so it must never turn a document that
+            // was fetched successfully into an error response.
+            console.error('Dokument-Cache konnte nicht befuellt werden:', e);
           }
-        } else {
-          // Only URL provided - minimal metadata
-          metadata = {
-            dokumentnummer: dokumentnummer ?? 'Unbekannt',
-            applikation: 'Unbekannt',
-            titel: inputUrl ?? '',
-            kurztitel: null,
-            citation: {},
-            dokument_url: inputUrl,
-          };
         }
 
-        if (!contentUrl) {
-          return createErrorResponse('**Fehler:** Keine gueltige URL zum Abrufen des Dokuments.');
-        }
-
-        // Fetch document content if not already fetched via direct URL
-        if (!htmlContent) {
-          htmlContent = await getDocumentContent(contentUrl, undefined, extra.signal);
-        }
-
-        // Format the document
-        const formatted = formatDocument(htmlContent, metadata, response_format);
-        const result = truncateResponse(formatted);
+        const result = truncateResponse(text);
 
         // The text stays the payload; the resource_link lets a client open the
         // untruncated original, which matters most for a truncated document.

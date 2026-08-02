@@ -17,6 +17,9 @@ import {
   formatSearchResults,
   formatDocument,
   truncateResponse,
+  chunkResponse,
+  extractOutline,
+  CHARACTER_LIMIT,
   type DocumentMetadata,
 } from '../formatting.js';
 import type { Document, SearchResult } from '../types.js';
@@ -1364,5 +1367,398 @@ describe('truncateResponse', () => {
 
       expect(result).toContain('Antwort gekuerzt');
     });
+  });
+});
+
+// =============================================================================
+// Response Chunking (issue #51)
+// =============================================================================
+
+/**
+ * Read a text through `chunkResponse` from offset 0 to the end.
+ *
+ * Returns every chunk plus the offsets they were requested at, which is what the
+ * viewer's paging loop does — so a bug that makes the loop stall or skip text
+ * shows up here rather than in the widget.
+ */
+function readAllChunks(text: string, limit?: number): { chunks: string[]; offsets: number[] } {
+  const chunks: string[] = [];
+  const offsets: number[] = [];
+  let offset: number | null = 0;
+  let guard = 0;
+
+  while (offset !== null) {
+    if (++guard > 1000) {
+      throw new Error('chunkResponse did not terminate');
+    }
+    offsets.push(offset);
+    const chunk = chunkResponse(text, offset, limit);
+    expect(chunk.total_length).toBe(text.length);
+    chunks.push(chunk.text);
+    offset = chunk.next_offset;
+  }
+
+  return { chunks, offsets };
+}
+
+describe('chunkResponse', () => {
+  describe('the paging contract', () => {
+    it('should return the whole text in one chunk when it fits', () => {
+      const text = 'Ein kurzer Text.';
+      const chunk = chunkResponse(text);
+
+      expect(chunk.text).toBe(text);
+      expect(chunk.total_length).toBe(text.length);
+      expect(chunk.next_offset).toBeNull();
+    });
+
+    it('should report the total length of the complete text on every chunk', () => {
+      const text = ('Ein Absatz mit etwas Text. '.repeat(20) + '\n\n').repeat(60);
+      const { chunks } = readAllChunks(text, 500);
+
+      expect(chunks.length).toBeGreaterThan(1);
+      // Asserted per chunk inside readAllChunks; this pins that it ran at all.
+      expect(chunkResponse(text, 0, 500).total_length).toBe(text.length);
+    });
+
+    it('should point next_offset exactly past the chunk it returned', () => {
+      const text = ('Ein Absatz mit etwas Text. '.repeat(20) + '\n\n').repeat(60);
+      const chunk = chunkResponse(text, 0, 500);
+
+      expect(chunk.next_offset).toBe(chunk.text.length);
+      const second = chunkResponse(text, chunk.next_offset ?? 0, 500);
+      expect(second.next_offset).toBe((chunk.next_offset ?? 0) + second.text.length);
+    });
+
+    it('should end the run with next_offset null', () => {
+      const text = ('Ein Absatz mit etwas Text. '.repeat(20) + '\n\n').repeat(60);
+      const { chunks } = readAllChunks(text, 500);
+
+      expect(
+        chunkResponse(text, text.length - chunks[chunks.length - 1].length, 500).next_offset,
+      ).toBeNull();
+    });
+  });
+
+  describe('losslessness — the invariant the viewer depends on', () => {
+    it('should concatenate back to the original for paragraph-structured text', () => {
+      const text = ('Ein Absatz mit etwas Text. '.repeat(20) + '\n\n').repeat(60);
+      const { chunks } = readAllChunks(text, 500);
+
+      expect(chunks.length).toBeGreaterThan(10);
+      expect(chunks.join('')).toBe(text);
+    });
+
+    it('should concatenate back to the original for sentence-only text', () => {
+      const text = 'Der Beschaediger haftet fuer den Schaden. '.repeat(500);
+      const { chunks } = readAllChunks(text, 500);
+
+      expect(chunks.length).toBeGreaterThan(10);
+      expect(chunks.join('')).toBe(text);
+    });
+
+    it('should concatenate back to the original for text without any boundary', () => {
+      const text = 'x'.repeat(60000);
+      const { chunks } = readAllChunks(text);
+
+      expect(chunks).toHaveLength(3);
+      expect(chunks[0]).toHaveLength(CHARACTER_LIMIT);
+      expect(chunks[1]).toHaveLength(CHARACTER_LIMIT);
+      expect(chunks[2]).toHaveLength(10000);
+      expect(chunks.join('')).toBe(text);
+    });
+
+    it('should concatenate back to the original for a real RIS document', () => {
+      const html = readFileSync(
+        new URL('./fixtures/nor12019037-excerpt.html', import.meta.url),
+        'utf8',
+      );
+      // One document is far below the limit, so it is repeated into something
+      // that actually pages — the character mix stays the real one.
+      const text = formatDocument(html, { dokumentnummer: 'NOR12019037' }, 'markdown').repeat(40);
+      const { chunks } = readAllChunks(text, 4000);
+
+      expect(chunks.length).toBeGreaterThan(5);
+      expect(chunks.join('')).toBe(text);
+    });
+
+    it('should never exceed the requested limit', () => {
+      const text = ('Ein Absatz. '.repeat(30) + '\n\n').repeat(80);
+      const { chunks } = readAllChunks(text, 700);
+
+      for (const chunk of chunks) {
+        expect(chunk.length).toBeLessThanOrEqual(700);
+      }
+    });
+
+    it('should always make progress, so the paging loop terminates', () => {
+      // A single unbroken run is the worst case: no paragraph, no sentence, and
+      // a boundary rule that could otherwise return a zero-length chunk.
+      const { offsets } = readAllChunks('y'.repeat(9999), 100);
+
+      for (let i = 1; i < offsets.length; i++) {
+        expect(offsets[i]).toBeGreaterThan(offsets[i - 1]);
+      }
+    });
+  });
+
+  describe('boundaries', () => {
+    it('should cut at a paragraph break when one sits late enough', () => {
+      const text = 'a'.repeat(400) + '\n\n' + 'b'.repeat(400);
+      const chunk = chunkResponse(text, 0, 500);
+
+      expect(chunk.text).toBe('a'.repeat(400));
+      expect(chunk.next_offset).toBe(400);
+    });
+
+    it('should fall back to a sentence boundary when the paragraph break is too early', () => {
+      const text = 'Kurz.\n\n' + 'Ein Satz mit Inhalt. '.repeat(40);
+      const chunk = chunkResponse(text, 0, 500);
+
+      expect(chunk.text.endsWith('.')).toBe(true);
+      expect(chunk.text.length).toBeGreaterThan(400);
+    });
+
+    it('should cut hard when neither boundary sits late enough', () => {
+      const text = 'Ein Satz.' + 'z'.repeat(1000);
+      const chunk = chunkResponse(text, 0, 500);
+
+      expect(chunk.text).toHaveLength(500);
+    });
+
+    it('should not split a surrogate pair', () => {
+      // The limit lands between the two halves of the emoji, which would render
+      // as U+FFFD on both sides of the cut.
+      const text = 'e'.repeat(499) + '\u{1F600}' + 'e'.repeat(500);
+      const chunk = chunkResponse(text, 0, 500);
+
+      expect(chunk.text).toHaveLength(499);
+      expect(chunk.next_offset).toBe(499);
+      expect(chunkResponse(text, 499, 500).text.startsWith('\u{1F600}')).toBe(true);
+      expect(chunk.text).not.toContain('�');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should answer an offset at or past the end with an empty final chunk', () => {
+      const text = 'Kurzer Text.';
+
+      for (const offset of [text.length, text.length + 1000]) {
+        const chunk = chunkResponse(text, offset);
+        expect(chunk.text).toBe('');
+        expect(chunk.total_length).toBe(text.length);
+        expect(chunk.next_offset).toBeNull();
+      }
+    });
+
+    it('should handle an empty text', () => {
+      expect(chunkResponse('')).toEqual({ text: '', total_length: 0, next_offset: null });
+    });
+
+    it('should read from the start for an offset the schema would have rejected', () => {
+      const text = 'Kurzer Text.';
+
+      for (const offset of [-1, -1000, Number.NaN, 3.5, Number.POSITIVE_INFINITY]) {
+        expect(chunkResponse(text, offset).text).toBe(text);
+      }
+    });
+
+    it('should default to the shared character limit', () => {
+      const text = 'q'.repeat(CHARACTER_LIMIT + 100);
+
+      expect(chunkResponse(text, 0).text).toHaveLength(CHARACTER_LIMIT);
+      expect(chunkResponse(text, 0).next_offset).toBe(CHARACTER_LIMIT);
+    });
+  });
+});
+
+// =============================================================================
+// Outline Extraction (issue #51)
+// =============================================================================
+
+/**
+ * The outline is read from the RIS source markup, not from the rendered text:
+ * formatDocument() writes exactly three markdown headings of its own and
+ * everything below them is plain prose. These tests run against the same
+ * byte-exact fixtures the text extraction is tested with, because the two have
+ * to agree character for character — a label normalised differently from its own
+ * line never matches, and the entry is silently lost.
+ */
+describe('extractOutline with real RIS document HTML', () => {
+  const normHtml = readFileSync(
+    new URL('./fixtures/nor12019037-excerpt.html', import.meta.url),
+    'utf8',
+  );
+  const normText = formatDocument(normHtml, { dokumentnummer: 'NOR12019037' }, 'markdown');
+  const normOutline = extractOutline(normHtml, normText);
+
+  const gazetteHtml = readFileSync(
+    new URL('./fixtures/bgbla-2012-ii-371-excerpt.html', import.meta.url),
+    'utf8',
+  );
+  const gazetteText = formatDocument(
+    gazetteHtml,
+    { dokumentnummer: 'BGBLA_2012_II_371' },
+    'markdown',
+  );
+  const gazetteOutline = extractOutline(gazetteHtml, gazetteText);
+
+  it('should locate every heading of the norm document', () => {
+    // 16 h1-h6 elements in the fixture, none of them lost.
+    expect(normOutline).toHaveLength(16);
+  });
+
+  it('should keep the non-breaking space of a paragraph symbol', () => {
+    // RIS writes `§&#160;1295.` and htmlToText leaves U+00A0 alone (#65).
+    // Normalising the label with \s+ folds it, and the entry stops matching its
+    // own line — this is the pitfall that costs the GldSymbol entry.
+    // Found by level, not by the leading §: the metadata field label
+    // §/Artikel/Anlage starts with one too.
+    const paragraph = normOutline.find((entry) => entry.level === 3);
+    const offset = paragraph?.offset ?? 0;
+
+    // U+00A0 survives into the label, and the label is byte-identical to its
+    // line in the text — folding it to a plain space breaks exactly that.
+    expect(paragraph?.label).toContain('\u00a0');
+    expect(normText.slice(offset, offset + (paragraph?.label.length ?? 0))).toBe(paragraph?.label);
+  });
+
+  it('should drop the spoken duplicate of a heading', () => {
+    // Without removing .sr-only the field label reads
+    // "§/Artikel/AnlageParagraph/Artikel/Anlage" and matches no line at all.
+    const field = normOutline.find((entry) => entry.label.includes('/Artikel/'));
+
+    expect(field?.label).toBe('§/Artikel/Anlage');
+  });
+
+  it('should take the level from the source markup', () => {
+    expect(normOutline.find((entry) => entry.label === 'Text')?.level).toBe(1);
+    expect(
+      normOutline.find((entry) => entry.label === 'Von der Verbindlichkeit zum Schadenersatze:')
+        ?.level,
+    ).toBe(2);
+    expect(normOutline.find((entry) => entry.label.startsWith('§ 1295'))?.level).toBe(3);
+  });
+
+  it('should return the entries in document order across heading levels', () => {
+    const offsets = normOutline.map((entry) => entry.offset);
+
+    expect(offsets).toEqual([...offsets].sort((a, b) => a - b));
+    // h1 Text, then h2, h2, h3, then h1 Schlagworte again: levels are not sorted,
+    // the document order is.
+    expect(normOutline.map((entry) => entry.level).join('')).toContain('1223');
+  });
+
+  it('should point every offset at the heading it belongs to', () => {
+    for (const entry of normOutline) {
+      expect(normText.slice(entry.offset, entry.offset + entry.label.length)).toBe(entry.label);
+      // Offsets address a line of their own, so the character before is a break.
+      if (entry.offset > 0) {
+        expect(normText[entry.offset - 1]).toBe('\n');
+      }
+    }
+  });
+
+  it('should span each entry up to the next one and the last one to the end', () => {
+    for (let i = 0; i < normOutline.length - 1; i++) {
+      expect(normOutline[i].span).toBe(normOutline[i + 1].offset - normOutline[i].offset);
+    }
+
+    const last = normOutline[normOutline.length - 1];
+    expect(last.offset + last.span).toBe(normText.length);
+  });
+
+  it('should separate a metadata field from a real section by span', () => {
+    // The distinction the widget needs and RIS does not mark up: `Typ` and
+    // `§ 1295.` are both plain headings, one is a nine-character field.
+    const field = normOutline.find((entry) => entry.label === 'Typ');
+    const section = normOutline.find((entry) => entry.label.startsWith('§ 1295'));
+
+    expect(field?.span).toBeLessThan(20);
+    expect(section?.span).toBeGreaterThan(500);
+  });
+
+  it('should resolve a line break inside a gazette masthead', () => {
+    // `<h1>BUNDESGESETZBLATT<br/>FÜR DIE REPUBLIK ÖSTERREICH</h1>`: cheerio's
+    // .text() glues the two lines into one word, while the text path breaks
+    // them. Without br → \n the entry is lost.
+    const masthead = gazetteOutline[0];
+
+    expect(masthead.label).toBe('BUNDESGESETZBLATT FÜR DIE REPUBLIK ÖSTERREICH');
+    expect(gazetteText.slice(masthead.offset)).toMatch(/^BUNDESGESETZBLATT\n/);
+  });
+
+  it('should locate every heading of the gazette document', () => {
+    expect(gazetteOutline).toHaveLength(3);
+    expect(gazetteOutline.map((entry) => entry.level)).toEqual([1, 1, 2]);
+  });
+});
+
+describe('extractOutline', () => {
+  /** A minimal RIS-shaped document: headings plus paragraphs, nothing else. */
+  function page(body: string): { html: string; text: string } {
+    const html = `<html><body>${body}</body></html>`;
+    return { html, text: htmlToText(html) };
+  }
+
+  it('should return an empty outline for a document without headings', () => {
+    const { html, text } = page('<p>Nur Fliesstext, keine Gliederung.</p>');
+
+    // A valid outline, not an error: the viewer pages by offset instead.
+    expect(extractOutline(html, text)).toEqual([]);
+  });
+
+  it('should return an empty outline for empty input', () => {
+    expect(extractOutline('', 'irgendein Text')).toEqual([]);
+    expect(extractOutline('<h1>Titel</h1>', '')).toEqual([]);
+  });
+
+  it('should skip a heading that holds no text', () => {
+    const { html, text } = page('<h1></h1><h2>Echt</h2><p>Inhalt</p>');
+
+    expect(extractOutline(html, text).map((entry) => entry.label)).toEqual(['Echt']);
+  });
+
+  it('should tell two occurrences of the same heading apart', () => {
+    const { html, text } = page(
+      '<h2>Gewaltmonopol</h2><p>Erster Abschnitt.</p>' +
+        '<h2>Gewaltmonopol</h2><p>Zweiter Abschnitt.</p>',
+    );
+    const outline = extractOutline(html, text);
+
+    expect(outline).toHaveLength(2);
+    expect(outline[0].offset).toBeLessThan(outline[1].offset);
+    // The cursor is what picks the second occurrence rather than the first.
+    expect(text.slice(outline[1].offset)).toMatch(/^Gewaltmonopol\n+Zweiter/);
+  });
+
+  it('should drop an unlocatable heading without losing the ones behind it', () => {
+    // A heading inside a table cell is joined with its neighbours by the text
+    // path, so it never gets a line of its own. The naive sequential scan stops
+    // at the first miss and loses everything after it.
+    const { html, text } = page(
+      '<h2>Erster</h2><p>a</p>' +
+        '<table><tr><td><h3>In der Zelle</h3></td><td>Wert</td></tr></table>' +
+        '<h2>Dritter</h2><p>b</p>',
+    );
+    const outline = extractOutline(html, text);
+
+    expect(outline.map((entry) => entry.label)).toEqual(['Erster', 'Dritter']);
+  });
+
+  it('should normalise runs of spaces and tabs in a label', () => {
+    const { html, text } = page('<h1>Viel   \t  Abstand</h1><p>Inhalt</p>');
+    const outline = extractOutline(html, text);
+
+    expect(outline[0].label).toBe('Viel Abstand');
+    expect(text.slice(outline[0].offset, outline[0].offset + 12)).toBe('Viel Abstand');
+  });
+
+  it('should read all six heading levels', () => {
+    const { html, text } = page(
+      [1, 2, 3, 4, 5, 6].map((level) => `<h${level}>Ebene ${level}</h${level}><p>x</p>`).join(''),
+    );
+
+    expect(extractOutline(html, text).map((entry) => entry.level)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 });

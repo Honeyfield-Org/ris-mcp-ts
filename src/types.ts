@@ -268,6 +268,59 @@ export const SearchResultOutputShape = {
     ),
 };
 
+/** One jump target of the document viewer's outline. */
+export const OutlineEntryShape = {
+  level: z.number().int().describe('Heading level 1-6 as marked up in the RIS source'),
+  label: z.string().describe('Heading text'),
+  offset: z.number().int().describe('Character offset of the heading in the document text'),
+  span: z
+    .number()
+    .int()
+    .describe(
+      'Characters up to the next heading, or to the end of the text — tells a one-line metadata field from a real section',
+    ),
+};
+
+/**
+ * Shape declared as `outputSchema` by `ris_dokument_abschnitt`.
+ *
+ * `ris_dokument` deliberately declares none, because a client may render
+ * `structuredContent` in place of the text block and would then show metadata
+ * instead of the document. That reasoning does not carry over here: the chunk
+ * text *is* part of the structured payload, so such a client loses nothing.
+ */
+export const DocumentChunkOutputShape = {
+  /**
+   * Absent for a document the caller addressed by URL: it has no Dokumentnummer
+   * to echo, and inventing one — the URL, or the "Unbekannt" placeholder the
+   * loader uses internally — would hand the viewer a key that does not resolve.
+   * `source_url` identifies those documents instead.
+   */
+  dokumentnummer: z
+    .string()
+    .optional()
+    .describe('RIS document number of the document this section belongs to'),
+  text: z.string().describe('The requested section of the document text'),
+  total_length: z
+    .number()
+    .int()
+    .describe(
+      'Length of the complete document text — compare across calls to detect that the document was re-fetched and offsets shifted',
+    ),
+  next_offset: z
+    .number()
+    .int()
+    .nullable()
+    .describe('Offset to request for the following section, or null at the end of the document'),
+  outline: z
+    .array(z.object(OutlineEntryShape))
+    .optional()
+    .describe(
+      'Jump targets of the document. Only returned for offset 0; empty when the document has no headings',
+    ),
+  source_url: z.string().optional().describe('RIS URL the document text was rendered from'),
+};
+
 // =============================================================================
 // Raw API Response Types
 // =============================================================================
