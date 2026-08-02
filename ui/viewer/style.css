@@ -1,0 +1,263 @@
+@import '../shared/theme.css';
+
+/*
+ * Document viewer layout.
+ *
+ * This is the one widget that sets a height and an overflow, against the rule
+ * the Trefferliste states in its own stylesheet. That rule was written for a
+ * 20-row list; a 260 000-character decision would otherwise produce an iframe
+ * tens of thousands of pixels tall, and — worse — leave the widget without a
+ * real scroll container, so every lazy-loading sentinel would intersect at once
+ * and fetch the whole document immediately. The height comes from
+ * `hostContext.containerDimensions` and is set on #ris-view by main.ts; only
+ * the text pane scrolls.
+ */
+
+.ris-doc-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Header: citation, Dokumentnummer, progress, „Im RIS öffnen". */
+
+.ris-doc-header {
+  flex: none;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ris-border);
+}
+
+.ris-doc-title {
+  margin: 0;
+  font-size: var(--ris-text-lg);
+  font-weight: var(--ris-weight-semibold);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.ris-doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-subtle);
+}
+
+.ris-doc-number {
+  font-family: var(--ris-font-mono);
+  overflow-wrap: anywhere;
+}
+
+.ris-doc-progress {
+  white-space: nowrap;
+}
+
+.ris-doc-meta .ris-action {
+  margin-left: auto;
+}
+
+/* Two panes: outline rail and the scrolling text. */
+
+.ris-doc-body {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 16px;
+  /* Without this the flex item refuses to shrink below its content height and
+     the pane never scrolls. */
+  min-height: 0;
+}
+
+.ris-doc-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 4px 4px 24px;
+}
+
+.ris-doc-section {
+  margin: 20px 0 8px;
+  font-size: var(--ris-text-md);
+  font-weight: var(--ris-weight-semibold);
+  color: var(--ris-fg-muted);
+  overflow-wrap: anywhere;
+}
+
+.ris-doc-p {
+  /* The payload is plain text whose line breaks carry meaning — RIS renders
+     tables and enumerations as lines — so they survive instead of collapsing. */
+  white-space: pre-wrap;
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+
+.ris-doc-metadata {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) 1fr;
+  gap: 2px 12px;
+  margin: 0 0 16px;
+  font-size: var(--ris-text-sm);
+}
+
+.ris-doc-meta-pair {
+  display: contents;
+}
+
+.ris-doc-metadata dt {
+  color: var(--ris-fg-subtle);
+}
+
+.ris-doc-metadata dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ris-link {
+  padding: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--ris-ring);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.ris-action {
+  padding: 5px 11px;
+  font-size: var(--ris-text-sm);
+  font-weight: var(--ris-weight-medium);
+  background: var(--ris-bg-raised);
+  border: 1px solid var(--ris-border-strong);
+  border-radius: var(--ris-radius-md);
+}
+
+.ris-action:hover:not(:disabled) {
+  background: var(--ris-bg-hover);
+}
+
+.ris-action:disabled {
+  color: var(--color-text-disabled, var(--ris-fg-subtle));
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ris-doc-gap {
+  padding: 16px 0;
+  border-top: 1px dashed var(--ris-border-strong);
+  border-bottom: 1px dashed var(--ris-border-strong);
+  margin: 16px 0;
+}
+
+.ris-doc-sentinel {
+  height: 1px;
+}
+
+/* Outline rail. */
+
+.ris-outline {
+  flex: 0 0 auto;
+  width: 220px;
+  overflow-y: auto;
+  border-right: 1px solid var(--ris-border);
+  padding-right: 12px;
+}
+
+.ris-outline-summary {
+  /* Wide layout: the rail is a permanent side column, so its disclosure control
+     is noise. The rule below keeps the list visible even when the user
+     collapsed it while the container was narrow. */
+  display: none;
+}
+
+.ris-outline > *:not(summary) {
+  display: block;
+}
+
+.ris-outline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ris-outline-jump {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 6px;
+  text-align: left;
+  font-size: var(--ris-text-sm);
+  background: none;
+  border: 0;
+  border-radius: var(--ris-radius-sm);
+  overflow-wrap: anywhere;
+}
+
+.ris-outline-jump:hover:not(:disabled) {
+  background: var(--ris-bg-hover);
+}
+
+.ris-outline-jump:disabled {
+  color: var(--color-text-disabled, var(--ris-fg-subtle));
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ris-outline-jump[aria-current='true'] {
+  font-weight: var(--ris-weight-semibold);
+  background: var(--ris-bg-raised);
+}
+
+.ris-outline-share {
+  flex: none;
+  font-size: var(--ris-text-xs);
+  color: var(--ris-fg-subtle);
+  white-space: nowrap;
+}
+
+.ris-outline-level-2 .ris-outline-jump {
+  padding-left: 14px;
+}
+
+.ris-outline-level-3 .ris-outline-jump,
+.ris-outline-level-4 .ris-outline-jump,
+.ris-outline-level-5 .ris-outline-jump,
+.ris-outline-level-6 .ris-outline-jump {
+  padding-left: 22px;
+}
+
+/* Narrow container: the rail folds above the text instead of beside it. */
+@media (max-width: 560px) {
+  .ris-doc-body {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ris-outline {
+    width: auto;
+    max-height: 40%;
+    border-right: 0;
+    border-bottom: 1px solid var(--ris-border);
+    padding-right: 0;
+    padding-bottom: 8px;
+  }
+
+  .ris-outline-summary {
+    display: list-item;
+    padding: 4px 0;
+    font-size: var(--ris-text-sm);
+    font-weight: var(--ris-weight-semibold);
+    cursor: pointer;
+  }
+
+  .ris-outline:not([open]) > *:not(summary) {
+    display: none;
+  }
+}
+
+/* Transient messages sit under the document so a failure never replaces it. */
+#ris-status:not(:empty) {
+  padding-top: 12px;
+}

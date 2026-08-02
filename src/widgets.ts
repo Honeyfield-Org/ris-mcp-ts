@@ -1,9 +1,10 @@
 /**
  * MCP Apps widget registration.
  *
- * The search tools point at a single HTML resource that hosts render as an
- * interactive Trefferliste. Registering it switches the `resources` capability
- * on in the initialize handshake; non-UI clients simply ignore it.
+ * Two HTML resources: the search tools point at an interactive Trefferliste,
+ * `ris_dokument` at a document viewer. Registering them switches the
+ * `resources` capability on in the initialize handshake; non-UI clients simply
+ * ignore both.
  */
 
 import {
@@ -14,9 +15,13 @@ import {
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { TREFFERLISTE_HTML } from './generated/trefferliste-html.js';
+import { VIEWER_HTML } from './generated/viewer-html.js';
 
 /** URI of the Trefferliste widget, referenced by every search tool. */
 export const SEARCH_WIDGET_RESOURCE_URI = 'ui://ris-mcp/trefferliste';
+
+/** URI of the document viewer, referenced by `ris_dokument`. */
+export const VIEWER_WIDGET_RESOURCE_URI = 'ui://ris-mcp/viewer';
 
 /**
  * UI metadata for the search tools.
@@ -65,13 +70,29 @@ export const DOCUMENT_CHUNK_META = {
 };
 
 /**
- * The policy the widget needs: nothing.
+ * UI metadata for `ris_dokument`.
  *
- * The bundle is fully self-contained (Vite singlefile), so every directive is
+ * No `openai/widgetAccessible`: that flag gates the calls a widget issues
+ * *itself*, and the viewer never calls `ris_dokument` — it loads further
+ * sections through `ris_dokument_abschnitt`, which carries the flag. Putting it
+ * here would grant an access nothing uses.
+ *
+ * Attaching this changes the `tools/list` entry and nothing else:
+ * `registerAppTool` normalises `_meta` and hands the handler through untouched,
+ * so the tool's response stays byte for byte what it was.
+ */
+export const VIEWER_WIDGET_META = {
+  ui: { resourceUri: VIEWER_WIDGET_RESOURCE_URI },
+};
+
+/**
+ * The policy the widgets need: nothing.
+ *
+ * Both bundles are fully self-contained (Vite singlefile), so every directive is
  * declared empty rather than omitted: hosts flag an undeclared policy as "CSP
  * off" instead of treating it as "needs nothing".
  */
-const SEARCH_WIDGET_CSP = {
+const WIDGET_CSP = {
   connectDomains: [],
   resourceDomains: [],
   frameDomains: [],
@@ -86,34 +107,45 @@ const SEARCH_WIDGET_CSP = {
  * ChatGPT honours — with `_meta.ui.csp` alone the widget kept its "CSP off"
  * badge there (live measurement #60), while claude.ai reads the standard key.
  *
- * Two fields of {@link SEARCH_WIDGET_CSP} have no counterpart here and are
- * therefore left out rather than invented: `baseUriDomains`, which the legacy
- * key does not define, and `redirect_domains`, which is not a mirror of
- * anything — it allowlists targets for ChatGPT's `openExternal`, so declaring
- * it empty would newly forbid what the host currently decides for itself, and
- * „Im RIS öffnen" is exactly such a link.
+ * Two fields of {@link WIDGET_CSP} have no counterpart here and are therefore
+ * left out rather than invented: `baseUriDomains`, which the legacy key does not
+ * define, and `redirect_domains`, which is not a mirror of anything — it
+ * allowlists targets for ChatGPT's `openExternal`, so declaring it empty would
+ * newly forbid what the host currently decides for itself, and „Im RIS öffnen"
+ * is exactly such a link.
  *
  * Source: "Component resource `_meta` fields", developers.openai.com/plugins/reference.
  */
-const SEARCH_WIDGET_CSP_CHATGPT = {
+const WIDGET_CSP_CHATGPT = {
   connect_domains: [],
   resource_domains: [],
   frame_domains: [],
 };
 
 /**
- * Resource declaration for the widget.
+ * Resource declaration for a widget.
  *
  * Carries both spellings of the same empty policy — every host that reads one
- * of them ends up applying the identical rules.
+ * of them ends up applying the identical rules. No `domain`: omitting it is
+ * verified safe, and a wrong value stops the widget rendering at all.
  */
-const SEARCH_WIDGET_RESOURCE_CONFIG: McpUiAppResourceConfig = {
-  description: 'Interactive result list for RIS search results',
-  _meta: {
-    ui: { csp: SEARCH_WIDGET_CSP },
-    'openai/widgetCSP': SEARCH_WIDGET_CSP_CHATGPT,
-  },
-};
+function widgetResourceConfig(description: string): McpUiAppResourceConfig {
+  return {
+    description,
+    _meta: {
+      ui: { csp: WIDGET_CSP },
+      'openai/widgetCSP': WIDGET_CSP_CHATGPT,
+    },
+  };
+}
+
+const SEARCH_WIDGET_RESOURCE_CONFIG = widgetResourceConfig(
+  'Interactive result list for RIS search results',
+);
+
+const VIEWER_WIDGET_RESOURCE_CONFIG = widgetResourceConfig(
+  'Reader for a single RIS document, with an outline and lazily loaded sections',
+);
 
 /**
  * Register the widget resources on the given MCP server.
@@ -122,20 +154,19 @@ const SEARCH_WIDGET_RESOURCE_CONFIG: McpUiAppResourceConfig = {
  * the `resources/list` entry, so both carry the same declaration.
  */
 export function registerWidgetResources(server: McpServer): void {
-  registerAppResource(
-    server,
-    'RIS Trefferliste',
-    SEARCH_WIDGET_RESOURCE_URI,
-    SEARCH_WIDGET_RESOURCE_CONFIG,
-    () => ({
-      contents: [
-        {
-          uri: SEARCH_WIDGET_RESOURCE_URI,
-          mimeType: RESOURCE_MIME_TYPE,
-          text: TREFFERLISTE_HTML,
-          _meta: SEARCH_WIDGET_RESOURCE_CONFIG._meta,
-        },
-      ],
-    }),
-  );
+  const widgets: [string, string, McpUiAppResourceConfig, string][] = [
+    [
+      'RIS Trefferliste',
+      SEARCH_WIDGET_RESOURCE_URI,
+      SEARCH_WIDGET_RESOURCE_CONFIG,
+      TREFFERLISTE_HTML,
+    ],
+    ['RIS Dokument', VIEWER_WIDGET_RESOURCE_URI, VIEWER_WIDGET_RESOURCE_CONFIG, VIEWER_HTML],
+  ];
+
+  for (const [name, uri, config, html] of widgets) {
+    registerAppResource(server, name, uri, config, () => ({
+      contents: [{ uri, mimeType: RESOURCE_MIME_TYPE, text: html, _meta: config._meta }],
+    }));
+  }
 }

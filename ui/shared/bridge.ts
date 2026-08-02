@@ -36,6 +36,23 @@ export interface ToolPayload {
 export interface BridgeOptions {
   /** Called for the tool result that mounted the widget. */
   onToolResult(payload: ToolPayload): void;
+  /**
+   * Called with the arguments of the call that mounted the widget.
+   *
+   * A separate channel from the result, and the one that matters for a tool
+   * whose payload is text rather than structured data: it names the document
+   * even when no output data reaches the widget at all.
+   */
+  onToolInput?(args: Record<string, unknown>): void;
+  /**
+   * Called with the host context on connect and on every later change.
+   *
+   * Theming is applied by the bridge either way; this is for the parts a widget
+   * has to lay itself out against, `containerDimensions` above all.
+   */
+  onHostContext?(context: unknown): void;
+  /** Identifies the widget to the host. Defaults to the Trefferliste. */
+  appName?: string;
 }
 
 /** Host-bound actions a widget performs. */
@@ -167,6 +184,24 @@ export function readMountResult(result: unknown, globals: unknown = globalThis):
 }
 
 /**
+ * Read the host global that carries the mounting tool's *arguments*.
+ *
+ * ChatGPT's own Apps SDK mirrors the `toolinput` notification as
+ * `window.openai.toolInput`, and a host may have it populated before the widget
+ * subscribes to anything. Feature-detected exactly like {@link readHostGlobal}:
+ * a host without the global keeps working through the event.
+ */
+export function readMountInput(globals: unknown = globalThis): Record<string, unknown> | null {
+  if (!isRecord(globals)) return null;
+
+  const openai = globals.openai;
+  if (!isRecord(openai)) return null;
+
+  const input = openai.toolInput;
+  return isRecord(input) ? input : null;
+}
+
+/**
  * Adopt the host's look.
  *
  * Fonts are deliberately not adopted (`applyHostFonts`): the host CSS may
@@ -197,25 +232,35 @@ function rejected(result: unknown): boolean {
  * handshake fails — the caller shows a notice and leaves the static marker in
  * place, which is what tells "never mounted" apart from "mounted, no data".
  */
-export async function connectBridge(
-  options: BridgeOptions,
-  app: HostApp = new App({ name: 'ris-mcp-trefferliste', version: '1.0.0' }),
-): Promise<Bridge> {
-  app.addEventListener('toolresult', (params) => {
+export async function connectBridge(options: BridgeOptions, app?: HostApp): Promise<Bridge> {
+  const host =
+    app ?? new App({ name: options.appName ?? 'ris-mcp-trefferliste', version: '1.0.0' });
+
+  host.addEventListener('toolresult', (params) => {
     options.onToolResult(readMountResult(params));
   });
-  app.addEventListener('hostcontextchanged', applyHostContext);
+  host.addEventListener('toolinput', (params) => {
+    const args = isRecord(params) ? params.arguments : undefined;
+    if (isRecord(args)) options.onToolInput?.(args);
+  });
+  host.addEventListener('hostcontextchanged', (context) => {
+    applyHostContext(context);
+    options.onHostContext?.(context);
+  });
 
-  await app.connect();
-  applyHostContext(app.getHostContext());
+  await host.connect();
+
+  const context = host.getHostContext();
+  applyHostContext(context);
+  options.onHostContext?.(context);
 
   return {
     async callTool(call): Promise<ToolPayload> {
-      return readToolResult(await withDeadline(app.callServerTool(call)));
+      return readToolResult(await withDeadline(host.callServerTool(call)));
     },
     async openLink(url): Promise<boolean> {
       try {
-        return !rejected(await app.openLink({ url }));
+        return !rejected(await host.openLink({ url }));
       } catch {
         return false;
       }
@@ -223,7 +268,7 @@ export async function connectBridge(
     async sendPrompt(text): Promise<boolean> {
       try {
         return !rejected(
-          await app.sendMessage({ role: 'user', content: [{ type: 'text', text }] }),
+          await host.sendMessage({ role: 'user', content: [{ type: 'text', text }] }),
         );
       } catch {
         return false;

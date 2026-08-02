@@ -1,16 +1,23 @@
 import { describe, expect, it } from 'vitest';
 
 import { TREFFERLISTE_HTML } from '../generated/trefferliste-html.js';
+import { VIEWER_HTML } from '../generated/viewer-html.js';
 
-describe('generated widget template', () => {
+/** Every widget bundle has to satisfy the same rules. */
+const BUNDLES: [string, string][] = [
+  ['trefferliste', TREFFERLISTE_HTML],
+  ['viewer', VIEWER_HTML],
+];
+
+describe.each(BUNDLES)('generated widget template: %s', (_widget, html) => {
   it('is a non-trivial single-file document', () => {
-    expect(TREFFERLISTE_HTML.length).toBeGreaterThan(500);
-    expect(TREFFERLISTE_HTML).toContain('nojs-marker');
+    expect(html.length).toBeGreaterThan(500);
+    expect(html).toContain('nojs-marker');
   });
 
   it('references no external resources', () => {
-    expect(TREFFERLISTE_HTML).not.toMatch(/src\s*=\s*["']https?:/i);
-    expect(TREFFERLISTE_HTML).not.toMatch(/href\s*=\s*["']https?:/i);
+    expect(html).not.toMatch(/src\s*=\s*["']https?:/i);
+    expect(html).not.toMatch(/href\s*=\s*["']https?:/i);
   });
 
   it('names no external origin at all', () => {
@@ -36,10 +43,7 @@ describe('generated widget template', () => {
       'http://[${',
     ];
 
-    const remaining = INERT_ORIGINS.reduce(
-      (html, origin) => html.split(origin).join(''),
-      TREFFERLISTE_HTML,
-    );
+    const remaining = INERT_ORIGINS.reduce((rest, origin) => rest.split(origin).join(''), html);
 
     expect(remaining).not.toMatch(/\bhttps?:\/\//i);
   });
@@ -49,12 +53,32 @@ describe('generated widget template', () => {
     // document keeps relative asset paths like src="/assets/main.js", renders
     // blank wherever those do not resolve, and still satisfies every other
     // assertion in this file.
-    expect(TREFFERLISTE_HTML).not.toMatch(/<script[^>]+\bsrc\s*=/i);
-    expect(TREFFERLISTE_HTML).not.toMatch(/<link[^>]+rel\s*=\s*["']?stylesheet/i);
-    expect(TREFFERLISTE_HTML).not.toMatch(/<link[^>]+rel\s*=\s*["']?modulepreload/i);
+    expect(html).not.toMatch(/<script[^>]+\bsrc\s*=/i);
+    expect(html).not.toMatch(/<link[^>]+rel\s*=\s*["']?stylesheet/i);
+    expect(html).not.toMatch(/<link[^>]+rel\s*=\s*["']?modulepreload/i);
+  });
+
+  it('imports no chunk of its own that was left beside it', () => {
+    // The break a second widget introduced: Rollup splits out everything two
+    // entries share, the single-file plugin inlines only what an entry pulls in
+    // directly, and the bundle ships `from"./widget-state-<hash>.js"` for a file
+    // that is never written. The script tag is inline, so every assertion above
+    // passes while the widget fails to start in every host.
+    //
+    // Dynamic imports count: ext-apps reaches for zod's JSON-Schema converter
+    // through `import("./index-<hash>.js")`, which is just as unloadable. No
+    // allowlist — `inlineDynamicImports` in vite.ui.config.ts is what makes this
+    // hold, and a reference that survives it is one nothing can resolve.
+    expect(html).not.toMatch(/\b(?:from|import)\s*\(?\s*["']\.[^"']*["']/);
+  });
+
+  it('carries the SDK it needs to talk to a host', () => {
+    // The same failure seen from the other side: a bundle missing the ext-apps
+    // client is small, self-consistent and completely inert.
+    expect(html).toContain('ui/notifications/tool-result');
   });
 
   it('stays under the bundle budget', () => {
-    expect(TREFFERLISTE_HTML.length).toBeLessThan(400_000);
+    expect(html.length).toBeLessThan(400_000);
   });
 });

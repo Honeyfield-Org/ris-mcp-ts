@@ -30,7 +30,7 @@ generated sources are never stale; you rarely call it by hand.
 
 ```bash
 pnpm test                # Server unit tests (886 tests, 18 files) — node env
-pnpm run test:ui         # Widget tests under ui/ (131 tests, 4 files) — jsdom env
+pnpm run test:ui         # Widget tests under ui/ (287 tests, 9 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
@@ -122,30 +122,44 @@ ui/                    # Widget sources — browser code, own tsconfig (DOM lib)
 │   ├── viewmodel.ts   # Pure structuredContent → display model (no DOM)
 │   ├── view.ts        # Model → elements, payload interpretation
 │   └── style.css
+├── viewer/            # The document viewer (same five-file split)
+│   ├── index.html     main.ts     viewmodel.ts     view.ts
+│   ├── copy.ts        # Viewer-specific German strings
+│   └── style.css      # Two-pane layout; the one widget that bounds its height
 ├── shared/
 │   ├── bridge.ts      # Host protocol: ext-apps App class, result acquisition
 │   ├── states.ts      # German copy + notice/skeleton elements
+│   ├── widget-state.ts # createSnapshotStore(key, version) — one slot per widget
 │   └── theme.css
-└── __fixtures__/      # Search-result fixtures for the widget tests
+└── __fixtures__/      # Search-result and document-chunk fixtures
 
-vite.ui.config.ts      # Widget build: every ui/<widget>/index.html is an entry
-scripts/gen-ui.mjs     # dist-ui/<widget>/index.html → src/generated/<widget>-html.ts
+vite.ui.config.ts      # Widget build: one widget per pass, named by RIS_UI_WIDGET
+scripts/gen-ui.mjs     # Drives the builds, then writes src/generated/<widget>-html.ts
 ```
 
 ### Widget Build Pipeline
 
-`gen:ui` = `vite build --config vite.ui.config.ts && node scripts/gen-ui.mjs`.
-Vite inlines each widget into one self-contained `index.html`
-(`vite-plugin-singlefile`, all assets inlined regardless of size), then
-`gen-ui.mjs` writes that HTML as a TypeScript string constant to
-`src/generated/<widget>-html.ts`. The server imports the constant, so it never
-resolves a file path at runtime — one less thing to break between npm install,
-Docker and dev.
+`gen:ui` = `node scripts/gen-ui.mjs`, which discovers the widgets from the
+sources and runs **one Vite pass per widget**. Each pass inlines that widget
+into one self-contained `index.html` (`vite-plugin-singlefile`, all assets
+inlined regardless of size), and `gen-ui.mjs` then writes the HTML as a
+TypeScript string constant to `src/generated/<widget>-html.ts`. The server
+imports the constant, so it never resolves a file path at runtime — one less
+thing to break between npm install, Docker and dev.
 
-Both the vite config and `gen-ui.mjs` derive the widget list from the sources
-(`ui/<name>/index.html`), so a new widget means a new directory, not a config
-edit. `src/generated/` is gitignored and rebuilt by the `pre*` hooks; a widget
-that failed to build raises a named error instead of producing a missing export.
+**One pass per widget is not optional.** Building several entries in one pass
+makes Rollup split out everything they share — `ui/shared/` and the whole
+ext-apps SDK — into chunks that the single-file plugin does not inline. Both
+bundles then ship a bare `import … from "./widget-state-<hash>.js"` for a file
+that is never written: they look fine to every `<script src=…>` assertion and
+fail to start in every host. `gen-ui.mjs` refuses a bundle that still carries a
+relative import, and `ui-template.test.ts` asserts the same thing plus the
+presence of the SDK.
+
+Widget discovery still comes from the sources (`ui/<name>/index.html`), so a new
+widget means a new directory, not a config edit. `src/generated/` is gitignored
+and rebuilt by the `pre*` hooks; a widget that failed to build raises a named
+error instead of producing a missing export.
 
 ## Key Patterns
 
@@ -153,7 +167,7 @@ that failed to build raises a named error instead of producing a missing export.
 
 Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(server)` function. Pattern:
 
-1. The 11 search tools register with `registerAppTool(server, name, { title, description, inputSchema, outputSchema, annotations, _meta }, handler)` from `@modelcontextprotocol/ext-apps/server` — same config object as `server.registerTool()` plus `_meta: SEARCH_WIDGET_META` (`src/widgets.ts`), which is what points the tool at the Trefferliste widget. `ris_dokument` uses plain `server.registerTool()`: no widget, and deliberately no `outputSchema` either (see below). The deprecated `server.tool(...)` overload is no longer used.
+1. The 11 search tools and `ris_dokument` register with `registerAppTool(server, name, { title, description, inputSchema, outputSchema, annotations, _meta }, handler)` from `@modelcontextprotocol/ext-apps/server` — same config object as `server.registerTool()` plus a `_meta` from `src/widgets.ts` that points the tool at its widget: `SEARCH_WIDGET_META` → Trefferliste, `VIEWER_WIDGET_META` → document viewer. `ris_dokument` still declares no `outputSchema` (see below); the wrapper only touches the descriptor. `ris_dokument_abschnitt` uses plain `server.registerTool()` because it sets no `resourceUri` — it feeds the viewer that is already open. The deprecated `server.tool(...)` overload is no longer used.
 2. `title` is a German display name, `description`/`inputSchema` are English. `annotations` is `{ readOnlyHint: true, openWorldHint: true, destructiveHint: false }` on **all 12** tools — `destructiveHint` is spec-redundant once `readOnlyHint` is true, but OpenAI lists it as a required annotation for app submissions; do not drop it as noise.
 3. Search tools declare `SearchResultOutputShape` (types.ts) as `outputSchema`; successful results carry the parsed result plus the `query` echo as `structuredContent` (emitted centrally in `executeSearchTool()`), error results (`isError: true`) carry none. `executeSearchTool()` takes the echo from `buildQueryEcho(toolName, args)` as a required argument, so a new search tool cannot silently ship without pagination support.
 4. For `limit`/`seite`, reuse `LimitSchema`/`SeiteSchema` from `types.ts` instead of raw `z.number()`
@@ -195,21 +209,47 @@ Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(serve
 - **Unused vars**: Must be prefixed with `_`
 - **ESM**: Project uses ES modules (`"type": "module"` in package.json, `.js` extensions in imports)
 
-## MCP Apps (Trefferliste Widget)
+## MCP Apps (Trefferliste and Viewer Widgets)
 
-Since v1.4.0 the 11 search tools can render their results as an interactive
-result list in hosts that support the MCP Apps extension
-(`@modelcontextprotocol/ext-apps`). The mechanism, in the order it happens:
+Since v1.4.0 the 11 search tools render their results as an interactive result
+list in hosts that support the MCP Apps extension
+(`@modelcontextprotocol/ext-apps`); since v1.5.0 `ris_dokument` renders a
+document viewer. The mechanism, in the order it happens:
 
-1. `registerWidgetResources()` (`src/widgets.ts`) registers one resource,
-   `ui://ris-mcp/trefferliste`, whose content is the generated single-file HTML.
-2. Each search tool carries `_meta: SEARCH_WIDGET_META`, i.e.
-   `_meta.ui.resourceUri` → that URI. `registerAppTool` additionally mirrors it
-   onto the legacy flat key `ui/resourceUri` for older hosts. `ris_dokument`
-   carries no UI metadata — its payload is the document text, not a list.
+1. `registerWidgetResources()` (`src/widgets.ts`) registers two resources,
+   `ui://ris-mcp/trefferliste` and `ui://ris-mcp/viewer`, whose content is the
+   generated single-file HTML.
+2. Each search tool carries `_meta: SEARCH_WIDGET_META` and `ris_dokument`
+   carries `_meta: VIEWER_WIDGET_META`, i.e. `_meta.ui.resourceUri` → the
+   matching URI. `registerAppTool` additionally mirrors it onto the legacy flat
+   key `ui/resourceUri` for older hosts.
 3. A supporting host loads that HTML and delivers the tool result to it;
    `ui/shared/bridge.ts` wraps the ext-apps `App` class for the handshake,
    theming, `callServerTool`, `openLink` and `sendMessage`.
+
+### The viewer's first render
+
+`ris_dokument` declares no `structuredContent` by design, so the viewer takes
+the first of four rungs that yields content: **(1)** the text block of the
+mounting result (up to 25 000 characters of markdown — the normal path, and it
+costs no tool call); **(2)** the `dokumentnummer`/`url` from the `toolinput`
+notification or `window.openai.toolInput`, followed by one
+`ris_dokument_abschnitt` call at offset 0; **(3)** this widget's own snapshot,
+which stores structure and a reading position but never text; **(4)** a German
+notice. There is no host-global stale-data path — the chat keeps the complete
+text and the `resource_link` in every rung.
+
+Further sections load through `ris_dokument_abschnitt` as the reader scrolls:
+one call in flight at a time, an `IntersectionObserver` rooted on the text pane
+with a 600px prefetch margin, paused while the tab is hidden. The viewer is the
+one widget that sets a height (from `hostContext.containerDimensions`, 640px
+fallback) and scrolls internally — without a real scroll container every
+sentinel intersects at once and lazy loading fetches the whole document.
+
+Document text is rendered by a line classifier, never a markdown parser, and
+always through `textContent`. Section anchors come from the server's
+`outline[].offset`; the widget carries no §-regex, because in court decisions
+every §-line is a citation of a *foreign* law.
 
 **The `resources` capability is now part of the initialize handshake.** The
 first registered resource switches it on for every client, including those that
@@ -248,6 +288,10 @@ the notice underneath it. Any change here must preserve that.
 | claude.ai | Fully functional — widget, pagination, `openLink` |
 | ChatGPT | Renders via the `window.openai.toolOutput` fallback |
 | Claude Code, API clients | Unchanged text output, no regression |
+
+The viewer's behaviour in both hosts is **not yet measured** — see the open
+questions in `.superpowers/sdd/v150-plan/v150-design-widget.md` §9, above all
+whether `toolinput` fires at all and what `containerDimensions` each host sends.
 
 Known issues and follow-ups: `claude-ai-mcp#165` (custom-connector rendering
 flaky — never reproduced here), `ext-apps#696`, and issue **#60** for
@@ -317,7 +361,7 @@ are validated by the shared `LimitSchema` (10/20/50/100) and `SeiteSchema` (≥1
 Every tool except `ris_dokument` and `ris_dokument_abschnitt` is a *search* tool:
 those 11 declare
 `SearchResultOutputShape` as `outputSchema` and carry the widget `_meta` (see
-[MCP Apps](#mcp-apps-trefferliste-widget)).
+[MCP Apps](#mcp-apps-trefferliste-and-viewer-widgets)).
 
 Their `structuredContent` holds the pagination fields (`total_hits`, `page`,
 `page_size`, `has_more`), the `documents` array and a `query` echo — the tool's

@@ -2,6 +2,7 @@
  * Tool 7: ris_dokument — Retrieve full text of a legal document.
  */
 
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
@@ -9,9 +10,15 @@ import type { DocumentCache } from '../document-cache.js';
 import { loadDocument } from '../document-loader.js';
 import { extractOutline, truncateResponse } from '../formatting.js';
 import { createErrorResponse, formatErrorResponse } from '../helpers.js';
+import { VIEWER_WIDGET_META } from '../widgets.js';
 
 export function registerDokumentTool(server: McpServer, cache: DocumentCache): void {
-  server.registerTool(
+  // registerAppTool only normalises the UI metadata on the descriptor — it
+  // mirrors `_meta.ui.resourceUri` onto the legacy flat key — and passes the
+  // handler through untouched. The response below is unchanged by it, which
+  // dokument-snapshot.e2e.test.ts pins byte for byte.
+  registerAppTool(
+    server,
     'ris_dokument',
     {
       title: 'Dokument abrufen',
@@ -37,6 +44,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
       // would replace the document text with a handful of fields and the model
       // would never see the document.
       annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
+      _meta: VIEWER_WIDGET_META,
     },
     async (args, extra) => {
       const { dokumentnummer, url: inputUrl, response_format } = args;

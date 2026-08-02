@@ -9,7 +9,7 @@
 
 import { connectBridge, type Bridge, type ToolPayload } from '../shared/bridge.js';
 import { COPY, createNotice, createSkeleton, type NoticeKind } from '../shared/states.js';
-import { persistSnapshot, restoreSnapshot } from '../shared/widget-state.js';
+import { createSnapshotStore } from '../shared/widget-state.js';
 
 import {
   focusPagination,
@@ -25,6 +25,9 @@ import {
   toViewModel,
   type SearchResultPayload,
 } from './viewmodel.js';
+
+/** This widget's own snapshot slot; the viewer keeps a separate one. */
+const snapshots = createSnapshotStore('risTrefferliste', 1);
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -88,7 +91,7 @@ function show(outcome: Outcome, keepPrevious: boolean): void {
     // The one place a page becomes the page on screen, and therefore the one
     // place worth remembering for a reopen — including which page it is, which
     // the payload carries in its query echo.
-    persistSnapshot(current);
+    snapshots.persist(current);
     clearStatus();
     renderCurrent();
     return;
@@ -192,7 +195,7 @@ function presentFromHost(payload: ToolPayload): void {
 function restorePrevious(): void {
   if (current) return;
 
-  const snapshot = parseSearchResult(restoreSnapshot());
+  const snapshot = parseSearchResult(snapshots.restore());
   if (!snapshot) return;
 
   current = snapshot;

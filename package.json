@@ -9,7 +9,7 @@
     "ris-mcp-ts": "dist/index.js"
   },
   "scripts": {
-    "gen:ui": "vite build --config vite.ui.config.ts && node scripts/gen-ui.mjs",
+    "gen:ui": "node scripts/gen-ui.mjs",
     "prebuild": "pnpm run typecheck",
     "build": "tsc",
     "predev": "pnpm run gen:ui",

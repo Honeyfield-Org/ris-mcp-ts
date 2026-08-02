@@ -1,17 +1,24 @@
 /**
- * Turns every single-file widget bundle in dist-ui/ into a TypeScript string
- * constant under src/generated/, so the server ships the HTML inside its own
- * module graph instead of resolving a file path at runtime.
+ * Builds every widget under ui/ into a single-file bundle and turns each into a
+ * TypeScript string constant under src/generated/, so the server ships the HTML
+ * inside its own module graph instead of resolving a file path at runtime.
  *
- * Run via `pnpm run gen:ui` (after `vite build --config vite.ui.config.ts`).
+ * One Vite pass per widget, deliberately: a single pass over several entries
+ * makes Rollup split out everything they share, and nothing inlines those
+ * chunks back in — see the comment in vite.ui.config.ts.
+ *
+ * Run via `pnpm run gen:ui`.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { build } from 'vite';
 
 const uiRoot = fileURLToPath(new URL('../ui', import.meta.url));
 const distUi = fileURLToPath(new URL('../dist-ui', import.meta.url));
 const outDir = fileURLToPath(new URL('../src/generated', import.meta.url));
+const configFile = fileURLToPath(new URL('../vite.ui.config.ts', import.meta.url));
 
 const constantName = (widget) => `${widget.replace(/[^a-z0-9]+/gi, '_').toUpperCase()}_HTML`;
 
@@ -28,8 +35,12 @@ if (widgets.length === 0) {
 }
 
 mkdirSync(outDir, { recursive: true });
+rmSync(distUi, { recursive: true, force: true });
 
 for (const widget of widgets) {
+  process.env.RIS_UI_WIDGET = widget;
+  await build({ configFile, mode: 'production', logLevel: 'warn' });
+
   const bundle = join(distUi, widget, 'index.html');
 
   if (!existsSync(bundle)) {
@@ -39,6 +50,18 @@ for (const widget of widgets) {
   }
 
   const html = readFileSync(bundle, 'utf8');
+
+  // A leftover cross-chunk reference means the bundle is not self-contained:
+  // the file it names is never written, so the widget would fail to start in
+  // every host while still passing every "no external URL" check. Static and
+  // dynamic both — ext-apps reaches for zod's JSON-Schema converter through
+  // `import("…")`, which `inlineDynamicImports` in vite.ui.config.ts is what
+  // resolves. There is deliberately no allowlist: a reference that survives
+  // here is one nothing can load at runtime.
+  const dangling = /\b(?:from|import)\s*\(?\s*["']\.[^"']*["']/.exec(html);
+  if (dangling) {
+    throw new Error(`Widget "${widget}" was not fully inlined — it still imports ${dangling[0]}`);
+  }
 
   writeFileSync(
     join(outDir, `${widget}-html.ts`),

@@ -46,18 +46,20 @@ function element(tag: string, className: string, text?: string): HTMLElement {
 }
 
 /**
- * Placeholder rows shown while a search is running.
+ * Placeholder rows shown while a request is running.
  *
  * RIS answers in seconds and may take up to 30, so every request the widget
- * issues itself needs something on screen in the meantime.
+ * issues itself needs something on screen in the meantime. `label` is what the
+ * announcement says: the default names a search, and a widget that is loading
+ * something else passes its own wording rather than announcing the wrong thing.
  */
-export function createSkeleton(rows = 3): HTMLElement {
+export function createSkeleton(rows = 3, label: string = COPY.loading): HTMLElement {
   const skeleton = element('div', 'ris-skeleton');
   // aria-busy alone is only read when a screen reader happens to be on the
   // element; role="status" makes the label an announcement in its own right.
   skeleton.setAttribute('role', 'status');
   skeleton.setAttribute('aria-busy', 'true');
-  skeleton.append(element('p', 'ris-skeleton-label', COPY.loading));
+  skeleton.append(element('p', 'ris-skeleton-label', label));
 
   for (let index = 0; index < rows; index += 1) {
     const row = element('div', 'ris-skeleton-row');

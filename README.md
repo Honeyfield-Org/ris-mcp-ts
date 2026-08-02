@@ -162,7 +162,9 @@ npx -y ris-mcp-ts
 
 ## Interactive Result List
 
-**One widget, all eleven search tools.** There is a single interactive result list, and every search tool renders into it: federal law, state law, case law, the federal and state law gazettes, government bills, district authority announcements, municipal law, the miscellaneous collections, change history and the ordinance gazettes. Only `ris_dokument` deliberately has no widget — there the full document text *is* the answer. The screenshots below are the same widget in two different hosts, not two different features.
+**One widget, all eleven search tools.** There is a single interactive result list, and every search tool renders into it: federal law, state law, case law, the federal and state law gazettes, government bills, district authority announcements, municipal law, the miscellaneous collections, change history and the ordinance gazettes. The screenshots below are the same widget in two different hosts, not two different features.
+
+**`ris_dokument` opens a reader instead.** A single document can run to a quarter of a million characters, far past what one answer may carry, so the viewer loads it section by section as you scroll, offers an outline to jump by where the document has one, and links back into RIS. The full text still reaches the chat either way — the widget is never the only copy.
 
 Hosts that support the MCP Apps extension render the hits as an interactive list — page through results without retyping the search, open a document in the browser, or request its full text with one click. The widget follows the host's light or dark theme; the shots below show both.
 

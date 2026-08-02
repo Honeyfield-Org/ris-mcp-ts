@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RIS Dokument</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <!--
+      Visible only when the bundle never executes; main.ts hides it as its first
+      act, so a still-visible marker means "the script never ran" rather than
+      "the widget mounted and found nothing".
+    -->
+    <p id="nojs-marker" class="ris-notice ris-notice-error">
+      Der Dokument-Viewer konnte nicht geladen werden — der vollständige Text steht im Chat.
+    </p>
+    <main id="ris-view"></main>
+    <div id="ris-status"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
