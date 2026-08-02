@@ -284,10 +284,8 @@ export const OutlineEntryShape = {
 /**
  * Shape declared as `outputSchema` by `ris_dokument_abschnitt`.
  *
- * `ris_dokument` deliberately declares none, because a client may render
- * `structuredContent` in place of the text block and would then show metadata
- * instead of the document. That reasoning does not carry over here: the chunk
- * text *is* part of the structured payload, so such a client loses nothing.
+ * Safe for the same reason {@link DocumentOutputShape} is: the text a client
+ * would lose by rendering only `structuredContent` is inside `structuredContent`.
  */
 export const DocumentChunkOutputShape = {
   /**
@@ -317,6 +315,47 @@ export const DocumentChunkOutputShape = {
     .optional()
     .describe(
       'Jump targets of the document. Only returned for offset 0; empty when the document has no headings',
+    ),
+  source_url: z.string().optional().describe('RIS URL the document text was rendered from'),
+};
+
+/**
+ * Shape declared as `outputSchema` by `ris_dokument`.
+ *
+ * The v1.3.0 live finding — clients that render `structuredContent` in place of
+ * the text block, so the document disappeared behind a handful of metadata
+ * fields — is answered by construction rather than by omission: `text` is the
+ * text block, byte for byte. A client that renders only the structured payload
+ * shows the same document. Omitting the schema instead is what left the viewer
+ * blind in claude.ai, whose only proven channel to a widget is
+ * `structuredContent` (Live-Befund 2026-08-02).
+ *
+ * Deliberately *not* here: `next_offset`. `text` is the truncated rendering with
+ * a German notice appended, not a chunk, so its length is not an offset into the
+ * document — `ris_dokument_abschnitt` starts the canonical series at 0.
+ */
+export const DocumentOutputShape = {
+  /** Absent for a URL-addressed document, exactly as in the chunk shape above. */
+  dokumentnummer: z
+    .string()
+    .optional()
+    .describe('RIS document number of this document, echoed from the request'),
+  text: z
+    .string()
+    .describe(
+      'The document text, identical to the text content block — truncated at 25000 characters with a German notice when the document is longer',
+    ),
+  total_length: z
+    .number()
+    .int()
+    .describe(
+      'Length of the complete document text; greater than the length of "text" when the document was truncated',
+    ),
+  outline: z
+    .array(z.object(OutlineEntryShape))
+    .optional()
+    .describe(
+      'Jump targets of the document. Returned for a truncated markdown response whose outline is small enough to travel with it — a document that fits in one response has nothing to navigate to, and a statute-sized outline is fetched with the next section instead',
     ),
   source_url: z.string().optional().describe('RIS URL the document text was rendered from'),
 };
