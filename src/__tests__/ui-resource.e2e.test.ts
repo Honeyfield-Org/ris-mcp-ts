@@ -66,6 +66,19 @@ const EXPECTED_CSP = {
   baseUriDomains: [],
 };
 
+/**
+ * The same policy under ChatGPT's legacy key, which is the one it reads.
+ *
+ * snake_case, and without the two fields that would have no meaning here:
+ * `base_uri_domains` is not part of that key, and `redirect_domains` governs
+ * `openExternal` targets rather than mirroring anything in `_meta.ui.csp`.
+ */
+const EXPECTED_CSP_CHATGPT = {
+  connect_domains: [],
+  resource_domains: [],
+  frame_domains: [],
+};
+
 /** `_meta.ui` as it arrives over the wire, before narrowing. */
 interface WireUiMeta {
   resourceUri?: string;
@@ -123,6 +136,36 @@ describe('widget resource', () => {
     const widget = resources.find((resource) => resource.uri === WIDGET_URI);
 
     expect(uiMeta(widget)?.csp).toEqual(EXPECTED_CSP);
+  });
+
+  it('should repeat the CSP under the key ChatGPT reads, in both places', async () => {
+    const { resources } = await client.listResources();
+    const widget = resources.find((resource) => resource.uri === WIDGET_URI);
+    const content = await client.readResource({ uri: WIDGET_URI });
+
+    expect(widget?._meta?.['openai/widgetCSP']).toEqual(EXPECTED_CSP_CHATGPT);
+    expect((content.contents[0] as WireMetaCarrier)._meta?.['openai/widgetCSP']).toEqual(
+      EXPECTED_CSP_CHATGPT,
+    );
+  });
+
+  it('should allowlist nothing in either spelling of the CSP', async () => {
+    // The two objects are written out separately, so this is what keeps them
+    // from drifting apart into two different policies.
+    const content = await client.readResource({ uri: WIDGET_URI });
+    const meta = (content.contents[0] as WireMetaCarrier)._meta;
+
+    const domains = [
+      ...Object.values(
+        uiMeta(content.contents[0] as WireMetaCarrier)?.csp as Record<string, string[]>,
+      ),
+      ...Object.values(meta?.['openai/widgetCSP'] as Record<string, string[]>),
+    ];
+
+    expect(domains.length).toBeGreaterThan(0);
+    for (const list of domains) {
+      expect(list).toEqual([]);
+    }
   });
 
   it('should set no domain on the resource', async () => {
