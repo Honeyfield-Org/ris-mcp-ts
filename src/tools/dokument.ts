@@ -78,7 +78,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
           return createErrorResponse(loaded.error);
         }
 
-        const { text, html, contentUrl, metadata } = loaded.document;
+        const { text, html, contentUrl } = loaded.document;
 
         // Offsets in an outline address the markdown rendering, and the viewer
         // shows a rail only for a document too long for one response — so the
@@ -115,23 +115,22 @@ Note: For long documents, content may be truncated. Use specific searches to nar
 
         const result = truncateResponse(text);
 
-        // The text stays the payload; the resource_link lets a client open the
-        // untruncated original, which matters most for a truncated document.
+        // Text only, and deliberately so: a `resource_link` block alongside it
+        // costs the viewer its entire data path in claude.ai, which delivers a
+        // widget no tool-result event at all for a result that carries one
+        // (measured 2026-08-02 — the trefferliste rendered in the same
+        // conversation while the viewer sat on its degradation notice). The URL
+        // that block carried is still in the text's `**Quelle:**` link and in
+        // `structuredContent.source_url`, so nothing is lost by dropping it.
+        // Reversible once the host stops swallowing the event; see DECISIONS.md.
         return {
-          content: [
-            { type: 'text' as const, text: result },
-            {
-              type: 'resource_link' as const,
-              uri: contentUrl,
-              name: dokumentnummer ?? metadata.titel ?? contentUrl,
-              mimeType: 'text/html',
-            },
-          ],
-          // `text` is `result`, not a second rendering of it: the two blocks are
-          // the same string, which is the whole safety argument for declaring an
-          // outputSchema here at all. The identifiers let the viewer address the
-          // document for further sections on a host that delivers neither the
-          // content blocks nor the tool input to a widget.
+          content: [{ type: 'text' as const, text: result }],
+          // `text` is `result`, not a second rendering of it: the text block and
+          // the structured payload are the same string, which is the whole
+          // safety argument for declaring an outputSchema here at all. The
+          // identifiers let the viewer address the document for further sections
+          // on a host that delivers neither the content blocks nor the tool
+          // input to a widget.
           structuredContent: {
             ...(dokumentnummer === undefined ? {} : { dokumentnummer }),
             text: result,

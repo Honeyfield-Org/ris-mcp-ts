@@ -38,12 +38,6 @@ exports[`ris_dokument response identity > should freeze the json response 1`] = 
 }",
     "type": "text",
   },
-  {
-    "mimeType": "text/html",
-    "name": "NOR12019037",
-    "type": "resource_link",
-    "uri": "https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html",
-  },
 ]
 `;
 
@@ -91,12 +85,6 @@ Tarifpost Art der Tätigkeit Pauschalgebühr Zuzüglich Zeitgebühr je angefange
 
 Berlakovich",
     "type": "text",
-  },
-  {
-    "mimeType": "text/html",
-    "name": "BGBLA_2012_II_371",
-    "type": "resource_link",
-    "uri": "https://ris.bka.gv.at/Dokumente/BgblAuth/BGBLA_2012_II_371/BGBLA_2012_II_371.html",
   },
 ]
 `;
@@ -174,12 +162,6 @@ alte Dokumentnummer
 
 N2181111519Z",
     "type": "text",
-  },
-  {
-    "mimeType": "text/html",
-    "name": "NOR12019037",
-    "type": "resource_link",
-    "uri": "https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html",
   },
 ]
 `;
@@ -263,12 +245,6 @@ alte Dokumentnummer
 N2181111519Z",
     "type": "text",
   },
-  {
-    "mimeType": "text/html",
-    "name": "NOR12019037",
-    "type": "resource_link",
-    "uri": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037_fallback.html",
-  },
 ]
 `;
 
@@ -345,12 +321,6 @@ alte Dokumentnummer
 
 N2181111519Z",
     "type": "text",
-  },
-  {
-    "mimeType": "text/html",
-    "name": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html",
-    "type": "resource_link",
-    "uri": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html",
   },
 ]
 `;
