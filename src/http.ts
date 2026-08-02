@@ -79,7 +79,18 @@ export function validateOrigin(req: Request, res: Response, next: NextFunction):
 // client IP nor create an entry in its store.
 app.use('/mcp', validateOrigin);
 
-// Rate limiting: MCP-specific (each request triggers upstream RIS API calls)
+// Rate limiting: MCP-specific. Most requests trigger an upstream RIS API call,
+// but the document viewer's `ris_dokument_abschnitt` does not: it pages through
+// a cached string, so a measured eager viewer run over the largest RIS document
+// (259 353 characters, 11 sections) cost 11 of 11 sections from cache — zero RIS
+// requests, about one millisecond each. The limit stays at 60 anyway, because it
+// is nowhere near binding for a viewer session: that whole run, handshake and
+// search included, is 16 POSTs, and three large documents in one session are 23.
+// A session is first throttled during the *fifth* consecutive eager opening of
+// that document, at POST 62 (measured 2026-08-02). Should a widget ever page
+// eagerly across more documents than that, the fix is a second bucket keyed on
+// the tool name rather than a higher global limit — a cache miss still costs a
+// RIS request, so that bucket could not be unbounded either.
 export const mcpLimiter = rateLimit({
   windowMs: 60_000,
   max: 60,
