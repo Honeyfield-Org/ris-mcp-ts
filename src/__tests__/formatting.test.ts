@@ -386,6 +386,12 @@ describe('htmlToText separators (issue #65)', () => {
     it('should separate the two halves even without surrounding whitespace', () => {
       expect(htmlToText('<div>A<br>B</div>')).toBe('A\nB');
     });
+
+    it('should stay a space inside a table cell so the row survives', () => {
+      // Inside a row the line break loses to the row grouping: a newline here
+      // would split the cell off from the rest of its row.
+      expect(htmlToText('<table><tr><td>A<br>B</td><td>C</td></tr></table>')).toBe('A B C');
+    });
   });
 });
 
@@ -408,10 +414,10 @@ describe('htmlToText with real RIS BGBl table HTML (issue #65)', () => {
   const text = htmlToText(html);
 
   /**
-   * RIS glues citations together with U+00A0 ("§ 14 Pflanzenschutzgesetz")
-   * and htmlToText deliberately leaves those bytes alone. Folding them to plain
-   * spaces keeps the assertions below about the separators under test rather
-   * than about RIS's use of non-breaking spaces.
+   * RIS holds its citations together with U+00A0 (between the paragraph sign
+   * and its number, for instance), and htmlToText deliberately leaves those bytes
+   * alone. Folding them to plain spaces keeps the assertions below about the
+   * separators under test rather than about RIS's use of non-breaking spaces.
    */
   function line(needle: string): string | undefined {
     return text
