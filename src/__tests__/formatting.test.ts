@@ -325,6 +325,158 @@ describe('htmlToText with real RIS document HTML (issue #64)', () => {
 });
 
 // =============================================================================
+// htmlToText() table and <br> separators (issue #65)
+// =============================================================================
+
+describe('htmlToText separators (issue #65)', () => {
+  describe('separates table cells with a space', () => {
+    it('should join the cells of a row with a single space', () => {
+      expect(htmlToText('<table><tr><td>Tarifpost</td><td>152,60</td></tr></table>')).toBe(
+        'Tarifpost 152,60',
+      );
+    });
+
+    it('should join header cells with a single space', () => {
+      expect(htmlToText('<table><tr><th>Gebühr</th><th>Zeitgebühr</th></tr></table>')).toBe(
+        'Gebühr Zeitgebühr',
+      );
+    });
+
+    it('should keep a row together when RIS wraps each cell content in a block', () => {
+      // The shape RIS actually emits: <td><p class="TabText">…</p></td>. Leaving
+      // the inner <p> on the block pass would split the row into one paragraph
+      // per cell again, so the space rule has to reach into the cell.
+      const html = '<table><tr><td><p>Tarifpost</p></td><td><p>152,60</p></td></tr></table>';
+      expect(htmlToText(html)).toBe('Tarifpost 152,60');
+    });
+
+    it('should never glue two cells together (regression guard for issue #64)', () => {
+      const html = '<table><tr><td>Zelle1</td><td>Zelle2</td></tr></table>';
+      expect(htmlToText(html)).not.toContain('Zelle1Zelle2');
+    });
+  });
+
+  describe('separates table rows with a line break', () => {
+    it('should put each row on its own line', () => {
+      // A row is a block boundary like any other, so it keeps the blank-line
+      // spacing the rest of the output uses — single newlines would be swallowed
+      // when the text is rendered as Markdown, re-gluing the rows visually.
+      expect(htmlToText('<table><tr><td>Zeile1</td></tr><tr><td>Zeile2</td></tr></table>')).toBe(
+        'Zeile1\n\nZeile2',
+      );
+    });
+
+    it('should not let a value leak into the neighbouring row', () => {
+      const text = htmlToText(
+        '<table><tr><td>1</td><td>152,60</td></tr><tr><td>2</td><td>178,80</td></tr></table>',
+      );
+      const lines = text.split('\n').filter((line) => line.length > 0);
+
+      expect(lines).toEqual(['1 152,60', '2 178,80']);
+    });
+  });
+
+  describe('turns <br> into a single newline', () => {
+    it('should break the line without opening a paragraph', () => {
+      expect(htmlToText('<p>BUNDESGESETZBLATT<br />FÜR DIE REPUBLIK ÖSTERREICH</p>')).toBe(
+        'BUNDESGESETZBLATT\nFÜR DIE REPUBLIK ÖSTERREICH',
+      );
+    });
+
+    it('should separate the two halves even without surrounding whitespace', () => {
+      expect(htmlToText('<div>A<br>B</div>')).toBe('A\nB');
+    });
+  });
+});
+
+// =============================================================================
+// htmlToText() against a real RIS BGBl fee table (issue #65)
+// =============================================================================
+
+/**
+ * BGBl documents carry their fee and rate schedules as HTML tables, and every
+ * one of them opens with the masthead row (Jahrgang / Ausgegeben am / Teil) and
+ * a `<br />` inside the BUNDESGESETZBLATT heading. The fixture is a trimmed but
+ * byte-exact excerpt of BGBl. II Nr. 371/2012 (Anhang 3 "Gebührentarif") holding
+ * all three.
+ */
+describe('htmlToText with real RIS BGBl table HTML (issue #65)', () => {
+  const html = readFileSync(
+    new URL('./fixtures/bgbla-2012-ii-371-excerpt.html', import.meta.url),
+    'utf8',
+  );
+  const text = htmlToText(html);
+
+  /**
+   * RIS glues citations together with U+00A0 ("§ 14 Pflanzenschutzgesetz")
+   * and htmlToText deliberately leaves those bytes alone. Folding them to plain
+   * spaces keeps the assertions below about the separators under test rather
+   * than about RIS's use of non-breaking spaces.
+   */
+  function line(needle: string): string | undefined {
+    return text
+      .replace(/\u00a0/g, ' ')
+      .split('\n')
+      .find((candidate) => candidate.includes(needle));
+  }
+
+  it('should keep the masthead row on one line', () => {
+    expect(line('Jahrgang 2012')).toBe('Jahrgang 2012 Ausgegeben am 9. November 2012 Teil II');
+  });
+
+  it('should keep the Kurztitel row on one line', () => {
+    expect(line('371. Verordnung:')).toBe(
+      '371. Verordnung: Änderung der Pflanzenschutzverordnung 2011',
+    );
+  });
+
+  it('should keep the fee table header row on one line', () => {
+    expect(line('Tarifpost')).toBe(
+      'Tarifpost Art der Tätigkeit Pauschalgebühr ' +
+        'Zuzüglich Zeitgebühr je angefangener halben Stunde Untersuchungsdauer',
+    );
+  });
+
+  it('should keep each fee row together with its amounts', () => {
+    expect(line('Verfahren zur Aufnahme')).toBe(
+      '1 Verfahren zur Aufnahme von Betrieben in das amtliche Verzeichnis gemäß § 14 ' +
+        'Pflanzenschutzgesetz 2011 (Registrierung) 152,60 26,20',
+    );
+    expect(line('Kombiniertes Registrierungs')).toBe(
+      '3 Kombiniertes Registrierungs- und Autorisierungsverfahren 178,80 26,20',
+    );
+  });
+
+  it('should put every fee row on its own line', () => {
+    const headerLine = line('Tarifpost');
+
+    expect(headerLine).not.toContain('152,60');
+    expect(line('Kombiniertes Registrierungs')).not.toContain('Pflanzenpässen');
+  });
+
+  it('should break the BUNDESGESETZBLATT heading without a blank line', () => {
+    expect(text).toContain('BUNDESGESETZBLATT\nFÜR DIE REPUBLIK ÖSTERREICH');
+  });
+
+  it('should not glue any cell to its neighbour', () => {
+    expect(text).not.toContain('TarifpostArt');
+    expect(text).not.toContain('152,6026,20');
+    expect(text).not.toContain('Jahrgang 2012Ausgegeben');
+    expect(text).not.toContain('Autorisierungsverfahren178,80');
+  });
+
+  it('should separate the Absatz marker from the Absatz text', () => {
+    expect(text).not.toContain('„(2)Die Bezeichnung');
+    expect(text).toContain('„(2) Die Bezeichnung des §');
+  });
+
+  it('should not leak stylesheet rules or the fixture provenance comment', () => {
+    expect(text).not.toContain('position: absolute');
+    expect(text).not.toContain('Fixture:');
+  });
+});
+
+// =============================================================================
 // formatDocument() against real RIS document HTML (issue #64)
 // =============================================================================
 
