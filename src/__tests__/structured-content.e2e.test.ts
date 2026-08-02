@@ -107,8 +107,12 @@ describe('tool output schema declarations', () => {
   it('should declare an outputSchema on every search tool', async () => {
     const { tools } = await client.listTools();
 
-    expect(tools).toHaveLength(12);
-    const searchTools = tools.filter((tool) => tool.name !== 'ris_dokument');
+    expect(tools).toHaveLength(13);
+    // Both document tools are excluded: ris_dokument declares no outputSchema at
+    // all, and ris_dokument_abschnitt declares a chunk rather than a result list.
+    const searchTools = tools.filter(
+      (tool) => tool.name !== 'ris_dokument' && tool.name !== 'ris_dokument_abschnitt',
+    );
     expect(searchTools).toHaveLength(11);
     for (const tool of searchTools) {
       expect(tool.outputSchema, `${tool.name} is missing an outputSchema`).toBeDefined();
