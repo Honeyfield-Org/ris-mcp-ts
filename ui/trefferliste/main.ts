@@ -9,6 +9,7 @@
 
 import { connectBridge, type Bridge, type ToolPayload } from '../shared/bridge.js';
 import { COPY, createNotice, createSkeleton, type NoticeKind } from '../shared/states.js';
+import { persistSnapshot, restoreSnapshot } from '../shared/widget-state.js';
 
 import {
   focusPagination,
@@ -17,7 +18,13 @@ import {
   type Outcome,
   type ResultHandlers,
 } from './view.js';
-import { fullTextPrompt, nextQuery, toViewModel, type SearchResultPayload } from './viewmodel.js';
+import {
+  fullTextPrompt,
+  nextQuery,
+  parseSearchResult,
+  toViewModel,
+  type SearchResultPayload,
+} from './viewmodel.js';
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -34,6 +41,8 @@ let current: SearchResultPayload | null = null;
 let bridge: Bridge | null = null;
 /** Guards against a second page request while one is still running. */
 let pending = false;
+/** True while the list on screen came from the previous render, not the host. */
+let restored = false;
 
 /** Which action a status notice belongs to. */
 type StatusSource = 'pagination' | 'link' | 'prompt';
@@ -75,6 +84,11 @@ function renderCurrent(): void {
 function show(outcome: Outcome, keepPrevious: boolean): void {
   if (outcome.kind === 'result') {
     current = outcome.result;
+    restored = false;
+    // The one place a page becomes the page on screen, and therefore the one
+    // place worth remembering for a reopen — including which page it is, which
+    // the payload carries in its query echo.
+    persistSnapshot(current);
     clearStatus();
     renderCurrent();
     return;
@@ -152,14 +166,55 @@ function present(payload: ToolPayload): void {
   show(interpretPayload(payload, isFollowUp ? 'follow-up' : 'mount'), isFollowUp);
 }
 
+/**
+ * Take a tool result the host delivered by itself.
+ *
+ * Kept apart from a page the widget asked for, because only here can a result
+ * arrive that the widget already knows better: on reopening a conversation
+ * ChatGPT replays the mounting result stripped of its data, and complaining
+ * about that underneath a list restored from this widget's own last render
+ * would be noise about a problem the user does not have. Anything that carries
+ * data — or reports a failure — is passed on unchanged.
+ */
+function presentFromHost(payload: ToolPayload): void {
+  if (restored && payload.source === 'missing' && !payload.isError) return;
+
+  present(payload);
+}
+
+/**
+ * Put this widget's own last render back on screen.
+ *
+ * Only ever runs while there is nothing else to show, which is what keeps a
+ * restored page from masking fresher data: a result that already arrived
+ * prevents the restore, and one that arrives later replaces it.
+ */
+function restorePrevious(): void {
+  if (current) return;
+
+  const snapshot = parseSearchResult(restoreSnapshot());
+  if (!snapshot) return;
+
+  current = snapshot;
+  restored = true;
+  clearStatus();
+  renderCurrent();
+}
+
 // The marker only ever answers "did the bundle run at all" — reaching this line
 // is that answer, so it goes away before anything else is decided.
 marker.hidden = true;
 view.replaceChildren(createSkeleton());
 
-connectBridge({ onToolResult: present })
+connectBridge({ onToolResult: presentFromHost })
   .then((connected) => {
     bridge = connected;
+    // Late enough that a host which delivers the mount result during the
+    // handshake has already been served, and early enough that a reopened
+    // conversation shows its page instead of a notice. A failed handshake
+    // deliberately restores nothing: a list whose buttons cannot reach a host
+    // would be worse than the notice that says so.
+    restorePrevious();
   })
   .catch(() => {
     // A handshake that never completed means no tool result ever arrived, so
