@@ -744,6 +744,24 @@ describe('reopening a conversation', () => {
     expect(bridge.callTool).not.toHaveBeenCalled();
   });
 
+  it('lets a structured replay win over the snapshot', async () => {
+    // The claude.ai reopen: the host has both a snapshot and a replay of the
+    // mounting result, and that replay carries the document in its structured
+    // payload rather than in content blocks.
+    hostHolding(snapshot);
+
+    await mount();
+    deliver(structuredPayload());
+    await connect();
+
+    expect(text()).toContain('§ 1295.');
+    // Fresh data wins whole: the stored reading position is not restored, so
+    // nothing is fetched and the header names the document that just arrived
+    // rather than the one the snapshot remembers.
+    expect(bridge.callTool).not.toHaveBeenCalled();
+    expect(view().querySelector('.ris-doc-title')?.textContent).toContain('§ 1295');
+  });
+
   it('keeps the canonical section when a stripped replay arrives after it', async () => {
     hostHolding(snapshot);
     answersWith(section({ text: 'Der Spruch.', next_offset: null, outline: undefined }));

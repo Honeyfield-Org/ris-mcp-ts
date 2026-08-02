@@ -7,8 +7,9 @@
  * to `viewmodel.ts`, elements to `view.ts`.
  *
  * The first render walks a four-rung ladder and takes the first rung that
- * yields content: the mounting result's text block, the document named by the
- * tool *input*, this widget's own last snapshot, and finally an honest notice.
+ * yields content: the mounting result — its text block *or* its structured
+ * payload, whichever the host delivered — then the document named by the tool
+ * *input*, then this widget's own last snapshot, and finally an honest notice.
  * The chat keeps the complete text and the resource link in every one of them.
  */
 
@@ -498,16 +499,20 @@ function adoptMountDocument(mount: MountDocument): void {
 /**
  * Take the result the host delivered by itself.
  *
- * A host that reopens a conversation replays the mounting result stripped of
- * its content; complaining about that underneath a document restored from this
- * widget's own snapshot would be noise about a problem the user does not have.
+ * A reopened conversation replays the mounting result, and how much of it
+ * survives the replay is the host's business: one that kept the structured
+ * payload replays the document itself, which then wins over anything restored
+ * from this widget's own snapshot; one that replays it stripped of both
+ * channels says nothing the viewer does not already know better.
  */
 function presentMount(payload: ToolPayload): void {
   const outcome = interpretPayload(payload, 'mount');
 
   if (outcome.kind === 'empty') {
-    // Nothing arrived. Under a restored document that is the replay above; with
-    // nothing on screen the ladder has further rungs to try.
+    // Neither channel carried anything. Under a document already on screen that
+    // is the stripped replay above, and complaining about it would be noise
+    // about a problem the user does not have; with nothing on screen the ladder
+    // has further rungs to try.
     return;
   }
 

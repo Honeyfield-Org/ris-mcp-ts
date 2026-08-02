@@ -349,7 +349,7 @@ export const DocumentOutputShape = {
     .number()
     .int()
     .describe(
-      'Length of the complete document text; greater than the length of "text" when the document was truncated',
+      'Length of the string "text" was cut from — the full rendered document in the requested format; greater than the length of "text" when the document was truncated',
     ),
   outline: z
     .array(z.object(OutlineEntryShape))
