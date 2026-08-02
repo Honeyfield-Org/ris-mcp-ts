@@ -92,8 +92,9 @@ describe('registered tool metadata', () => {
 
   // The descriptions are hard-wrapped in the source, so collapse whitespace
   // before matching a sentence that may straddle a line break.
-  const describedAs = (name: string): string =>
-    (registeredTools[name].description ?? '').replace(/\s+/g, ' ');
+  const collapse = (text: string | undefined): string => (text ?? '').replace(/\s+/g, ' ');
+
+  const describedAs = (name: string): string => collapse(registeredTools[name].description);
 
   it.each(steeredToolNames)(
     'tool %s should name titel/paragraph as the precise entry points',
@@ -102,6 +103,14 @@ describe('registered tool metadata', () => {
       expect(describedAs(name)).toContain('precise entry points');
     },
   );
+
+  // Erv (English translations) takes SearchTerms/Title only — buildBundesrechtParams
+  // drops a paragraph argument there, so the steering text has to say so.
+  it('tool ris_bundesrecht should flag that paragraph is ignored for Erv', () => {
+    expect(describedAs('ris_bundesrecht')).toContain(
+      '"paragraph" is ignored for applikation="Erv"',
+    );
+  });
 
   it.each(steeredToolNames)(
     'tool %s should warn that suchworte hits are sorted alphabetically',
@@ -118,9 +127,9 @@ describe('registered tool metadata', () => {
   it.each(steeredToolNames)(
     'tool %s should repeat the ordering caveat on the suchworte parameter itself',
     (name) => {
-      const suchworte = registeredTools[name].inputSchema?.shape.suchworte;
-      expect(suchworte?.description).toContain('alphabetically by law title, not by relevance');
-      expect(suchworte?.description).toContain('"titel" and/or "paragraph"');
+      const suchworte = collapse(registeredTools[name].inputSchema?.shape.suchworte.description);
+      expect(suchworte).toContain('alphabetically by law title, not by relevance');
+      expect(suchworte).toContain('"titel" and/or "paragraph"');
     },
   );
 });

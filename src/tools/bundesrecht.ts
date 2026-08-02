@@ -86,7 +86,8 @@ export function registerBundesrechtTool(server: McpServer): void {
 Use this tool to find Austrian federal legislation like ABGB, StGB, UGB, etc.
 
 Search strategy: "titel" and "paragraph" are the precise entry points — prefer them
-whenever the law or the section is known. "suchworte" runs a broad full-text search
+whenever the law or the section is known ("paragraph" is ignored for applikation="Erv",
+the English translations). "suchworte" runs a broad full-text search
 and the RIS API returns those hits ordered alphabetically by law title, not by
 relevance, so a common term buries the relevant law under thousands of results.
 Austrian law often splits one topic across several statutes, so look for a companion
