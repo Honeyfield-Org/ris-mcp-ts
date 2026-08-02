@@ -76,11 +76,19 @@ export function formatDate(dateStr: string | null | undefined): string {
  * cheerio's `.text()` concatenates text nodes without any separator, so RIS
  * markup like `<h1>Kurztitel</h1><p>Allgemeines...</p>` would otherwise come out
  * as "KurztitelAllgemeines...".
+ *
+ * `td`/`th` and `br` are deliberately absent: they are separated by the cell and
+ * line-break rules in `htmlToText()` instead, which keep a table row on one line
+ * rather than exploding it into one paragraph per cell. Dropping them here
+ * without those rules would bring back the gluing of issue #64.
  */
 const BLOCK_LEVEL_ELEMENTS =
-  'address, article, aside, blockquote, br, dd, div, dl, dt, fieldset, figcaption, figure, ' +
+  'address, article, aside, blockquote, dd, div, dl, dt, fieldset, figcaption, figure, ' +
   'footer, form, h1, h2, h3, h4, h5, h6, header, hr, li, main, nav, ol, p, pre, section, ' +
-  'table, tbody, td, tfoot, th, thead, tr, ul';
+  'table, tbody, tfoot, thead, tr, ul';
+
+/** Table cells, which separate columns of a row rather than paragraphs. */
+const TABLE_CELLS = 'td, th';
 
 /**
  * Convert HTML to clean readable text using cheerio.
@@ -103,8 +111,45 @@ export function htmlToText(htmlContent: string): string {
   // half loses no information.
   $('.sr-only').remove();
 
-  // Turn block boundaries into newlines before extracting text.
-  $(BLOCK_LEVEL_ELEMENTS).before('\n').after('\n');
+  // A `<br>` breaks the line inside its block, it does not open a new one.
+  $('br').replaceWith('\n');
+
+  // RIS sets the Absatz number as an inline span directly against its text
+  // (`<span class="Absatzzahl">(1)</span><span>Jedermann ...</span>`), which
+  // reads as "(1)Jedermann". The class always wraps the complete marker token,
+  // so a trailing space cannot split a word.
+  $('.Absatzzahl').after(' ');
+
+  // A table cell is a column boundary, not a paragraph boundary: cells are
+  // joined by spaces and `tr` (a block element above) carries the line break for
+  // the row. RIS wraps the content of a cell in a block of its own —
+  // `<td><p class="InhaltEintrag">152,60</p></td>` — so those nested blocks have
+  // to yield a space as well, or the row falls apart into one paragraph per cell.
+  const blocks = $(BLOCK_LEVEL_ELEMENTS);
+  const cellBlocks = blocks.filter((_, element) => $(element).closest(TABLE_CELLS).length > 0);
+
+  cellBlocks.before(' ').after(' ');
+  blocks.not(cellBlocks).before('\n').after('\n');
+  $(TABLE_CELLS).after(' ');
+
+  // RIS pretty-prints its table markup, so the source itself carries newlines
+  // between and inside the cells (`</td>\n<td>\n<p>...`). Those would survive
+  // into the output and tear the row apart again, so line breaks inside a row
+  // fold into a space; the runs of spaces this leaves are collapsed by the
+  // general whitespace pass below. The line break for the row comes from the
+  // `tr` boundary, which sits outside the row and is untouched by this. The
+  // character class names the line breaks rather than using `\s`, which would
+  // also fold the non-breaking spaces RIS holds citations together with — those
+  // survive here as everywhere else in the output.
+  $('tr')
+    .find('*')
+    .addBack()
+    .contents()
+    .each((_, node) => {
+      if (node.type === 'text') {
+        node.data = node.data.replace(/[\r\n]+/g, ' ');
+      }
+    });
 
   // Process the body or entire document
   let text = $('body').length > 0 ? $('body').text() : $.text();
