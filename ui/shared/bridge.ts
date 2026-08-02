@@ -43,8 +43,9 @@ export interface Bridge {
   /**
    * Run a tool on the originating server.
    *
-   * Rejects on transport failure (evicted session, host refusal); a tool that
-   * failed server-side resolves with `isError` set instead.
+   * Rejects on transport failure (evicted session, host refusal) and when the
+   * host leaves the call unanswered; a tool that failed server-side resolves
+   * with `isError` set instead.
    */
   callTool(call: { name: string; arguments: Record<string, unknown> }): Promise<ToolPayload>;
   /** Opens a URL in the host's browser; `false` when the host declined. */
@@ -53,8 +54,37 @@ export interface Bridge {
   sendPrompt(text: string): Promise<boolean>;
 }
 
+/**
+ * How long the widget waits for a page it requested itself.
+ *
+ * A host that refuses widget-initiated tool calls may drop the request instead
+ * of answering it — the call then never settles, and the list stays behind a
+ * loading skeleton for the rest of the session. That is the one outcome the
+ * widget must never produce, so an unanswered call is turned into a rejection
+ * the caller can report. The server gives up on RIS after 30s, so everything
+ * past this margin is the host rather than the search.
+ */
+const CALL_TIMEOUT_MS = 45_000;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Reject when the host leaves a call unanswered, and never leak the timer. */
+async function withDeadline<T>(call: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error('host did not answer the tool call'));
+    }, CALL_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([call, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Concatenate the text blocks of a tool result, ignoring other modalities. */
@@ -181,7 +211,7 @@ export async function connectBridge(
 
   return {
     async callTool(call): Promise<ToolPayload> {
-      return readToolResult(await app.callServerTool(call));
+      return readToolResult(await withDeadline(app.callServerTool(call)));
     },
     async openLink(url): Promise<boolean> {
       try {

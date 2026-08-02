@@ -159,6 +159,22 @@ describe('tool ui metadata', () => {
     }
   });
 
+  it('should let the widget call every search tool it paginates', async () => {
+    // ChatGPT gates widget-initiated `tools/call` on this compatibility flag
+    // (default `false`), while the standard `_meta.ui.visibility` grants the
+    // same access by default. Both hosts have to agree that the widget may
+    // fetch the next page.
+    const { tools } = await client.listTools();
+
+    for (const name of SEARCH_TOOLS) {
+      const tool = tools.find((candidate) => candidate.name === name);
+      expect(
+        tool?._meta?.['openai/widgetAccessible'],
+        `${name} cannot be called by the widget`,
+      ).toBe(true);
+    }
+  });
+
   it('should declare no widget on ris_dokument', async () => {
     const { tools } = await client.listTools();
     const dokument = tools.find((tool) => tool.name === 'ris_dokument');
@@ -166,6 +182,8 @@ describe('tool ui metadata', () => {
     expect(dokument).toBeDefined();
     expect(uiMeta(dokument)).toBeUndefined();
     expect(dokument?._meta?.['ui/resourceUri']).toBeUndefined();
+    // No widget means nothing may call it from an iframe either.
+    expect(dokument?._meta?.['openai/widgetAccessible']).toBeUndefined();
   });
 
   it('should carry no csp on the tools — hosts read it from the resource', async () => {
