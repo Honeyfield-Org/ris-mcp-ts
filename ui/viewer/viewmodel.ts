@@ -437,6 +437,12 @@ export function buildDocumentView(state: ViewerState): DocumentView {
   const loadedChars = runs.reduce((sum, run) => sum + run.text.length, 0);
   const chunked = state.totalLength !== null && state.totalLength > CHUNK_LIMIT;
 
+  // A document the viewer cannot name is a document it cannot fetch more of:
+  // that happens when a host delivers the mounting result but never its
+  // arguments. The text stays and the chat keeps the rest — but a sentinel
+  // whose call could not be made would be a control that silently does nothing.
+  const addressable = Boolean(state.key.dokumentnummer ?? state.key.url);
+
   return {
     title,
     dokumentnummer: state.key.dokumentnummer ?? null,
@@ -450,7 +456,11 @@ export function buildDocumentView(state: ViewerState): DocumentView {
     // While the text is the mount result the viewer does not know where it ends,
     // so the sentinel fetches the canonical first section rather than a
     // continuation it would have to guess at.
-    sentinelOffset: state.provisional ? 0 : (runs[runs.length - 1]?.nextOffset ?? null),
+    sentinelOffset: !addressable
+      ? null
+      : state.provisional
+        ? 0
+        : (runs[runs.length - 1]?.nextOffset ?? null),
   };
 }
 

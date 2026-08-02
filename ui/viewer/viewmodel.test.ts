@@ -339,6 +339,21 @@ describe('buildDocumentView', () => {
     expect(model.sentinelOffset).toBe(24_000);
   });
 
+  it('offers no sentinel for a document it cannot name', () => {
+    // A host that delivered the mounting result but never its arguments leaves
+    // the viewer with text and no way to ask for more; a control that could not
+    // make its call would silently do nothing.
+    const model = buildDocumentView(
+      state({
+        key: {},
+        provisional: true,
+        chunks: [{ offset: 0, text: 'Text', nextOffset: null }],
+      }),
+    );
+
+    expect(model.sentinelOffset).toBeNull();
+  });
+
   it('drops the sentinel at the end of the document', () => {
     const model = buildDocumentView(
       state({ totalLength: 5, chunks: [{ offset: 0, text: 'kurz', nextOffset: null }] }),
