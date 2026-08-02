@@ -343,9 +343,10 @@ describe('htmlToText separators (issue #65)', () => {
     });
 
     it('should keep a row together when RIS wraps each cell content in a block', () => {
-      // The shape RIS actually emits: <td><p class="TabText">…</p></td>. Leaving
-      // the inner <p> on the block pass would split the row into one paragraph
-      // per cell again, so the space rule has to reach into the cell.
+      // The shape RIS actually emits, see the fee table in the fixture below:
+      // <td><p class="InhaltEintrag">…</p></td>. Leaving the inner <p> on the
+      // block pass would split the row into one paragraph per cell again, so the
+      // space rule has to reach into the cell.
       const html = '<table><tr><td><p>Tarifpost</p></td><td><p>152,60</p></td></tr></table>';
       expect(htmlToText(html)).toBe('Tarifpost 152,60');
     });
@@ -353,6 +354,15 @@ describe('htmlToText separators (issue #65)', () => {
     it('should never glue two cells together (regression guard for issue #64)', () => {
       const html = '<table><tr><td>Zelle1</td><td>Zelle2</td></tr></table>';
       expect(htmlToText(html)).not.toContain('Zelle1Zelle2');
+    });
+
+    it('should not let an empty cell glue its neighbours', () => {
+      expect(htmlToText('<table><tr><td>A</td><td></td><td>B</td></tr></table>')).toBe('A B');
+      // RIS fills its empty cells with &#160;, which is preserved rather than
+      // folded away — so the gap widens, but the neighbours stay apart.
+      expect(htmlToText('<table><tr><td>A</td><td>&#160;</td><td>B</td></tr></table>')).toBe(
+        'A \u00a0 B',
+      );
     });
   });
 

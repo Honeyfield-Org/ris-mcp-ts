@@ -123,8 +123,8 @@ export function htmlToText(htmlContent: string): string {
   // A table cell is a column boundary, not a paragraph boundary: cells are
   // joined by spaces and `tr` (a block element above) carries the line break for
   // the row. RIS wraps the content of a cell in a block of its own —
-  // `<td><p class="TabText">152,60</p></td>` — so those nested blocks have to
-  // yield a space as well, or the row falls apart into one paragraph per cell.
+  // `<td><p class="InhaltEintrag">152,60</p></td>` — so those nested blocks have
+  // to yield a space as well, or the row falls apart into one paragraph per cell.
   const blocks = $(BLOCK_LEVEL_ELEMENTS);
   const cellBlocks = blocks.filter((_, element) => $(element).closest(TABLE_CELLS).length > 0);
 
@@ -134,19 +134,20 @@ export function htmlToText(htmlContent: string): string {
 
   // RIS pretty-prints its table markup, so the source itself carries newlines
   // between and inside the cells (`</td>\n<td>\n<p>...`). Those would survive
-  // into the output and tear the row apart again, so layout whitespace inside a
-  // row collapses to a single space. The line break for the row comes from the
+  // into the output and tear the row apart again, so line breaks inside a row
+  // fold into a space; the runs of spaces this leaves are collapsed by the
+  // general whitespace pass below. The line break for the row comes from the
   // `tr` boundary, which sits outside the row and is untouched by this. The
-  // character class spells out the layout characters rather than using `\s`,
-  // which would also fold the non-breaking spaces RIS holds citations together
-  // with — those survive here as everywhere else in the output.
+  // character class names the line breaks rather than using `\s`, which would
+  // also fold the non-breaking spaces RIS holds citations together with — those
+  // survive here as everywhere else in the output.
   $('tr')
     .find('*')
     .addBack()
     .contents()
     .each((_, node) => {
       if (node.type === 'text') {
-        node.data = node.data.replace(/[ \t\r\n]+/g, ' ');
+        node.data = node.data.replace(/[\r\n]+/g, ' ');
       }
     });
 
