@@ -41,6 +41,30 @@ export const SEARCH_WIDGET_META = {
 };
 
 /**
+ * UI metadata for the document viewer's chunk tool.
+ *
+ * `visibility: ["app"]` is the standard way to say "only the app may call this,
+ * the model must not see it" (ext-apps `McpUiToolMeta.visibility`, default
+ * `["model", "app"]`). It is a declaration, not an enforcement: nothing in the
+ * SDK or ext-apps removes the tool from `tools/list`, so a host that does not
+ * know the key shows it to the model like any other tool. That is survivable
+ * here — the tool answers a model call with real document text — but it is why
+ * its description points at `ris_dokument` instead.
+ *
+ * `openai/widgetAccessible` is ChatGPT's own gate for widget-initiated calls and
+ * defaults to `false`; without it the viewer could not load a single further
+ * section there.
+ *
+ * No `resourceUri`: this tool feeds the viewer that is already open, it does not
+ * open one. Pointing it at the resource would invite hosts to render a fresh
+ * widget per section.
+ */
+export const DOCUMENT_CHUNK_META = {
+  ui: { visibility: ['app'] },
+  'openai/widgetAccessible': true,
+};
+
+/**
  * The policy the widget needs: nothing.
  *
  * The bundle is fully self-contained (Vite singlefile), so every directive is
