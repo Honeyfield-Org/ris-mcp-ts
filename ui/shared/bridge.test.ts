@@ -247,6 +247,44 @@ describe('bridge actions', () => {
     expect(payload.structuredContent).toEqual(STRUCTURED);
   });
 
+  it('gives up on a call the host never answers, instead of loading forever', async () => {
+    vi.useFakeTimers();
+    try {
+      const app = stubApp({ callServerTool: vi.fn(() => new Promise<never>(() => undefined)) });
+      const bridge = await connectBridge({ onToolResult: vi.fn() }, app);
+
+      const call = bridge.callTool({ name: 'ris_bundesrecht', arguments: { seite: 2 } });
+      const settled = expect(call).rejects.toThrow('host did not answer');
+
+      await vi.advanceTimersByTimeAsync(45_000);
+      await settled;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not fail a call that the host answers in time', async () => {
+    vi.useFakeTimers();
+    try {
+      const app = stubApp({
+        callServerTool: vi.fn(
+          () =>
+            new Promise((resolve) => {
+              setTimeout(() => resolve(toolResult()), 29_000);
+            }),
+        ) as unknown as HostApp['callServerTool'],
+      });
+      const bridge = await connectBridge({ onToolResult: vi.fn() }, app);
+
+      const call = bridge.callTool({ name: 'ris_bundesrecht', arguments: {} });
+      await vi.advanceTimersByTimeAsync(29_000);
+
+      expect((await call).structuredContent).toEqual(STRUCTURED);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('lets a transport failure surface, so the caller can tell it from a tool error', async () => {
     const app = stubApp({
       callServerTool: vi.fn(async () => {

@@ -25,29 +25,69 @@ export const SEARCH_WIDGET_RESOURCE_URI = 'ui://ris-mcp/trefferliste';
  * types both as `never` because hosts read them from the resource and ignore
  * them on the tool. `registerAppTool` mirrors `resourceUri` onto the legacy
  * flat `ui/resourceUri` key for older hosts.
+ *
+ * `openai/widgetAccessible` is ChatGPT's own gate for tool calls the widget
+ * issues itself — the pagination buttons. The standard field for that is
+ * `_meta.ui.visibility`, which defaults to `["model", "app"]` and therefore
+ * already grants it (ext-apps `McpUiToolMeta.visibility`), but ChatGPT's
+ * compatibility field defaults to `false` and is documented as the one
+ * "existing UI integrations" use ("`_meta` fields on tool descriptor",
+ * developers.openai.com/plugins/reference). Hosts that do not know the key
+ * ignore it, so the standard path stays untouched.
  */
 export const SEARCH_WIDGET_META = {
   ui: { resourceUri: SEARCH_WIDGET_RESOURCE_URI },
+  'openai/widgetAccessible': true,
+};
+
+/**
+ * The policy the widget needs: nothing.
+ *
+ * The bundle is fully self-contained (Vite singlefile), so every directive is
+ * declared empty rather than omitted: hosts flag an undeclared policy as "CSP
+ * off" instead of treating it as "needs nothing".
+ */
+const SEARCH_WIDGET_CSP = {
+  connectDomains: [],
+  resourceDomains: [],
+  frameDomains: [],
+  baseUriDomains: [],
+};
+
+/**
+ * The same policy under ChatGPT's own key, which is what it reads.
+ *
+ * `_meta["openai/widgetCSP"]` is documented as the legacy compatibility key
+ * with snake_case field names, superseded by `_meta.ui.csp` but still the one
+ * ChatGPT honours — with `_meta.ui.csp` alone the widget kept its "CSP off"
+ * badge there (live measurement #60), while claude.ai reads the standard key.
+ *
+ * Two fields of {@link SEARCH_WIDGET_CSP} have no counterpart here and are
+ * therefore left out rather than invented: `baseUriDomains`, which the legacy
+ * key does not define, and `redirect_domains`, which is not a mirror of
+ * anything — it allowlists targets for ChatGPT's `openExternal`, so declaring
+ * it empty would newly forbid what the host currently decides for itself, and
+ * „Im RIS öffnen" is exactly such a link.
+ *
+ * Source: "Component resource `_meta` fields", developers.openai.com/plugins/reference.
+ */
+const SEARCH_WIDGET_CSP_CHATGPT = {
+  connect_domains: [],
+  resource_domains: [],
+  frame_domains: [],
 };
 
 /**
  * Resource declaration for the widget.
  *
- * The bundle is fully self-contained (Vite singlefile), so every CSP directive
- * is declared empty rather than omitted: hosts flag an undeclared policy as
- * "CSP off" instead of treating it as "needs nothing".
+ * Carries both spellings of the same empty policy — every host that reads one
+ * of them ends up applying the identical rules.
  */
 const SEARCH_WIDGET_RESOURCE_CONFIG: McpUiAppResourceConfig = {
   description: 'Interactive result list for RIS search results',
   _meta: {
-    ui: {
-      csp: {
-        connectDomains: [],
-        resourceDomains: [],
-        frameDomains: [],
-        baseUriDomains: [],
-      },
-    },
+    ui: { csp: SEARCH_WIDGET_CSP },
+    'openai/widgetCSP': SEARCH_WIDGET_CSP_CHATGPT,
   },
 };
 

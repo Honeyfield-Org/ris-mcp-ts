@@ -66,6 +66,19 @@ const EXPECTED_CSP = {
   baseUriDomains: [],
 };
 
+/**
+ * The same policy under ChatGPT's legacy key, which is the one it reads.
+ *
+ * snake_case, and without the two fields that would have no meaning here:
+ * `base_uri_domains` is not part of that key, and `redirect_domains` governs
+ * `openExternal` targets rather than mirroring anything in `_meta.ui.csp`.
+ */
+const EXPECTED_CSP_CHATGPT = {
+  connect_domains: [],
+  resource_domains: [],
+  frame_domains: [],
+};
+
 /** `_meta.ui` as it arrives over the wire, before narrowing. */
 interface WireUiMeta {
   resourceUri?: string;
@@ -125,6 +138,36 @@ describe('widget resource', () => {
     expect(uiMeta(widget)?.csp).toEqual(EXPECTED_CSP);
   });
 
+  it('should repeat the CSP under the key ChatGPT reads, in both places', async () => {
+    const { resources } = await client.listResources();
+    const widget = resources.find((resource) => resource.uri === WIDGET_URI);
+    const content = await client.readResource({ uri: WIDGET_URI });
+
+    expect(widget?._meta?.['openai/widgetCSP']).toEqual(EXPECTED_CSP_CHATGPT);
+    expect((content.contents[0] as WireMetaCarrier)._meta?.['openai/widgetCSP']).toEqual(
+      EXPECTED_CSP_CHATGPT,
+    );
+  });
+
+  it('should allowlist nothing in either spelling of the CSP', async () => {
+    // The two objects are written out separately, so this is what keeps them
+    // from drifting apart into two different policies.
+    const content = await client.readResource({ uri: WIDGET_URI });
+    const meta = (content.contents[0] as WireMetaCarrier)._meta;
+
+    const domains = [
+      ...Object.values(
+        uiMeta(content.contents[0] as WireMetaCarrier)?.csp as Record<string, string[]>,
+      ),
+      ...Object.values(meta?.['openai/widgetCSP'] as Record<string, string[]>),
+    ];
+
+    expect(domains.length).toBeGreaterThan(0);
+    for (const list of domains) {
+      expect(list).toEqual([]);
+    }
+  });
+
   it('should set no domain on the resource', async () => {
     const { resources } = await client.listResources();
     const widget = resources.find((resource) => resource.uri === WIDGET_URI);
@@ -159,6 +202,22 @@ describe('tool ui metadata', () => {
     }
   });
 
+  it('should let the widget call every search tool it paginates', async () => {
+    // ChatGPT gates widget-initiated `tools/call` on this compatibility flag
+    // (default `false`), while the standard `_meta.ui.visibility` grants the
+    // same access by default. Both hosts have to agree that the widget may
+    // fetch the next page.
+    const { tools } = await client.listTools();
+
+    for (const name of SEARCH_TOOLS) {
+      const tool = tools.find((candidate) => candidate.name === name);
+      expect(
+        tool?._meta?.['openai/widgetAccessible'],
+        `${name} cannot be called by the widget`,
+      ).toBe(true);
+    }
+  });
+
   it('should declare no widget on ris_dokument', async () => {
     const { tools } = await client.listTools();
     const dokument = tools.find((tool) => tool.name === 'ris_dokument');
@@ -166,6 +225,8 @@ describe('tool ui metadata', () => {
     expect(dokument).toBeDefined();
     expect(uiMeta(dokument)).toBeUndefined();
     expect(dokument?._meta?.['ui/resourceUri']).toBeUndefined();
+    // No widget means nothing may call it from an iframe either.
+    expect(dokument?._meta?.['openai/widgetAccessible']).toBeUndefined();
   });
 
   it('should carry no csp on the tools — hosts read it from the resource', async () => {
