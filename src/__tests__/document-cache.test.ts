@@ -199,6 +199,45 @@ describe('eviction', () => {
     expect(cache.chars).toBe(100);
   });
 
+  it('should drop the previous text when a document grows past the budget', () => {
+    // The document was cached, then grew. Keeping the old entry would leave the
+    // viewer paging a text that ris_dokument no longer renders — stale offsets
+    // into a document nobody is looking at any more.
+    const cache = createDocumentCache({ maxChars: 1000 });
+
+    cache.set('NOR1', doc('a'.repeat(400)));
+    cache.set('NOR1', doc('a'.repeat(1400)));
+
+    expect(cache.get('NOR1')).toBeUndefined();
+    expect(cache.size).toBe(0);
+    expect(cache.chars).toBe(0);
+  });
+
+  it('should drop the previous text under the alias too when it grows past the budget', () => {
+    const cache = createDocumentCache({ maxChars: 1000 });
+    const url = 'https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037.html';
+
+    cache.set('NOR1', doc('a'.repeat(400)), url);
+    cache.set('NOR1', doc('a'.repeat(1400)), url);
+
+    expect(cache.get('NOR1')).toBeUndefined();
+    expect(cache.get(url)).toBeUndefined();
+    expect(cache.size).toBe(0);
+    expect(cache.chars).toBe(0);
+  });
+
+  it('should leave other documents alone when one grows past the budget', () => {
+    const cache = createDocumentCache({ maxChars: 1000 });
+
+    cache.set('KEEP', doc('k'.repeat(100)));
+    cache.set('NOR1', doc('a'.repeat(400)));
+    cache.set('NOR1', doc('a'.repeat(1400)));
+
+    expect(cache.get('KEEP')?.text).toBe('k'.repeat(100));
+    expect(cache.size).toBe(1);
+    expect(cache.chars).toBe(100);
+  });
+
   it('should never hold more characters than the budget allows', () => {
     const cache = createDocumentCache({ maxEntries: 100, maxChars: 500 });
 

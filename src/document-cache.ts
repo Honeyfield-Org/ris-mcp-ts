@@ -116,6 +116,23 @@ export function createDocumentCache(options: DocumentCacheOptions = {}): Documen
     },
 
     set(key: string, value: CachedDocument, alias?: string): void {
+      const hasAlias = alias !== undefined && alias !== key;
+
+      // Every previous copy of this document goes first, under either name —
+      // before the oversize check below, which stores nothing in its place.
+      // Dropping afterwards would leave a document that has grown past the
+      // budget being served from its old, shorter text while ris_dokument
+      // renders the new one, and the viewer would page against stale offsets.
+      // The alias may also have been a primary key of its own (the document was
+      // opened by URL and now arrives by Dokumentnummer), which is the same
+      // document under a second copy.
+      drop(key);
+      aliases.delete(key);
+      if (hasAlias) {
+        drop(alias);
+        aliases.delete(alias);
+      }
+
       // Caching a document larger than the whole budget would evict everything
       // else and still overshoot, so it is not cached at all. The chunk path
       // stays correct, it just re-fetches per call.
@@ -123,16 +140,10 @@ export function createDocumentCache(options: DocumentCacheOptions = {}): Documen
         return;
       }
 
-      drop(key);
-      aliases.delete(key);
       entries.set(key, { value, storedAt: now() });
       chars += value.text.length;
 
-      if (alias !== undefined && alias !== key) {
-        // The alias may have been a primary key of its own before (the document
-        // was opened by URL, now it arrives by Dokumentnummer); that entry is
-        // the same document under a second copy, so it goes.
-        drop(alias);
+      if (hasAlias) {
         aliases.set(alias, key);
       }
 
