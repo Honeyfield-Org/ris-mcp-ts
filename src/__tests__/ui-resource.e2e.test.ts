@@ -1,6 +1,6 @@
 /**
- * E2E tests for the MCP Apps registration: the widget resource and the UI
- * metadata that points the 11 search tools at it.
+ * E2E tests for the MCP Apps registration: the two widget resources and the UI
+ * metadata that points the 11 search tools and `ris_dokument` at them.
  *
  * These assertions pin the wire contract #49 builds on, so they go through a
  * real Client over InMemoryTransport rather than inspecting the registry.
@@ -42,6 +42,13 @@ afterAll(async () => {
 });
 
 const WIDGET_URI = 'ui://ris-mcp/trefferliste';
+const VIEWER_URI = 'ui://ris-mcp/viewer';
+
+/** Both resources declare the identical policy, so both are checked for it. */
+const WIDGET_URIS: [string, string][] = [
+  ['Trefferliste', WIDGET_URI],
+  ['Dokument-Viewer', VIEWER_URI],
+];
 
 /** The 11 search tools that render the Trefferliste widget. */
 const SEARCH_TOOLS = [
@@ -98,11 +105,11 @@ function uiMeta(carrier: WireMetaCarrier | undefined): WireUiMeta | undefined {
 // 1. Widget Resource
 // =============================================================================
 
-describe('widget resource', () => {
-  it('should list the Trefferliste widget', async () => {
+describe.each(WIDGET_URIS)('widget resource: %s', (_name, uri) => {
+  it('should list the widget', async () => {
     const { resources } = await client.listResources();
 
-    const widget = resources.find((resource) => resource.uri === WIDGET_URI);
+    const widget = resources.find((resource) => resource.uri === uri);
     expect(widget).toBeDefined();
   });
 
@@ -111,13 +118,13 @@ describe('widget resource', () => {
     // app, so the listing MIME type has to match the one `resources/read`
     // returns — `registerAppResource` defaults it, which is worth pinning.
     const { resources } = await client.listResources();
-    const widget = resources.find((resource) => resource.uri === WIDGET_URI);
+    const widget = resources.find((resource) => resource.uri === uri);
 
     expect(widget?.mimeType).toBe(RESOURCE_MIME_TYPE);
   });
 
   it('should serve the generated single-file document under the MCP Apps MIME type', async () => {
-    const content = await client.readResource({ uri: WIDGET_URI });
+    const content = await client.readResource({ uri });
 
     expect(content.contents[0].mimeType).toBe(RESOURCE_MIME_TYPE);
     // Inlining itself is guarded by ui-template.test.ts — this only proves the
@@ -126,22 +133,22 @@ describe('widget resource', () => {
   });
 
   it('should declare an explicit CSP on the resource content item', async () => {
-    const content = await client.readResource({ uri: WIDGET_URI });
+    const content = await client.readResource({ uri });
 
     expect(uiMeta(content.contents[0] as WireMetaCarrier)?.csp).toEqual(EXPECTED_CSP);
   });
 
   it('should declare the same CSP on the listing entry hosts fall back to', async () => {
     const { resources } = await client.listResources();
-    const widget = resources.find((resource) => resource.uri === WIDGET_URI);
+    const widget = resources.find((resource) => resource.uri === uri);
 
     expect(uiMeta(widget)?.csp).toEqual(EXPECTED_CSP);
   });
 
   it('should repeat the CSP under the key ChatGPT reads, in both places', async () => {
     const { resources } = await client.listResources();
-    const widget = resources.find((resource) => resource.uri === WIDGET_URI);
-    const content = await client.readResource({ uri: WIDGET_URI });
+    const widget = resources.find((resource) => resource.uri === uri);
+    const content = await client.readResource({ uri });
 
     expect(widget?._meta?.['openai/widgetCSP']).toEqual(EXPECTED_CSP_CHATGPT);
     expect((content.contents[0] as WireMetaCarrier)._meta?.['openai/widgetCSP']).toEqual(
@@ -152,7 +159,7 @@ describe('widget resource', () => {
   it('should allowlist nothing in either spelling of the CSP', async () => {
     // The two objects are written out separately, so this is what keeps them
     // from drifting apart into two different policies.
-    const content = await client.readResource({ uri: WIDGET_URI });
+    const content = await client.readResource({ uri });
     const meta = (content.contents[0] as WireMetaCarrier)._meta;
 
     const domains = [
@@ -170,11 +177,26 @@ describe('widget resource', () => {
 
   it('should set no domain on the resource', async () => {
     const { resources } = await client.listResources();
-    const widget = resources.find((resource) => resource.uri === WIDGET_URI);
-    const content = await client.readResource({ uri: WIDGET_URI });
+    const widget = resources.find((resource) => resource.uri === uri);
+    const content = await client.readResource({ uri });
 
     expect(uiMeta(widget)).not.toHaveProperty('domain');
     expect(uiMeta(content.contents[0] as WireMetaCarrier)).not.toHaveProperty('domain');
+  });
+});
+
+describe('the two widget resources', () => {
+  it('should serve a different bundle for each', async () => {
+    const [list, viewer] = await Promise.all([
+      client.readResource({ uri: WIDGET_URI }),
+      client.readResource({ uri: VIEWER_URI }),
+    ]);
+
+    // Vite builds each widget in its own pass; one bundle served twice would
+    // mean the entry discovery collapsed them.
+    expect((list.contents[0] as { text: string }).text).not.toBe(
+      (viewer.contents[0] as { text: string }).text,
+    );
   });
 });
 
@@ -218,15 +240,36 @@ describe('tool ui metadata', () => {
     }
   });
 
-  it('should declare no widget on ris_dokument', async () => {
+  it('should point ris_dokument at the viewer, in both spellings', async () => {
     const { tools } = await client.listTools();
     const dokument = tools.find((tool) => tool.name === 'ris_dokument');
 
     expect(dokument).toBeDefined();
-    expect(uiMeta(dokument)).toBeUndefined();
-    expect(dokument?._meta?.['ui/resourceUri']).toBeUndefined();
-    // No widget means nothing may call it from an iframe either.
+    expect(uiMeta(dokument)?.resourceUri).toBe(VIEWER_URI);
+    expect(dokument?._meta?.['ui/resourceUri']).toBe(VIEWER_URI);
+  });
+
+  it('should not let the viewer call ris_dokument from its iframe', async () => {
+    // `openai/widgetAccessible` gates the calls a widget issues *itself*. The
+    // viewer only ever calls the chunk tool, so the flag would grant an access
+    // nothing uses — and cargo-culting it onto a model-called tool is exactly
+    // what this assertion exists to stop.
+    const { tools } = await client.listTools();
+    const dokument = tools.find((tool) => tool.name === 'ris_dokument');
+
     expect(dokument?._meta?.['openai/widgetAccessible']).toBeUndefined();
+  });
+
+  it('should let the viewer call the chunk tool, and keep it out of the model', async () => {
+    const { tools } = await client.listTools();
+    const chunk = tools.find((tool) => tool.name === 'ris_dokument_abschnitt');
+
+    expect(chunk?._meta?.['openai/widgetAccessible']).toBe(true);
+    expect(uiMeta(chunk)).toMatchObject({ visibility: ['app'] });
+    // It feeds the viewer that is already open; a resourceUri would invite
+    // hosts to render a fresh widget for every section.
+    expect(uiMeta(chunk)?.resourceUri).toBeUndefined();
+    expect(chunk?._meta?.['ui/resourceUri']).toBeUndefined();
   });
 
   it('should carry no csp on the tools — hosts read it from the resource', async () => {
