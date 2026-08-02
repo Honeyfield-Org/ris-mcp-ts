@@ -95,12 +95,27 @@ export function registerLandesrechtTool(server: McpServer): void {
 
 Use this tool to find laws enacted by Austrian federal states (Bundeslaender).
 
+Search strategy: "titel" and "paragraph" (together with "bundesland") are the precise
+entry points — prefer them whenever the law or the section is known. "suchworte" runs a
+broad full-text search and the RIS API returns those hits ordered alphabetically by law
+title, not by relevance, so a common term buries the relevant law under thousands of
+results. Austrian law often splits one topic across several statutes and across the
+federal/state divide — when the topic turns out to be federal rather than state law
+(warranty, for example, sits in the VGG and in §§ 922 ff ABGB), search it with
+ris_bundesrecht instead.
+
 Example queries:
   - suchworte="Bauordnung", bundesland="Salzburg" -> Find state building law
   - titel="Bauordnung", bundesland="Wien", paragraph="1" -> Specific section
   - suchworte="Naturschutz", bundesland="Tirol", fassung_vom="2020-01-01" -> Version as of a date`,
       inputSchema: {
-        suchworte: z.string().max(1000).optional().describe('Full-text search terms'),
+        suchworte: z
+          .string()
+          .max(1000)
+          .optional()
+          .describe(
+            'Broad full-text search terms. Hits come back ordered alphabetically by law title, not by relevance — prefer "titel" and/or "paragraph" whenever the law or the section is known.',
+          ),
         titel: z.string().max(500).optional().describe('Search in law titles'),
         bundesland: LandesrechtBundeslandSchema.optional().describe(
           'Filter by state - Wien, Niederoesterreich, Oberoesterreich, Salzburg, Tirol, Vorarlberg, Kaernten, Steiermark, Burgenland',

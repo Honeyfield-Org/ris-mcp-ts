@@ -40,6 +40,7 @@ describe('registered tool metadata', () => {
     title?: string;
     description?: string;
     annotations?: { readOnlyHint?: boolean; openWorldHint?: boolean };
+    inputSchema?: { shape: Record<string, { description?: string }> };
   }
 
   const registeredTools = (
@@ -83,6 +84,54 @@ describe('registered tool metadata', () => {
     const tool = registeredTools[name];
     expect(tool.annotations?.openWorldHint).toBe(true);
   });
+
+  // Search-steering hints (issue #54): models reflexively reach for the
+  // full-text parameter, whose hits the RIS API sorts alphabetically by law
+  // title. The descriptions have to point them at titel/paragraph instead.
+  const steeredToolNames = ['ris_bundesrecht', 'ris_landesrecht'];
+
+  // The descriptions are hard-wrapped in the source, so collapse whitespace
+  // before matching a sentence that may straddle a line break.
+  const collapse = (text: string | undefined): string => (text ?? '').replace(/\s+/g, ' ');
+
+  const describedAs = (name: string): string => collapse(registeredTools[name].description);
+
+  it.each(steeredToolNames)(
+    'tool %s should name titel/paragraph as the precise entry points',
+    (name) => {
+      expect(describedAs(name)).toContain('"titel" and "paragraph"');
+      expect(describedAs(name)).toContain('precise entry points');
+    },
+  );
+
+  // Erv (English translations) takes SearchTerms/Title only — buildBundesrechtParams
+  // drops a paragraph argument there, so the steering text has to say so.
+  it('tool ris_bundesrecht should flag that paragraph is ignored for Erv', () => {
+    expect(describedAs('ris_bundesrecht')).toContain(
+      '"paragraph" is ignored for applikation="Erv"',
+    );
+  });
+
+  it.each(steeredToolNames)(
+    'tool %s should warn that suchworte hits are sorted alphabetically',
+    (name) => {
+      expect(describedAs(name)).toContain('alphabetically by law title, not by relevance');
+    },
+  );
+
+  it.each(steeredToolNames)('tool %s should cross-reference VGG and ABGB warranty law', (name) => {
+    expect(describedAs(name)).toContain('VGG');
+    expect(describedAs(name)).toContain('§§ 922 ff ABGB');
+  });
+
+  it.each(steeredToolNames)(
+    'tool %s should repeat the ordering caveat on the suchworte parameter itself',
+    (name) => {
+      const suchworte = collapse(registeredTools[name].inputSchema?.shape.suchworte.description);
+      expect(suchworte).toContain('alphabetically by law title, not by relevance');
+      expect(suchworte).toContain('"titel" and/or "paragraph"');
+    },
+  );
 });
 
 // =============================================================================
