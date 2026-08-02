@@ -72,6 +72,17 @@ export function formatDate(dateStr: string | null | undefined): string {
 // =============================================================================
 
 /**
+ * Block-level elements, whose boundaries have to survive into the text output.
+ * cheerio's `.text()` concatenates text nodes without any separator, so RIS
+ * markup like `<h1>Kurztitel</h1><p>Allgemeines...</p>` would otherwise come out
+ * as "KurztitelAllgemeines...".
+ */
+const BLOCK_LEVEL_ELEMENTS =
+  'address, article, aside, blockquote, br, dd, div, dl, dt, fieldset, figcaption, figure, ' +
+  'footer, form, h1, h2, h3, h4, h5, h6, header, hr, li, main, nav, ol, p, pre, section, ' +
+  'table, tbody, td, tfoot, th, thead, tr, ul';
+
+/**
  * Convert HTML to clean readable text using cheerio.
  */
 export function htmlToText(htmlContent: string): string {
@@ -84,16 +95,29 @@ export function htmlToText(htmlContent: string): string {
   // Remove script, style, and head elements
   $('script, style, head').remove();
 
+  // RIS renders every structural marker twice: a visible form carrying
+  // aria-hidden="true" and a redundant spoken form in .sr-only, e.g.
+  // `<span aria-hidden="true">(1)</span><span class="sr-only">Absatz eins,</span>`.
+  // Both end up in .text(), so each marker is duplicated in the text handed to
+  // the model. The pair is redundant by construction, so dropping the spoken
+  // half loses no information.
+  $('.sr-only').remove();
+
+  // Turn block boundaries into newlines before extracting text.
+  $(BLOCK_LEVEL_ELEMENTS).before('\n').after('\n');
+
   // Process the body or entire document
   let text = $('body').length > 0 ? $('body').text() : $.text();
 
-  // Clean up whitespace
+  // Clean up whitespace. Lines are trimmed first: the inserted boundaries leave
+  // whitespace-only lines behind, which would otherwise survive the newline
+  // collapse below.
   text = text
-    .replace(/\n{3,}/g, '\n\n') // Normalize multiple newlines
-    .replace(/[ \t]+/g, ' ') // Normalize multiple spaces
     .split('\n')
     .map((line) => line.trim())
     .join('\n')
+    .replace(/[ \t]+/g, ' ') // Normalize multiple spaces
+    .replace(/\n{3,}/g, '\n\n') // Normalize multiple newlines
     .trim();
 
   return text;
