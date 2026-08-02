@@ -3,7 +3,7 @@
 [![CI](https://github.com/philrox/ris-mcp-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/philrox/ris-mcp-ts/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/ris-mcp-ts.svg)](https://www.npmjs.com/package/ris-mcp-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.19.0-brightgreen.svg)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-blue.svg)](https://modelcontextprotocol.io/)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.philrox%2Fris-green.svg)](https://registry.modelcontextprotocol.io)
 
@@ -38,6 +38,7 @@ The server translates these natural language requests into structured API calls 
 - **Government bills**, ministerial decrees, cabinet protocols
 - **Full document retrieval** with smart prefix-based routing
 - **Change history tracking** across 36 application types
+- **Interactive result list** (MCP Apps) in hosts that support it — with a full text answer everywhere else
 - **Markdown and JSON** output formats
 - **Free and open** — uses Austria's Open Government Data API, no API key needed
 
@@ -158,6 +159,18 @@ npx -y ris-mcp-ts
 | `ris_sonstige` | Search miscellaneous collections (8 sub-apps) |
 | `ris_history` | Track document change history (36 app types) |
 | `ris_verordnungen` | Search state ordinance gazettes |
+
+## Interactive Result List
+
+The eleven search tools ship an MCP Apps widget: hosts that support the extension render the hits as an interactive list — page through results without retyping the search, open a document in the browser, or request its full text with one click.
+
+| Host | What you get |
+|------|--------------|
+| claude.ai | Interactive list, pagination, document links |
+| ChatGPT | Interactive list |
+| Claude Code, and any client without MCP Apps support | The regular text results, unchanged |
+
+The chat answer is always complete. The widget is an addition to it, never a replacement — a host that does not render it loses nothing, and `ris_dokument` (full document text) has no widget by design.
 
 ## Tool Reference
 
@@ -497,7 +510,7 @@ Search state ordinance gazettes (Verordnungsblätter).
 
 ### Prerequisites
 
-- Node.js >= 20.0.0
+- Node.js >= 20.19.0 (required by the Vite 7 widget build)
 
 ### Setup
 
@@ -515,8 +528,10 @@ pnpm run build
 | `pnpm run dev` | Start with hot reload (tsx) |
 | `pnpm run build` | Compile TypeScript |
 | `pnpm start` | Run compiled version |
-| `pnpm test` | Run all tests |
-| `pnpm run check` | Typecheck + lint + format check + tests |
+| `pnpm test` | Run the server tests |
+| `pnpm run test:ui` | Run the widget tests (jsdom) |
+| `pnpm run gen:ui` | Build the widget bundle into `src/generated/` (runs automatically before dev/test/typecheck) |
+| `pnpm run check` | Typecheck + lint + format check + both test suites |
 | `pnpm run inspect` | Launch MCP Inspector for manual testing |
 
 ### Project Structure
@@ -531,6 +546,7 @@ src/
 ├── formatting.ts      # Output formatting (markdown/json)
 ├── helpers.ts         # Shared helper functions
 ├── constants.ts       # Static mappings and configuration
+├── widgets.ts         # MCP Apps widget resource + tool metadata
 ├── tools/             # One file per tool handler
 │   ├── index.ts
 │   ├── bundesrecht.ts
@@ -538,6 +554,10 @@ src/
 │   ├── judikatur.ts
 │   └── ...
 └── __tests__/         # Unit and integration tests
+
+ui/                    # Widget sources (browser code, built by Vite)
+├── trefferliste/      # The result-list widget
+└── shared/            # Host bridge, shared states and theme
 ```
 
 ## Contributing
