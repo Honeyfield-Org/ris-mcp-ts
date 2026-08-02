@@ -1,0 +1,200 @@
+/*
+ * Design tokens for RIS widgets.
+ *
+ * Every token resolves a host-provided CSS custom property first and only falls
+ * back to a value of our own. The variable names are the ones the host may set
+ * via `applyHostStyleVariables` — the authoritative list is the
+ * `McpUiStyleVariableKey` union in
+ * node_modules/@modelcontextprotocol/ext-apps/dist/src/spec.types.d.ts:31.
+ * (The ext-apps repo's docs/mcp-theme.css is the TypeDoc site theme, not an app
+ * token file, so it is not the reference it sounds like.)
+ *
+ * Two theme signals are honoured: the OS preference, and the `data-theme`
+ * attribute that `applyDocumentTheme` stamps on <html> from the host context.
+ * An explicit attribute wins over the OS in both directions.
+ *
+ * No @font-face, no @import, no url() — the widget resource declares an empty
+ * CSP, and the system font stack is what both claude.ai and ChatGPT ask for.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --ris-bg: var(--color-background-primary, #ffffff);
+  --ris-bg-raised: var(--color-background-secondary, #f7f7f8);
+  --ris-bg-hover: var(--color-background-tertiary, #efeff1);
+  --ris-fg: var(--color-text-primary, #18181b);
+  --ris-fg-muted: var(--color-text-secondary, #52525b);
+  --ris-fg-subtle: var(--color-text-tertiary, #71717a);
+  --ris-border: var(--color-border-primary, #e0e0e3);
+  --ris-border-strong: var(--color-border-secondary, #c8c8cd);
+  --ris-ring: var(--color-ring-primary, #2563eb);
+  --ris-danger-fg: var(--color-text-danger, #b42318);
+  --ris-danger-bg: var(--color-background-danger, #fef3f2);
+  --ris-danger-border: var(--color-border-danger, #f5c6c1);
+
+  --ris-font: var(
+    --font-sans,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif
+  );
+  --ris-font-mono: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+
+  --ris-text-xs: var(--font-text-xs-size, 0.75rem);
+  --ris-text-sm: var(--font-text-sm-size, 0.8125rem);
+  --ris-text-md: var(--font-text-md-size, 0.875rem);
+  --ris-text-lg: var(--font-text-lg-size, 1rem);
+
+  --ris-weight-medium: var(--font-weight-medium, 500);
+  --ris-weight-semibold: var(--font-weight-semibold, 600);
+
+  --ris-radius-sm: var(--border-radius-sm, 4px);
+  --ris-radius-md: var(--border-radius-md, 8px);
+  --ris-radius-full: var(--border-radius-full, 999px);
+}
+
+/* Dark fallbacks for hosts that set no variables and no data-theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ris-bg: var(--color-background-primary, #1b1b1f);
+    --ris-bg-raised: var(--color-background-secondary, #242429);
+    --ris-bg-hover: var(--color-background-tertiary, #2e2e34);
+    --ris-fg: var(--color-text-primary, #ededf0);
+    --ris-fg-muted: var(--color-text-secondary, #b4b4bb);
+    --ris-fg-subtle: var(--color-text-tertiary, #8e8e96);
+    --ris-border: var(--color-border-primary, #35353c);
+    --ris-border-strong: var(--color-border-secondary, #4a4a53);
+    --ris-ring: var(--color-ring-primary, #7aa2f7);
+    --ris-danger-fg: var(--color-text-danger, #ff9c92);
+    --ris-danger-bg: var(--color-background-danger, #3a1f1d);
+    --ris-danger-border: var(--color-border-danger, #5c2f2b);
+  }
+}
+
+/* The host said dark, whatever the OS thinks. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ris-bg: var(--color-background-primary, #1b1b1f);
+  --ris-bg-raised: var(--color-background-secondary, #242429);
+  --ris-bg-hover: var(--color-background-tertiary, #2e2e34);
+  --ris-fg: var(--color-text-primary, #ededf0);
+  --ris-fg-muted: var(--color-text-secondary, #b4b4bb);
+  --ris-fg-subtle: var(--color-text-tertiary, #8e8e96);
+  --ris-border: var(--color-border-primary, #35353c);
+  --ris-border-strong: var(--color-border-secondary, #4a4a53);
+  --ris-ring: var(--color-ring-primary, #7aa2f7);
+  --ris-danger-fg: var(--color-text-danger, #ff9c92);
+  --ris-danger-bg: var(--color-background-danger, #3a1f1d);
+  --ris-danger-border: var(--color-border-danger, #5c2f2b);
+}
+
+/* The host said light, whatever the OS thinks. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/*
+ * Shared primitives.
+ *
+ * Height is deliberately unconstrained: the App class reports size via a
+ * ResizeObserver on <body>/<html> (autoResize, on by default) and claude.ai
+ * measures DOM height itself, so a fixed height or an overflow container on the
+ * document would freeze the iframe at the wrong size in both hosts.
+ */
+body {
+  margin: 0;
+  padding: 12px;
+  font-family: var(--ris-font);
+  font-size: var(--ris-text-md);
+  line-height: 1.5;
+  color: var(--ris-fg);
+  background: var(--ris-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ris-ring);
+  outline-offset: 2px;
+  border-radius: var(--ris-radius-sm);
+}
+
+.ris-notice {
+  padding: 12px 14px;
+  border: 1px solid var(--ris-border);
+  border-radius: var(--ris-radius-md);
+  background: var(--ris-bg-raised);
+}
+
+.ris-notice-error {
+  color: var(--ris-danger-fg);
+  border-color: var(--ris-danger-border);
+  background: var(--ris-danger-bg);
+}
+
+.ris-notice-title {
+  margin: 0;
+  font-weight: var(--ris-weight-semibold);
+}
+
+.ris-notice-detail {
+  margin: 4px 0 0;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-muted);
+  white-space: pre-wrap;
+}
+
+.ris-notice-error .ris-notice-detail {
+  color: inherit;
+}
+
+.ris-skeleton-label {
+  margin: 0 0 10px;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-subtle);
+}
+
+.ris-skeleton-row {
+  padding: 12px 0;
+  border-top: 1px solid var(--ris-border);
+}
+
+.ris-skeleton-line {
+  display: block;
+  height: 10px;
+  border-radius: var(--ris-radius-sm);
+  background: var(--ris-bg-hover);
+}
+
+.ris-skeleton-line-title {
+  width: 62%;
+}
+
+.ris-skeleton-line-meta {
+  width: 38%;
+  margin-top: 8px;
+  height: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ris-skeleton-line {
+    animation: ris-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes ris-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}

@@ -1,25 +1,198 @@
-:root {
-  color-scheme: light dark;
-  --ris-fg: #1a1a1a;
-  --ris-bg: #ffffff;
+@import '../shared/theme.css';
+
+/*
+ * Trefferliste layout.
+ *
+ * Nothing here sets a height or an overflow on the document: the host sizes the
+ * iframe from the rendered DOM (ResizeObserver via the App class, plus
+ * claude.ai's own measurement), and a scroll container would pin it at the
+ * wrong height in both.
+ */
+
+.ris-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 10px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ris-fg: #ededed;
-    --ris-bg: #1c1c1c;
-  }
+.ris-tool-badge {
+  padding: 2px 8px;
+  font-size: var(--ris-text-xs);
+  font-weight: var(--ris-weight-semibold);
+  color: var(--ris-fg-muted);
+  background: var(--ris-bg-hover);
+  border-radius: var(--ris-radius-full);
 }
 
-body {
+.ris-query {
+  font-weight: var(--ris-weight-semibold);
+  font-size: var(--ris-text-lg);
+  overflow-wrap: anywhere;
+}
+
+.ris-hits {
+  margin-left: auto;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-subtle);
+  white-space: nowrap;
+}
+
+.ris-rows {
   margin: 0;
-  padding: 16px;
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--ris-fg);
-  background: var(--ris-bg);
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ris-border);
+}
+
+.ris-row {
+  border-bottom: 1px solid var(--ris-border);
+}
+
+.ris-row-toggle {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: start;
+  gap: 4px 10px;
+  width: 100%;
+  padding: 10px 2px;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--ris-radius-sm);
+}
+
+.ris-row-toggle:hover {
+  background: var(--ris-bg-hover);
+}
+
+.ris-row-heading {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: var(--ris-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.ris-row-more {
+  font-size: var(--ris-text-xs);
+  font-weight: var(--font-weight-normal, 400);
+  color: var(--ris-fg-subtle);
+  white-space: nowrap;
+}
+
+.ris-row-subtitle {
+  grid-column: 1;
+  grid-row: 2;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-muted);
+  overflow-wrap: anywhere;
+}
+
+.ris-row-badge {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 1px 7px;
+  font-size: var(--ris-text-xs);
+  color: var(--ris-fg-muted);
+  border: 1px solid var(--ris-border-strong);
+  border-radius: var(--ris-radius-full);
+  white-space: nowrap;
+}
+
+/* Chevron, drawn rather than shipped: the bundle carries no image assets. */
+.ris-row-toggle::after {
+  content: '';
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--ris-fg-subtle);
+  border-bottom: 1.5px solid var(--ris-fg-subtle);
+  transform: rotate(45deg) translate(-2px, -2px);
+}
+
+.ris-row-toggle[aria-expanded='true']::after {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
+
+.ris-row-detail {
+  padding: 2px 2px 14px;
+}
+
+.ris-meta {
+  display: grid;
+  grid-template-columns: minmax(6rem, max-content) 1fr;
+  gap: 2px 12px;
+  margin: 0 0 12px;
+  font-size: var(--ris-text-sm);
+}
+
+.ris-meta dt {
+  color: var(--ris-fg-subtle);
+}
+
+.ris-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ris-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ris-action {
+  padding: 5px 11px;
+  font-size: var(--ris-text-sm);
+  font-weight: var(--ris-weight-medium);
+  background: var(--ris-bg-raised);
+  border: 1px solid var(--ris-border-strong);
+  border-radius: var(--ris-radius-md);
+}
+
+.ris-action:hover {
+  background: var(--ris-bg-hover);
+}
+
+.ris-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.ris-page {
+  padding: 5px 11px;
+  font-size: var(--ris-text-sm);
+  background: var(--ris-bg-raised);
+  border: 1px solid var(--ris-border-strong);
+  border-radius: var(--ris-radius-md);
+}
+
+.ris-page:hover:not(:disabled) {
+  background: var(--ris-bg-hover);
+}
+
+.ris-page:disabled {
+  color: var(--color-text-disabled, var(--ris-fg-subtle));
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ris-range {
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-subtle);
+  white-space: nowrap;
+}
+
+/* Transient messages sit under the list so a failure never replaces it. */
+#ris-status:not(:empty) {
+  padding-top: 12px;
 }
