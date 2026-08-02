@@ -6,12 +6,12 @@
     "url": "https://github.com/Honeyfield-Org/ris-mcp-ts",
     "source": "github"
   },
-  "version": "1.4.0",
+  "version": "1.4.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "ris-mcp-ts",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "transport": {
         "type": "stdio"
       }
