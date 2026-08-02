@@ -200,7 +200,7 @@ In a host without MCP Apps support the same prompts return the full text answer 
 | Host | What you get |
 |------|--------------|
 | claude.ai | Interactive list, pagination, document links |
-| ChatGPT | Interactive list |
+| ChatGPT | Interactive list, pagination |
 | Claude Code, and any client without MCP Apps support | The regular text results, unchanged |
 
 The chat answer is always complete. The widget is an addition to it, never a replacement — a host that does not render it loses nothing, and `ris_dokument` (full document text) has no widget by design.
