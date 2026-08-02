@@ -18,6 +18,11 @@
 - Die Widget-CSP wird mit explizit leeren Arrays (`connectDomains`, `resourceDomains`, `frameDomains`, `baseUriDomains`) an der **Resource** deklariert, nicht am Tool — `McpUiToolMeta.csp` ist in den ext-apps-Typings `never` (Hosts lesen die CSP aus `resources/read`, Fallback `resources/list`), und eine fehlende Deklaration erscheint im Host als "CSP aus" statt als "braucht nichts" (Befund Rendering-Gate #45). Die leeren Arrays setzen voraus, dass das Bundle self-contained bleibt — `ui-template.test.ts` hält das fest.
 - Alle 12 Tools tragen `destructiveHint: false`, obwohl die Annotation bei `readOnlyHint: true` spec-redundant ist — OpenAI listet sie als Pflicht-Annotation für App-Submissions; nicht als Rauschen wegkürzen.
 - `.sr-only` wird bei der Dokument-Extraktion bedingungslos entfernt — die RIS-Vorlesefassung ist konstruktionsbedingt redundant (160/160 gepaart über drei Dokumentklassen), und eine Paar-Bedingung (`aria-hidden`-Check) würde bei RIS-Attributdrift den Bug #64 still zurückbringen.
+- Der `openai/widgetCSP`-Alias spiegelt `_meta.ui.csp` nur in den drei Feldern, die beide Keys kennen (`connect_domains`, `resource_domains`, `frame_domains`) — `base_uri_domains` existiert im Legacy-Key nicht, und ein leeres `redirect_domains` wäre kein Spiegel, sondern würde `openExternal` („Im RIS öffnen") neu verbieten (#60).
+- Ein selbst geschriebener Render-Snapshot via `setWidgetState` (unter `privateContent`, versioniert, ≤64k) ist erlaubt und ersetzt nicht den verworfenen Host-Global-Fallback — er ist an die Widget-Instanz gebunden, wird nur gelesen solange nichts anderes auf dem Schirm ist, und frische Daten gewinnen immer (#60).
+- Die 45s-Deadline auf Widget-initiierte Calls gilt bewusst für alle Hosts (nicht feature-gated) — sie feuert nur, wo der alte Code für immer im Skeleton hing, und stellt die alte Liste samt Notice wieder her (#60).
+- Tabellenzeilen sind die Gruppierungseinheit der Text-Extraktion: Zellen space-gejoint, `tr` trägt die Block-Grenze — weil Markdown-Rendering einzelne Newlines schluckt (#65).
+- Inline-Marker-Separierung bleibt auf bekannte RIS-Klassen gescoped (`.Absatzzahl`), nie eine Blanket-Regel für Inline-Grenzen — RIS splittet Tokens über Inline-Spans, eine generische Regel würde Komposita zerreißen (#65).
 
 ## Offen
 
