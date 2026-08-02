@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { connectBridge, readMountResult, readToolResult, type HostApp } from './bridge.js';
+import {
+  connectBridge,
+  readMountInput,
+  readMountResult,
+  readToolResult,
+  type HostApp,
+} from './bridge.js';
 
 const STRUCTURED = { total_hits: 3, page: 1, page_size: 20, has_more: false, documents: [] };
 
@@ -151,6 +157,24 @@ describe('readToolResult — results the widget requested itself', () => {
   });
 });
 
+describe('readMountInput — the arguments channel', () => {
+  it('reads the arguments ChatGPT mirrors onto its global', () => {
+    expect(readMountInput({ openai: { toolInput: { dokumentnummer: 'NOR12019037' } } })).toEqual({
+      dokumentnummer: 'NOR12019037',
+    });
+  });
+
+  it.each([
+    ['no globals at all', undefined],
+    ['a host without the extension', {}],
+    ['a host that exposes no input', { openai: {} }],
+    ['a non-object input', { openai: { toolInput: 'NOR12019037' } }],
+    ['a non-object global', { openai: 'yes' }],
+  ])('finds nothing in %s', (_label, globals) => {
+    expect(readMountInput(globals)).toBeNull();
+  });
+});
+
 describe('connectBridge', () => {
   beforeEach(() => {
     document.documentElement.removeAttribute('data-theme');
@@ -230,6 +254,60 @@ describe('connectBridge', () => {
     app.emit('hostcontextchanged', { locale: 'de-AT' });
 
     expect(document.documentElement.dataset.theme).toBe('light');
+  });
+
+  it('reports the arguments of the call that mounted the widget', async () => {
+    const app = stubApp();
+    const onToolInput = vi.fn();
+    await connectBridge({ onToolResult: vi.fn(), onToolInput }, app);
+
+    app.emit('toolinput', { arguments: { dokumentnummer: 'NOR12019037' } });
+
+    expect(onToolInput).toHaveBeenCalledWith({ dokumentnummer: 'NOR12019037' });
+  });
+
+  it.each([
+    ['a notification without arguments', {}],
+    ['arguments that are not an object', { arguments: 'NOR12019037' }],
+    ['no params at all', undefined],
+  ])('ignores %s', async (_label, params) => {
+    const app = stubApp();
+    const onToolInput = vi.fn();
+    await connectBridge({ onToolResult: vi.fn(), onToolInput }, app);
+
+    app.emit('toolinput', params);
+
+    expect(onToolInput).not.toHaveBeenCalled();
+  });
+
+  it('subscribes to the input channel before connecting as well', async () => {
+    const events: string[] = [];
+    const app = stubApp({
+      addEventListener: vi.fn((event: string) => {
+        events.push(event);
+      }) as unknown as HostApp['addEventListener'],
+      connect: vi.fn(async () => {
+        events.push('connect');
+      }),
+    });
+
+    await connectBridge({ onToolResult: vi.fn(), onToolInput: vi.fn() }, app);
+
+    expect(events.indexOf('toolinput')).toBeLessThan(events.indexOf('connect'));
+  });
+
+  it('hands the host context to a widget that lays itself out against it', async () => {
+    const context = { containerDimensions: { height: 480, width: 720 } };
+    const app = stubApp({
+      getHostContext: vi.fn(() => context) as unknown as HostApp['getHostContext'],
+    });
+    const onHostContext = vi.fn();
+
+    await connectBridge({ onToolResult: vi.fn(), onHostContext }, app);
+    app.emit('hostcontextchanged', { containerDimensions: { maxHeight: 900 } });
+
+    expect(onHostContext).toHaveBeenNthCalledWith(1, context);
+    expect(onHostContext).toHaveBeenNthCalledWith(2, { containerDimensions: { maxHeight: 900 } });
   });
 });
 
