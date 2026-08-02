@@ -17,6 +17,7 @@
 - Mit der ersten registrierten Resource schaltet sich die `resources`-Capability im Initialize-Handshake ein — bewusst in Kauf genommen, weil Nicht-UI-Clients die Capability ignorieren und der Text-Pfad aller 12 Tools unverändert bleibt.
 - Die Widget-CSP wird mit explizit leeren Arrays (`connectDomains`, `resourceDomains`, `frameDomains`, `baseUriDomains`) an der **Resource** deklariert, nicht am Tool — `McpUiToolMeta.csp` ist in den ext-apps-Typings `never` (Hosts lesen die CSP aus `resources/read`, Fallback `resources/list`), und eine fehlende Deklaration erscheint im Host als "CSP aus" statt als "braucht nichts" (Befund Rendering-Gate #45). Die leeren Arrays setzen voraus, dass das Bundle self-contained bleibt — `ui-template.test.ts` hält das fest.
 - Alle 12 Tools tragen `destructiveHint: false`, obwohl die Annotation bei `readOnlyHint: true` spec-redundant ist — OpenAI listet sie als Pflicht-Annotation für App-Submissions; nicht als Rauschen wegkürzen.
+- `.sr-only` wird bei der Dokument-Extraktion bedingungslos entfernt — die RIS-Vorlesefassung ist konstruktionsbedingt redundant (160/160 gepaart über drei Dokumentklassen), und eine Paar-Bedingung (`aria-hidden`-Check) würde bei RIS-Attributdrift den Bug #64 still zurückbringen.
 
 ## Offen
 

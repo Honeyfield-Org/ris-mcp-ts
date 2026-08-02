@@ -199,6 +199,21 @@ describe('htmlToText', () => {
     });
   });
 
+  describe('removes screen-reader duplicates', () => {
+    it('should drop a .sr-only twin and keep its visible partner', () => {
+      expect(htmlToText('<span aria-hidden="true">X</span><span class="sr-only">Y</span>')).toBe(
+        'X',
+      );
+    });
+
+    it('should drop .sr-only without requiring an aria-hidden partner', () => {
+      // Guards the recorded decision that the removal stays unconditional: a
+      // pairing check would silently reinstate #64 the moment RIS drops or
+      // renames the aria-hidden attribute on the visible half.
+      expect(htmlToText('<span>X</span><span class="sr-only">Y</span>')).toBe('X');
+    });
+  });
+
   describe('normalizes whitespace', () => {
     it('should normalize multiple spaces to single space', () => {
       const html = '<p>Hello     World</p>';
