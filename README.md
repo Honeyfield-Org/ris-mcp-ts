@@ -1,6 +1,6 @@
 # RIS MCP Server
 
-[![CI](https://github.com/philrox/ris-mcp-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/philrox/ris-mcp-ts/actions/workflows/ci.yml)
+[![CI](https://github.com/Honeyfield-Org/ris-mcp-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/Honeyfield-Org/ris-mcp-ts/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/ris-mcp-ts.svg)](https://www.npmjs.com/package/ris-mcp-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20.19.0-brightgreen.svg)](https://nodejs.org/)
@@ -466,7 +466,7 @@ Track document creation, modification, and deletion across the RIS database.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `applikation` | string | **Required.** Application type (30 options — see below) |
+| `applikation` | string | **Required.** Application type (36 options — see below) |
 | `aenderungen_von` | string | Changes from date (YYYY-MM-DD) |
 | `aenderungen_bis` | string | Changes to date (YYYY-MM-DD) |
 | `include_deleted` | boolean | Include deleted documents (default: false) |
@@ -474,12 +474,13 @@ Track document creation, modification, and deletion across the RIS database.
 | `limit` | number | Results per page |
 | `response_format` | string | "markdown" or "json" |
 
-**Available applications (30):**
+**Available applications (36):**
 
 Federal law: `Bundesnormen`, `BgblAuth`, `BgblAlt`, `BgblPdf`, `RegV`
 State law: `Landesnormen`, `LgblAuth`, `Lgbl`, `LgblNO`, `Vbl`, `Gemeinderecht`, `GemeinderechtAuth`
 Case law: `Justiz`, `Vfgh`, `Vwgh`, `Bvwg`, `Lvwg`, `Dsk`, `Gbk`, `Pvak`, `AsylGH`
 Other: `Bvb`, `Mrp`, `Erlaesse`, `PruefGewO`, `Avsv`, `Spg`, `KmGer`, `Dok`, `Normenliste`
+Historical (jurisdictions dissolved on 2014-01-01, change history still tracked): `Verg`, `Upts`, `Uvs`, `Ubas`, `Umse`, `Bks`
 
 </details>
 
@@ -515,7 +516,7 @@ Search state ordinance gazettes (Verordnungsblätter).
 ### Setup
 
 ```bash
-git clone https://github.com/philrox/ris-mcp-ts.git
+git clone https://github.com/Honeyfield-Org/ris-mcp-ts.git
 cd ris-mcp-ts
 pnpm install
 pnpm run build
