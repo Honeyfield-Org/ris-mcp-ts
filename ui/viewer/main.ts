@@ -66,6 +66,8 @@ let bridge: Bridge | null = null;
 let pending = false;
 /** True once a call failed at the transport — every further one would too. */
 let expired = false;
+/** True once the handshake resolved: without it even `openLink` has no host. */
+let connected = false;
 /** True while what is on screen came from the snapshot rather than the host. */
 let restored = false;
 /** Identity from the `toolinput` channel, before any document exists. */
@@ -133,6 +135,7 @@ function render(): void {
   // The session state belongs to the module, but every control that follows from
   // it is rendered rather than reached back into afterwards.
   state.expired = expired;
+  state.connected = connected;
   const model = buildDocumentView(state);
   state.title = model.title;
   rendered = renderDocument(view, model, handlers, height);
@@ -227,6 +230,7 @@ function adoptChunk(offset: number, chunk: DocumentChunk, key: DocumentKey): boo
       provisional: false,
       failedOffset: null,
       expired,
+      connected,
     };
   }
 
@@ -469,6 +473,7 @@ function adoptMountText(text: string): void {
     provisional: true,
     failedOffset: null,
     expired,
+    connected,
   };
   restored = false;
   clearStatus();
@@ -520,6 +525,7 @@ function restoreFrom(snapshot: ViewerSnapshot): void {
     provisional: false,
     failedOffset: null,
     expired,
+    connected,
   };
   restored = true;
   anchorOffset = snapshot.anchorOffset;
@@ -602,8 +608,13 @@ connectBridge({
     if (state) render();
   },
 })
-  .then((connected) => {
-    bridge = connected;
+  .then((host) => {
+    bridge = host;
+    connected = true;
+    // The first render may have happened before the handshake resolved — on a
+    // host that delivers the mounting result during it, which is the normal
+    // path. Its links were rendered against a host that was not there yet.
+    if (state) render();
     advanceLadder();
   })
   .catch(() => {

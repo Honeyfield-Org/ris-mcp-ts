@@ -43,6 +43,7 @@ function state(overrides: Partial<ViewerState> = {}): ViewerState {
     provisional: false,
     failedOffset: null,
     expired: false,
+    connected: true,
     ...overrides,
   };
 }
@@ -303,6 +304,27 @@ describe('buildOutline', () => {
       true,
       false,
     ]);
+  });
+
+  it('counts a section as loaded only when something on screen anchors it', () => {
+    // Two entries pointing into the same block: `buildBlocks` anchors the first
+    // and has no second id to give, so the second has nothing to scroll to even
+    // though its offset sits inside loaded text. Range containment would call
+    // both loaded and leave an enabled button that does nothing.
+    const outline: OutlineEntry[] = [
+      { level: 2, label: 'erste', offset: 3, span: 3 },
+      { level: 2, label: 'zweite', offset: 6, span: 20_000 },
+    ];
+    const model = buildDocumentView(
+      state({
+        expired: true,
+        totalLength: GAZETTE_TOTAL,
+        outline,
+        chunks: [{ offset: 0, text: 'Absatz eins\n\nAbsatz zwei', nextOffset: null }],
+      }),
+    );
+
+    expect(model.rail?.map((row) => row.loaded)).toEqual([true, false]);
   });
 });
 

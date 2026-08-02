@@ -36,6 +36,7 @@ function state(overrides: Partial<ViewerState> = {}): ViewerState {
     provisional: false,
     failedOffset: null,
     expired: false,
+    connected: true,
     ...overrides,
   };
 }
@@ -392,6 +393,29 @@ describe('an expired session', () => {
     const jumps = [...container.querySelectorAll<HTMLButtonElement>('.ris-outline-jump')];
 
     expect(jumps.every((jump) => !jump.disabled)).toBe(true);
+  });
+});
+
+describe('links when there is no host on the other end', () => {
+  it('keeps them working after the session expired', () => {
+    // An evicted session costs tool calls, not `openLink` — that goes through
+    // the host, which is still there.
+    const [container, actions] = render({ expired: true });
+
+    const open = buttonLabelled(container, COPY.openInRis);
+    expect(open.disabled).toBe(false);
+    open.click();
+
+    expect(actions.onOpenLink).toHaveBeenCalledWith(SHORT_CHUNK.source_url);
+    expect(container.querySelector<HTMLButtonElement>('.ris-link')?.disabled).toBe(false);
+  });
+
+  it('disables them when the handshake never completed', () => {
+    const [container] = render({ connected: false });
+
+    expect(buttonLabelled(container, COPY.openInRis).disabled).toBe(true);
+    // The links inside the metadata block route through the same host.
+    expect(container.querySelector<HTMLButtonElement>('.ris-link')?.disabled).toBe(true);
   });
 });
 

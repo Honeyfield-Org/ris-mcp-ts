@@ -146,6 +146,14 @@ export interface DocumentView {
    * and a button that cannot work is worse than none.
    */
   expired: boolean;
+  /**
+   * Whether the widget ever reached its host.
+   *
+   * Separate from {@link expired} because the two failures cost different
+   * things: an evicted session still opens links, a handshake that never
+   * completed leaves nothing on the other end of `openLink` either.
+   */
+  connected: boolean;
 }
 
 /** What the viewer knows about the document currently open. */
@@ -177,6 +185,8 @@ export interface ViewerState {
   failedOffset: number | null;
   /** Mirrors the session state, so the rendered controls follow from the model. */
   expired: boolean;
+  /** Mirrors whether the handshake ever completed — see {@link DocumentView.connected}. */
+  connected: boolean;
 }
 
 const META_LINE = /^\*\*(.+?):\*\* ?(.*)$/;
@@ -432,8 +442,6 @@ export function buildOutline(
 /** Assemble everything on screen from what the viewer currently holds. */
 export function buildDocumentView(state: ViewerState): DocumentView {
   const runs = mergeChunks(state.chunks);
-  const holds = (offset: number): boolean =>
-    runs.some((run) => offset >= run.offset && offset < run.offset + run.text.length);
 
   // While the text is the mount result the viewer does not know where it ends,
   // so the continuation is the canonical first section rather than an offset it
@@ -463,6 +471,18 @@ export function buildDocumentView(state: ViewerState): DocumentView {
   const loadedChars = runs.reduce((sum, run) => sum + run.text.length, 0);
   const chunked = state.totalLength !== null && state.totalLength > CHUNK_LIMIT;
 
+  // Jumpable means "a block on screen carries this anchor", not "the offset
+  // falls inside loaded text". The two differ: an entry whose offset is not a
+  // line of its own — a blank line, or a second entry landing in a block that
+  // already has an anchor — is inside the text and still has nothing to scroll
+  // to. Once the session is gone that difference is the whole answer, because
+  // the fetch that would have resolved it can no longer happen.
+  const anchored = new Set(
+    views
+      .flatMap((run) => run.blocks.map((block) => block.anchorOffset))
+      .filter((offset): offset is number => offset !== null),
+  );
+
   // A document the viewer cannot name is a document it cannot fetch more of:
   // that happens when a host delivers the mounting result but never its
   // arguments. The text stays and the chat keeps the rest — but a sentinel
@@ -477,10 +497,11 @@ export function buildDocumentView(state: ViewerState): DocumentView {
       chunked && state.totalLength
         ? `${formatShare(Math.min(1, loadedChars / state.totalLength))} geladen`
         : '',
-    rail: buildOutline(state.outline, state.totalLength, holds),
+    rail: buildOutline(state.outline, state.totalLength, (offset) => anchored.has(offset)),
     runs: views,
     sentinelOffset: addressable && !stalled && !state.expired ? continuation : null,
     expired: state.expired,
+    connected: state.connected,
   };
 }
 

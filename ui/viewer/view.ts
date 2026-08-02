@@ -154,7 +154,11 @@ function renderHeader(model: DocumentView, handlers: ViewerHandlers): HTMLElemen
   }
   if (model.sourceUrl) {
     const url = model.sourceUrl;
-    meta.append(button('ris-action', COPY.openInRis, () => handlers.onOpenLink(url)));
+    const open = button('ris-action', COPY.openInRis, () => handlers.onOpenLink(url));
+    // An evicted session still opens links — that goes through the host, not
+    // through the server. A handshake that never completed does not.
+    open.disabled = !model.connected;
+    meta.append(open);
   }
   header.append(meta);
 
@@ -213,6 +217,7 @@ export function renderOutline(
 function renderMeta(
   block: Extract<Block, { kind: 'meta' }>,
   handlers: ViewerHandlers,
+  connected: boolean,
 ): HTMLElement {
   const pair = element('div', 'ris-doc-meta-pair');
   pair.append(element('dt', undefined, block.label));
@@ -220,9 +225,12 @@ function renderMeta(
   const value = element('dd');
   if (block.url) {
     // A link becomes a button routed through the host, never an `<a href>`: no
-    // navigation escapes the iframe and no URL from RIS is trusted into the DOM.
+    // navigation escapes the iframe and no URL from RIS is trusted into the DOM
+    // — which is also why it needs a host on the other end to work at all.
     const url = block.url;
-    value.append(button('ris-link', block.value, () => handlers.onOpenLink(url)));
+    const link = button('ris-link', block.value, () => handlers.onOpenLink(url));
+    link.disabled = !connected;
+    value.append(link);
   } else {
     value.textContent = block.value;
   }
@@ -231,14 +239,14 @@ function renderMeta(
   return pair;
 }
 
-function renderBlock(block: Block, handlers: ViewerHandlers): HTMLElement {
+function renderBlock(block: Block, handlers: ViewerHandlers, connected: boolean): HTMLElement {
   const node = ((): HTMLElement => {
     switch (block.kind) {
       case 'title':
       case 'heading':
         return element('h2', 'ris-doc-section', block.text);
       case 'meta':
-        return renderMeta(block, handlers);
+        return renderMeta(block, handlers, connected);
       case 'paragraph':
         return element('p', 'ris-doc-p', block.text);
     }
@@ -255,12 +263,16 @@ function renderBlock(block: Block, handlers: ViewerHandlers): HTMLElement {
 }
 
 /** Render the blocks of one contiguous run, wrapping metadata pairs in a `<dl>`. */
-export function renderBlocks(run: RunView, handlers: ViewerHandlers): HTMLElement[] {
+export function renderBlocks(
+  run: RunView,
+  handlers: ViewerHandlers,
+  connected = true,
+): HTMLElement[] {
   const nodes: HTMLElement[] = [];
   let list: HTMLElement | null = null;
 
   for (const block of run.blocks) {
-    const node = renderBlock(block, handlers);
+    const node = renderBlock(block, handlers, connected);
 
     if (block.kind === 'meta') {
       if (!list) {
@@ -301,7 +313,7 @@ export function renderDocument(
   textPane.tabIndex = 0;
 
   for (const run of model.runs) {
-    textPane.append(...renderBlocks(run, handlers));
+    textPane.append(...renderBlocks(run, handlers, model.connected));
 
     if (run.gapOffset !== null) {
       const offset = run.gapOffset;

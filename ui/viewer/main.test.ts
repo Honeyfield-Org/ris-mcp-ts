@@ -731,6 +731,35 @@ describe('a handshake that fails after the document is on screen', () => {
     expect(noticeTitle()).toBe(COPY.connectFailedTitle);
     expect(view().querySelector('.ris-doc-sentinel')).toBeNull();
   });
+
+  it('does not offer a RIS link it has no host to open', async () => {
+    handshake = Promise.reject(new Error('kein Host'));
+    handshake.catch(() => undefined);
+
+    await mount();
+    deliverInput?.({ dokumentnummer: 'NOR1' });
+    deliver(payload());
+    await settle();
+
+    const link = view().querySelector<HTMLButtonElement>('.ris-doc-metadata .ris-link');
+    expect(link?.disabled).toBe(true);
+  });
+
+  it('offers the links again once a handshake does complete', async () => {
+    // The mounting result normally arrives *during* the handshake, so the first
+    // render happens before there is a host — the links must not stay dead.
+    await mount();
+    deliver(payload());
+    expect(view().querySelector<HTMLButtonElement>('.ris-doc-metadata .ris-link')?.disabled).toBe(
+      true,
+    );
+
+    await connect();
+
+    expect(view().querySelector<HTMLButtonElement>('.ris-doc-metadata .ris-link')?.disabled).toBe(
+      false,
+    );
+  });
 });
 
 // =============================================================================
