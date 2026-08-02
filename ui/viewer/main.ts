@@ -10,7 +10,8 @@
  * yields content: the mounting result — its text block *or* its structured
  * payload, whichever the host delivered — then the document named by the tool
  * *input*, then this widget's own last snapshot, and finally an honest notice.
- * The chat keeps the complete text and the resource link in every one of them.
+ * The chat keeps the complete text, including its `**Quelle:**` link to the RIS
+ * original, in every one of them.
  */
 
 import { connectBridge, readMountInput, type Bridge, type ToolPayload } from '../shared/bridge.js';

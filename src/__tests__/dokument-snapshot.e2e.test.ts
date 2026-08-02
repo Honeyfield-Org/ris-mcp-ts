@@ -1,12 +1,18 @@
 /**
  * Byte-identity snapshot of the `ris_dokument` response (issues #51, #52).
  *
- * The `content` array of this tool does not change: the same text block and the
- * same `resource_link`, whatever else the handler grows. The snapshots below
- * were generated from the pre-#51 handler and committed unchanged; a byte that
- * moves fails this file. The long-document case is pinned by length and digest
- * instead of by its 25 000 characters, which is the same guarantee in a
- * reviewable size.
+ * The **text block** of this tool does not change, whatever else the handler
+ * grows or loses. The snapshots were generated from the pre-#51 handler; a byte
+ * that moves in the text fails this file. The long-document case is pinned by
+ * length and digest instead of by its 25 000 characters, which is the same
+ * guarantee in a reviewable size.
+ *
+ * The `resource_link` block was removed from the snapshots in #52, deliberately
+ * and as the only change to them: claude.ai delivers a widget no tool-result
+ * event at all when the result carries one, which left the viewer on its
+ * degradation notice while the trefferliste rendered in the same conversation.
+ * The source URL is unaffected — it is in the text block's `**Quelle:**` link
+ * and in `structuredContent.source_url`, both of which these tests pin.
  *
  * The `structuredContent` pin flipped in #52, deliberately: the tool now
  * declares an `outputSchema` whose payload *carries the text block*, so the
@@ -144,7 +150,7 @@ async function dokument(args: Record<string, unknown>): Promise<unknown> {
 // =============================================================================
 
 describe('ris_dokument response identity', () => {
-  it('should return text plus resource_link', async () => {
+  it('should return the text block and nothing else', async () => {
     serve(NORM_HTML);
 
     const result = await client.callTool({
@@ -152,10 +158,26 @@ describe('ris_dokument response identity', () => {
       arguments: { dokumentnummer: 'NOR12019037' },
     });
 
-    expect((result.content as { type: string }[]).map((block) => block.type)).toEqual([
-      'text',
-      'resource_link',
-    ]);
+    // A resource_link here costs the whole widget in claude.ai — the host
+    // delivers no tool-result event at all for a result that carries one.
+    expect((result.content as { type: string }[]).map((block) => block.type)).toEqual(['text']);
+  });
+
+  it('should keep the source URL reachable in both surviving carriers', async () => {
+    serve(NORM_HTML);
+
+    const result = await client.callTool({
+      name: 'ris_dokument',
+      arguments: { dokumentnummer: 'NOR12019037' },
+    });
+
+    const text = (result.content as { text: string }[])[0].text;
+    const url = (result.structuredContent as { source_url: string }).source_url;
+
+    // What the dropped block used to carry has two homes left, so removing it
+    // costs a client nothing it cannot reach.
+    expect(url).toContain('NOR12019037');
+    expect(text).toContain(`**Quelle:** [${url}](${url})`);
   });
 
   it('should carry the text block itself in structuredContent', async () => {

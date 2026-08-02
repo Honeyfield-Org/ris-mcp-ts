@@ -238,7 +238,16 @@ from the `toolinput` notification or `window.openai.toolInput`, followed by one
 `ris_dokument_abschnitt` call at offset 0; **(3)** this widget's own snapshot,
 which stores structure and a reading position but never text; **(4)** a German
 notice. There is no host-global stale-data path — the chat keeps the complete
-text and the `resource_link` in every rung.
+text, including its `**Quelle:**` link to the RIS original, in every rung.
+
+**`ris_dokument` emits no `resource_link` block** (#52). claude.ai delivers a
+widget *no tool-result event at all* when the result carries one, so the viewer
+sat on its degradation notice while the trefferliste rendered in the same
+conversation; removing the block made it render fully. The URL survives twice —
+in the text block's `**Quelle:**` markdown link and in
+`structuredContent.source_url` — and ChatGPT's "Dateibereitstellung erlauben?"
+consent prompt, which that block triggered, disappears with it. Host bug,
+reported upstream; the block is meant to come back once it is fixed.
 
 **Both mount channels are load-bearing, measured 2026-08-02 (#52):** claude.ai
 delivers a widget neither `content[]` nor `toolinput`, only `structuredContent`

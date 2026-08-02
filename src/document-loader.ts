@@ -33,7 +33,7 @@ export interface LoadedDocument {
   text: string;
   /** RIS source HTML — needed for the outline; callers may drop it. */
   html: string;
-  /** URL the HTML came from; feeds ris_dokument's resource_link. */
+  /** URL the HTML came from; feeds `source_url` and the document cache key. */
   contentUrl: string;
   metadata: DocumentMetadata;
 }

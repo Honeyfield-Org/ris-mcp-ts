@@ -55,7 +55,14 @@ export interface TextContent {
   text: string;
 }
 
-/** A pointer to a resource the client can fetch itself instead of re-parsing text. */
+/**
+ * A pointer to a resource the client can fetch itself instead of re-parsing text.
+ *
+ * No handler emits one at the moment: `ris_dokument` dropped its block because
+ * claude.ai delivers a widget no tool-result event at all for a result that
+ * carries one (#52, see DECISIONS.md). The type stays because that is a host
+ * bug and the block is meant to come back once it is fixed.
+ */
 export interface ResourceLinkContent {
   type: 'resource_link';
   uri: string;
