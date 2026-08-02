@@ -162,31 +162,38 @@ npx -y ris-mcp-ts
 
 ## Interactive Result List
 
-The eleven search tools ship an MCP Apps widget: hosts that support the extension render the hits as an interactive list — page through results without retyping the search, open a document in the browser, or request its full text with one click. The widget follows the host's light or dark theme.
+**One widget, all eleven search tools.** There is a single interactive result list, and every search tool renders into it: federal law, state law, case law, the federal and state law gazettes, government bills, district authority announcements, municipal law, the miscellaneous collections, change history and the ordinance gazettes. Only `ris_dokument` deliberately has no widget — there the full document text *is* the answer. The screenshots below are the same widget in two different hosts, not two different features.
+
+Hosts that support the MCP Apps extension render the hits as an interactive list — page through results without retyping the search, open a document in the browser, or request its full text with one click. The widget follows the host's light or dark theme; the shots below show both.
+
+<table>
+<tr>
+<td width="50%"><img src="https://raw.githubusercontent.com/Honeyfield-Org/ris-mcp-ts/main/docs/assets/widget-in-claude.png" alt="The RIS widget running inside Claude: a connector row reading 'ris-mcp / ris_bundesrecht', below it the result list for 'Verbrauchergewährleistungsgesetz' with 40 hits and its first sections, each tagged 'Bundesrecht'." width="100%"></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/Honeyfield-Org/ris-mcp-ts/main/docs/assets/widget-in-chatgpt.png" alt="The same RIS widget running inside ChatGPT: the result list for 'Verbrauchergewährleistungsgesetz' with 40 hits and its first sections, above ChatGPT's own composer with the placeholder 'ChatGPT fragen'." width="100%"></td>
+</tr>
+<tr>
+<td align="center"><em>In Claude</em></td>
+<td align="center"><em>In ChatGPT</em></td>
+</tr>
+</table>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Honeyfield-Org/ris-mcp-ts/main/docs/assets/readme-bundesrecht-light.png" alt="Federal law search for the act 'Verbrauchergewährleistungsgesetz' in the light theme: 40 hits listed section by section, with § 1 expanded to show its in-force date, document number and the actions 'Im RIS öffnen', 'PDF' and 'Volltext in den Chat', above a pagination bar reading 1–10 of 40." width="820">
+  <img src="https://raw.githubusercontent.com/Honeyfield-Org/ris-mcp-ts/main/docs/assets/readme-judikatur-light.png" alt="Case law search for 'Verjährung' in the light theme: 7,466 hits, with court, decision date and case number on the expanded result, the actions 'Im RIS öffnen', 'PDF' and 'Volltext in den Chat', and pagination controls at the bottom." width="820">
   <br>
-  <em>Federal law (<code>ris_bundesrecht</code>) — a title search listing an act's sections, with one hit expanded</em>
-</p>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Honeyfield-Org/ris-mcp-ts/main/docs/assets/readme-judikatur-dark.png" alt="Case law search for 'Verjährung' in the dark theme: 7,466 hits, with court, decision date and case number on the expanded result and pagination controls at the bottom." width="820">
-  <br>
-  <em>Case law (<code>ris_judikatur</code>) — court, decision date and case number, with pagination</em>
+  <em>The expanded detail view, light theme — metadata, the three actions, and pagination</em>
 </p>
 
 ### Example Prompts
 
-RIS is a German-language database, so these work best in German:
+RIS is a German-language database, so these work best in German. Each of these lands on a different tool:
 
-> "Zeig mir das Verbrauchergewährleistungsgesetz"
+> "Zeig mir das Verbrauchergewährleistungsgesetz" — `ris_bundesrecht`
 
-> "Zeig mir § 1295 ABGB in der geltenden Fassung"
+> "Finde aktuelle OGH-Rechtsprechung zu Verjährung" — `ris_judikatur`
 
-> "Finde aktuelle OGH-Rechtsprechung zu Verjährung"
+> "Was steht im Tiroler Landesrecht zum Naturschutz?" — `ris_landesrecht`
 
-> "Welche Erkenntnisse des VfGH gibt es zur Erwerbsfreiheit?"
+> "Zeig mir BGBl. I Nr. 175/2021" — `ris_bundesgesetzblatt`
 
 In a host without MCP Apps support the same prompts return the full text answer instead — see the table below.
 
