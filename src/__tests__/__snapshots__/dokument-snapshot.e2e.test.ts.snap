@@ -184,6 +184,94 @@ N2181111519Z",
 ]
 `;
 
+exports[`ris_dokument response identity > should freeze the markdown response the search fallback produces 1`] = `
+[
+  {
+    "text": "# § 1295 ABGB (JGS Nr. 946/1811)
+
+## Dokumentinformation
+
+**Titel:** Allgemeines buergerliches Gesetzbuch
+**Paragraph:** § 1295
+**Kundmachungsorgan:** JGS Nr. 946/1811
+**In Kraft seit:** 01.01.1917
+**ELI:** eli/jgs/1811/946/P1295/NOR12019037
+**Dokumentnummer:** \`NOR12019037\`
+**Quelle:** [https://www.ris.bka.gv.at/eli/jgs/1811/946/P1295/NOR12019037](https://www.ris.bka.gv.at/eli/jgs/1811/946/P1295/NOR12019037)
+**Gesamte Rechtsvorschrift:** [https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622](https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622)
+
+## Inhalt
+
+Kurztitel
+
+Allgemeines bürgerliches Gesetzbuch
+
+Kundmachungsorgan
+
+JGS Nr. 946/1811 zuletzt geändert durch RGBl. Nr. 69/1916
+
+Typ
+
+BG
+
+§/Artikel/Anlage
+
+§ 1295
+
+Inkrafttretensdatum
+
+01.01.1917
+
+Abkürzung
+
+ABGB
+
+Index
+
+20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)
+
+Text
+
+Von der Verbindlichkeit zum Schadenersatze:
+
+1) von dem Schaden aus Verschulden;
+
+§ 1295.
+
+(1) Jedermann ist berechtigt, von dem Beschädiger den Ersatz des Schadens, welchen dieser ihm aus Verschulden zugefügt hat, zu fordern; der Schaden mag durch Übertretung einer Vertragspflicht oder ohne Beziehung auf einen Vertrag verursacht worden sein.
+
+(2) Auch wer in einer gegen die guten Sitten verstoßenden Weise absichtlich Schaden zufügt, ist dafür verantwortlich, jedoch falls dies in Ausübung eines Rechtes geschah, nur dann, wenn die Ausübung des Rechtes offenbar den Zweck hatte, den anderen zu schädigen.
+
+Schlagworte
+
+Vertragsverletzung, Delikt, Schikane
+
+Zuletzt aktualisiert am
+
+21.11.2017
+
+Gesetzesnummer
+
+10001622
+
+Dokumentnummer
+
+NOR12019037
+
+alte Dokumentnummer
+
+N2181111519Z",
+    "type": "text",
+  },
+  {
+    "mimeType": "text/html",
+    "name": "NOR12019037",
+    "type": "resource_link",
+    "uri": "https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037_fallback.html",
+  },
+]
+`;
+
 exports[`ris_dokument response identity > should freeze the response for a document addressed by URL 1`] = `
 [
   {

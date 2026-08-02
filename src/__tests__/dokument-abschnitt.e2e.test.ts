@@ -19,6 +19,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+import { loadDocument } from '../document-loader.js';
 import { registerAllTools } from '../tools/index.js';
 
 // =============================================================================
@@ -258,6 +259,25 @@ describe('paging', () => {
 
     expect(sections.length).toBeGreaterThan(1);
     expect(sections.join('').length).toBe(total);
+  });
+
+  it('should cut its sections from the very string ris_dokument renders', async () => {
+    // The property the whole offset scheme rests on. Both tools go through
+    // loadDocument(), so comparing against its untruncated output is comparing
+    // against what ris_dokument rendered — ris_dokument's own response is cut at
+    // 25 000 characters and cannot show this for a document that pages.
+    stubSingleDocument();
+
+    const first = await chunk({ dokumentnummer: 'NOR12019037', offset: 0 });
+    const loaded = await loadDocument(
+      { dokumentnummer: 'NOR12019037', responseFormat: 'markdown' },
+      new AbortController().signal,
+    );
+
+    expect(loaded.success).toBe(true);
+    const canonical = loaded.success ? loaded.document.text : '';
+    expect(first.total_length).toBe(canonical.length);
+    expect(canonical.startsWith(first.text)).toBe(true);
   });
 
   it('should report total_length on every section, not only the first', async () => {

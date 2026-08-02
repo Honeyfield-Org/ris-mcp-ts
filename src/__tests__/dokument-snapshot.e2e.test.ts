@@ -61,6 +61,76 @@ function serve(html: string): void {
   );
 }
 
+/** Content URL the search fallback hands back — distinct from the direct one. */
+const FALLBACK_CONTENT_URL =
+  'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037_fallback.html';
+
+/**
+ * Serve the second resolution strategy: the direct URL 404s, the search API
+ * answers, and the content URL from that answer carries the document.
+ *
+ * This is the branch that produces the *rich* metadata header — langtitel,
+ * kundmachungsorgan, ELI, both URLs — where the direct branch produces a
+ * minimal one. The difference between the two headers is several thousand
+ * characters on a real document, which is precisely why it needs its own
+ * byte-level pin.
+ */
+function serveSearchFallback(): void {
+  const searchBody = JSON.stringify({
+    OgdSearchResult: {
+      OgdDocumentResults: {
+        Hits: { '#text': '1', '@pageNumber': '1', '@pageSize': '10' },
+        OgdDocumentReference: [
+          {
+            Data: {
+              Metadaten: {
+                Technisch: { ID: 'NOR12019037', Applikation: 'BrKons' },
+                Allgemein: {
+                  DokumentUrl: 'https://www.ris.bka.gv.at/eli/jgs/1811/946/P1295/NOR12019037',
+                },
+                Bundesrecht: {
+                  Kurztitel: 'ABGB',
+                  Langtitel: 'Allgemeines buergerliches Gesetzbuch',
+                  Eli: 'eli/jgs/1811/946/P1295/NOR12019037',
+                  BrKons: {
+                    Kundmachungsorgan: 'JGS Nr. 946/1811',
+                    ArtikelParagraphAnlage: '§ 1295',
+                    Inkrafttretensdatum: '1917-01-01',
+                    Ausserkrafttretensdatum: '9999-12-31',
+                    GesamteRechtsvorschriftUrl:
+                      'https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001622',
+                  },
+                },
+              },
+              Dokumentliste: {
+                ContentReference: {
+                  ContentType: 'MainDocument',
+                  Urls: { ContentUrl: [{ DataType: 'Html', Url: FALLBACK_CONTENT_URL }] },
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) => {
+      const target = String(url);
+      if (target.includes('/ris/api/')) {
+        return Promise.resolve({ ok: true, text: () => Promise.resolve(searchBody) });
+      }
+      if (target === FALLBACK_CONTENT_URL) {
+        return Promise.resolve({ ok: true, text: () => Promise.resolve(NORM_HTML) });
+      }
+      // The direct URL construction — this is the failure that triggers the fallback.
+      return Promise.resolve({ ok: false, status: 404, text: () => Promise.resolve('Not Found') });
+    }),
+  );
+}
+
 async function dokument(args: Record<string, unknown>): Promise<unknown> {
   const result = await client.callTool({ name: 'ris_dokument', arguments: args });
   return result.content;
@@ -96,6 +166,19 @@ describe('ris_dokument response identity', () => {
     serve(GAZETTE_HTML);
 
     expect(await dokument({ dokumentnummer: 'BGBLA_2012_II_371' })).toMatchSnapshot();
+  });
+
+  it('should freeze the markdown response the search fallback produces', async () => {
+    serveSearchFallback();
+
+    const content = (await dokument({ dokumentnummer: 'NOR12019037' })) as { text?: string }[];
+
+    // Guards the fixture as much as the response: if the direct branch ever
+    // answered here, the header would be minimal and the snapshot would pin the
+    // wrong branch without anyone noticing.
+    expect(content[0].text).toContain('**Kundmachungsorgan:**');
+    expect(content[0].text).toContain('**ELI:**');
+    expect(content).toMatchSnapshot();
   });
 
   it('should freeze the json response', async () => {
