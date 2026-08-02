@@ -59,16 +59,19 @@ describe('persistSnapshot', () => {
     expect(persistSnapshot(LAW_RESULT, globals)).toBe(false);
   });
 
-  it('leaves an oversized page unstored rather than pushing it at the host', () => {
+  it('clears the previous page instead of storing an oversized one', () => {
     const { globals } = hostWithMemory();
     const huge = {
       ...LAW_RESULT,
       documents: Array.from({ length: 400 }, () => LAW_RESULT.documents[0]),
     };
 
+    persistSnapshot(LAW_RESULT, globals);
     expect(persistSnapshot(huge, globals)).toBe(false);
-    expect(globals.openai.setWidgetState).not.toHaveBeenCalled();
-    // And the reopen then shows the honest notice rather than a truncated list.
+
+    // Neither the oversized page nor the smaller one the user has left: a
+    // reopen shows the honest notice rather than the wrong page.
+    expect(globals.openai.setWidgetState).toHaveBeenLastCalledWith({});
     expect(restoreSnapshot(globals)).toBeNull();
   });
 });

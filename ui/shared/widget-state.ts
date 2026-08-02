@@ -56,7 +56,8 @@ function widgetStateHost(globals: unknown): WidgetStateHost | null {
  *
  * Returns whether it was stored — every reason not to (no such host, a payload
  * too large for one, a host that refuses) is a reason to carry on rendering,
- * never to fail the render.
+ * never to fail the render. A page that cannot be stored clears the previous
+ * one, so a reopen never restores a page the user has moved on from.
  */
 export function persistSnapshot(payload: unknown, globals: unknown = globalThis): boolean {
   const host = widgetStateHost(globals);
@@ -65,13 +66,16 @@ export function persistSnapshot(payload: unknown, globals: unknown = globalThis)
   const snapshot = { [SNAPSHOT_KEY]: { version: SNAPSHOT_VERSION, payload } };
 
   try {
-    if (JSON.stringify(snapshot).length > SNAPSHOT_LIMIT) return false;
+    const storable = JSON.stringify(snapshot).length <= SNAPSHOT_LIMIT;
 
     // `privateContent` is the documented slot for state the model must not
     // read: the result reaches it once as the tool result, and a search page
     // has no business being replayed into its context on every later turn.
-    host.setWidgetState({ privateContent: snapshot });
-    return true;
+    // A page too large to store also invalidates whatever smaller page was
+    // stored before it — leaving that behind would reopen on a page the user
+    // has since left, so it is cleared rather than kept.
+    host.setWidgetState(storable ? { privateContent: snapshot } : {});
+    return storable;
   } catch {
     return false;
   }
