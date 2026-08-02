@@ -69,10 +69,66 @@ export interface DocumentChunk {
   dokumentnummer?: string;
 }
 
+/**
+ * The `structuredContent` of the `ris_dokument` response that mounts the viewer.
+ *
+ * Shares `text`, `total_length`, `outline` and `source_url` with a chunk and
+ * carries no `next_offset`, deliberately: this text is the *truncated* rendering
+ * with a German notice appended, so where it ends is not where the document
+ * continues. It renders immediately and the canonical series replaces it.
+ */
+export interface DocumentResult {
+  text: string;
+  total_length: number;
+  outline?: OutlineEntry[];
+  source_url?: string;
+  dokumentnummer?: string;
+}
+
 /** How the viewer addresses its document — whichever identifier it was given. */
 export interface DocumentKey {
   dokumentnummer?: string;
   url?: string;
+}
+
+/**
+ * The mounting result as the viewer works with it, from either source.
+ *
+ * `totalLength` and `outline` are null when only the text block arrived: a text
+ * block says nothing about the document it was cut from, and inventing a length
+ * would arm the refetch check in {@link ViewerState} against a number the viewer
+ * made up.
+ */
+export interface MountDocument {
+  text: string;
+  totalLength: number | null;
+  outline: OutlineEntry[] | null;
+  key: DocumentKey;
+  sourceUrl: string | null;
+}
+
+/**
+ * Normalise a validated `ris_dokument` payload into what the viewer renders.
+ *
+ * Exactly one identifier travels on, never both: `ris_dokument_abschnitt` given
+ * a `url` resolves through the URL branch of the shared loader even when a
+ * Dokumentnummer is also present, which builds a different metadata header — and
+ * a header of a different length shifts every offset the viewer holds.
+ */
+export function toMountDocument(result: DocumentResult): MountDocument {
+  const key: DocumentKey = result.dokumentnummer
+    ? { dokumentnummer: result.dokumentnummer }
+    : result.source_url
+      ? { url: result.source_url }
+      : {};
+
+  return {
+    text: result.text,
+    totalLength: result.total_length,
+    outline: result.outline ?? null,
+    key,
+    sourceUrl: result.source_url ?? null,
+  };
 }
 
 /** A section of text the viewer holds, addressed by its offset. */
@@ -246,6 +302,23 @@ export function parseChunkResult(value: unknown): DocumentChunk | null {
   if (value.outline !== undefined && !isOutline(value.outline)) return null;
 
   return value as unknown as DocumentChunk;
+}
+
+/**
+ * Validate the structured payload of the mounting `ris_dokument` response.
+ *
+ * The one channel claude.ai was measured to deliver to a widget at all, which
+ * is why the text has to arrive through it rather than only through the content
+ * blocks. Empty text is rejected rather than rendered: the caller then falls
+ * through to the text block, and an empty document is not a document.
+ */
+export function parseDocumentResult(value: unknown): DocumentResult | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.text !== 'string' || value.text === '') return null;
+  if (!isFiniteNumber(value.total_length)) return null;
+  if (value.outline !== undefined && !isOutline(value.outline)) return null;
+
+  return value as unknown as DocumentResult;
 }
 
 /**

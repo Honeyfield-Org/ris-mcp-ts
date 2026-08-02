@@ -33,6 +33,7 @@ import {
   relocateAnchor,
   type DocumentChunk,
   type DocumentKey,
+  type MountDocument,
   type ViewerSnapshot,
   type ViewerState,
 } from './viewmodel.js';
@@ -457,18 +458,32 @@ function persist(): void {
 // The first-render ladder
 // =============================================================================
 
-/** Rung 1: the text block of the result that mounted the widget. */
-function adoptMountText(text: string): void {
+/**
+ * Rung 1: the mounting `ris_dokument` result, from whichever channel carried it.
+ *
+ * The text is a *truncated* rendering with a German notice appended, so the run
+ * stays provisional however much the payload said about it: where this text ends
+ * is not where the document continues, and the canonical series replaces it
+ * whole on the first scroll. What the structured payload adds is everything
+ * around the text — the document's real length, its outline, and the identifier
+ * without which no further section could be fetched at all.
+ */
+function adoptMountDocument(mount: MountDocument): void {
   // Fresh text always wins over a restored snapshot, and never over the
   // canonical sections the viewer has already loaded for itself.
   if (state && !state.provisional && !restored) return;
 
+  // The payload's own identifier when it carried one — this is the whole reason
+  // the structured channel matters, because a host may deliver it and nothing
+  // else. Otherwise whatever the tool-input channel or an earlier render knew.
+  const named = Boolean(mount.key.dokumentnummer ?? mount.key.url);
+
   state = {
-    key: state?.key ?? mountKey ?? {},
-    chunks: [{ offset: 0, text, nextOffset: null }],
-    totalLength: null,
-    outline: [],
-    sourceUrl: null,
+    key: named ? mount.key : (state?.key ?? mountKey ?? {}),
+    chunks: [{ offset: 0, text: mount.text, nextOffset: null }],
+    totalLength: mount.totalLength,
+    outline: mount.outline ?? [],
+    sourceUrl: mount.sourceUrl,
     title: '',
     provisional: true,
     failedOffset: null,
@@ -488,12 +503,16 @@ function adoptMountText(text: string): void {
  * widget's own snapshot would be noise about a problem the user does not have.
  */
 function presentMount(payload: ToolPayload): void {
-  if (restored && !payload.text && !payload.isError) return;
-
   const outcome = interpretPayload(payload, 'mount');
 
-  if (outcome.kind === 'text') {
-    adoptMountText(outcome.text);
+  if (outcome.kind === 'empty') {
+    // Nothing arrived. Under a restored document that is the replay above; with
+    // nothing on screen the ladder has further rungs to try.
+    return;
+  }
+
+  if (outcome.kind === 'document') {
+    adoptMountDocument(outcome.document);
     return;
   }
 

@@ -10,7 +10,7 @@
  * it.
  */
 
-import type { DocumentChunk, OutlineEntry } from '../viewer/viewmodel.js';
+import type { DocumentChunk, DocumentResult, OutlineEntry } from '../viewer/viewmodel.js';
 
 /**
  * The text block of a `ris_dokument` mount, for a document that fits in one
@@ -109,6 +109,25 @@ export const GAZETTE_OUTLINE: OutlineEntry[] = [
   { level: 3, label: '§ 19', offset: 19_217, span: 4900 },
   { level: 3, label: '§ 20', offset: 24_117, span: 4883 },
 ];
+
+/**
+ * The `structuredContent` of a `ris_dokument` mount.
+ *
+ * Carries the same string the text block does — that identity is what makes the
+ * schema safe to declare — plus what the text alone cannot say: the untruncated
+ * length, the outline, and the identifier for further sections. The default here
+ * is the truncated case, since it is the only one that ships an outline.
+ */
+export function documentResult(overrides: Partial<DocumentResult> = {}): DocumentResult {
+  return {
+    dokumentnummer: 'BVWGT_1',
+    text: NORM_MARKDOWN,
+    total_length: LONG_TOTAL,
+    outline: DECISION_OUTLINE,
+    source_url: 'https://www.ris.bka.gv.at/Dokumente/Bvwg/BVWGT_1/BVWGT_1.html',
+    ...overrides,
+  };
+}
 
 /** One section of a long document, as the chunk tool returns it. */
 export function chunk(overrides: Partial<DocumentChunk> = {}): DocumentChunk {

@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   DECISION_OUTLINE,
+  documentResult,
   GAZETTE_OUTLINE,
   GAZETTE_TOTAL,
   LONG_TOTAL,
@@ -19,7 +20,7 @@ import {
 import type { Bridge, BridgeOptions, ToolPayload } from '../shared/bridge.js';
 
 import { COPY } from './copy.js';
-import type { DocumentChunk } from './viewmodel.js';
+import type { DocumentChunk, DocumentResult } from './viewmodel.js';
 
 /** Captured from the mount so a test can play the host's part. */
 let deliver: BridgeOptions['onToolResult'];
@@ -140,7 +141,7 @@ async function setVisibility(state: 'hidden' | 'visible'): Promise<void> {
 // Payloads
 // =============================================================================
 
-/** A tool result as the host hands it over: text, never structured content. */
+/** A mounting result as a host delivering content blocks hands it over. */
 function payload(overrides: Partial<ToolPayload> = {}): ToolPayload {
   return {
     structuredContent: null,
@@ -148,6 +149,19 @@ function payload(overrides: Partial<ToolPayload> = {}): ToolPayload {
     text: NORM_MARKDOWN,
     isError: false,
     ...overrides,
+  };
+}
+
+/**
+ * The same mounting result as claude.ai hands it over: structured content, no
+ * content blocks.
+ */
+function structuredPayload(overrides: Partial<DocumentResult> = {}): ToolPayload {
+  return {
+    structuredContent: documentResult(overrides),
+    source: 'toolresult',
+    text: '',
+    isError: false,
   };
 }
 
@@ -205,6 +219,12 @@ function noticeTitle(): string | undefined {
 
 function sentinelOffset(): string | undefined {
   return view().querySelector<HTMLElement>('.ris-doc-sentinel')?.dataset.offset;
+}
+
+function railLabels(): string[] {
+  return [...view().querySelectorAll('.ris-outline-jump')].map(
+    (jump) => jump.firstChild?.textContent ?? '',
+  );
 }
 
 function calls(): unknown[] {
@@ -312,6 +332,87 @@ describe('rung 1: the mounting result carries the text', () => {
     expect(document.querySelector('.ris-notice-detail')?.textContent).toBe(
       'Dokument NOR1 wurde nicht gefunden.',
     );
+  });
+});
+
+// =============================================================================
+// Rung 1 — the same result through the structured channel
+// =============================================================================
+
+describe('rung 1: the mounting result arrives as structured content', () => {
+  it('renders the document without asking the server for anything', async () => {
+    // claude.ai delivers neither content blocks nor tool input to a widget. Its
+    // one measured channel carries the text itself, so this rung still costs
+    // nothing (Live-Befund 2026-08-02).
+    await mount();
+    deliver(structuredPayload());
+    await connect();
+
+    expect(text()).toContain('§ 1295.');
+    expect(bridge.callTool).not.toHaveBeenCalled();
+  });
+
+  it('draws the outline rail and the progress from the same payload', async () => {
+    // Without the structured channel both need a section call whose only new
+    // information is metadata — it would refetch the 25 000 characters already
+    // on screen.
+    await mount();
+    deliver(structuredPayload({ outline: GAZETTE_OUTLINE, total_length: GAZETTE_TOTAL }));
+    await connect();
+
+    expect(railLabels()).toContain('Steuersätze');
+    expect(view().querySelector('.ris-doc-progress')?.textContent).toMatch(/geladen$/);
+    expect(bridge.callTool).not.toHaveBeenCalled();
+  });
+
+  it('names the document, so the reader can keep scrolling', async () => {
+    // The finding this fixes: with no identifier from any channel the viewer
+    // renders no sentinel at all, and the document ends after the first 25 000
+    // characters however far the reader scrolls.
+    await mount();
+    deliver(structuredPayload());
+    await connect();
+
+    expect(sentinelOffset()).toBe('0');
+    await scrollToEnd();
+
+    expect(calls()).toEqual([
+      { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'BVWGT_1', offset: 0 } },
+    ]);
+    expect(text()).toContain('Erster Abschnitt.');
+  });
+
+  it('addresses a document with no Dokumentnummer by its source URL', async () => {
+    const url = 'https://www.ris.bka.gv.at/Dokumente/Bvwg/BVWGT_1/BVWGT_1.html';
+
+    await mount();
+    deliver(structuredPayload({ dokumentnummer: undefined, source_url: url }));
+    await connect();
+    await scrollToEnd();
+
+    // Never both identifiers: the chunk tool given a `url` resolves through the
+    // URL branch of the loader, which builds a different metadata header and
+    // shifts every offset the viewer holds.
+    expect(calls()).toEqual([{ name: 'ris_dokument_abschnitt', arguments: { url, offset: 0 } }]);
+  });
+
+  it('prefers the structured payload over the text block when a host sends both', async () => {
+    await mount();
+    deliver({ ...structuredPayload(), text: 'Etwas ganz anderes.' });
+    await connect();
+
+    // Identical strings on the wire, so the choice shows only in what comes with
+    // them — here, the identifier that makes the sentinel possible.
+    expect(text()).toContain('§ 1295.');
+    expect(sentinelOffset()).toBe('0');
+  });
+
+  it('keeps the text on screen when the structured payload is unusable', async () => {
+    await mount();
+    deliver(payload({ structuredContent: { text: '', total_length: 0 } }));
+    await connect();
+
+    expect(text()).toContain('§ 1295.');
   });
 });
 
