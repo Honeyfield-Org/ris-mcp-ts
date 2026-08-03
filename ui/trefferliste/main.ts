@@ -170,17 +170,33 @@ function present(payload: ToolPayload): void {
 }
 
 /**
+ * Whether a payload the host delivered by itself holds no page to render.
+ *
+ * Reopening a conversation produces both shapes: ChatGPT replays the mounting
+ * result stripped of its data (`missing`), and where the bridge answers that
+ * from `window.openai.toolOutput` instead, the global regularly no longer holds
+ * this search either — it parses as no search result at all. A `toolresult`
+ * payload is deliberately not counted: a real server answer whose structured
+ * content the widget cannot read is an anomaly, and worth showing.
+ */
+function carriesNoResult(payload: ToolPayload): boolean {
+  if (payload.source === 'missing') return true;
+
+  return payload.source === 'host-global' && parseSearchResult(payload.structuredContent) === null;
+}
+
+/**
  * Take a tool result the host delivered by itself.
  *
  * Kept apart from a page the widget asked for, because only here can a result
- * arrive that the widget already knows better: on reopening a conversation
- * ChatGPT replays the mounting result stripped of its data, and complaining
- * about that underneath a list restored from this widget's own last render
- * would be noise about a problem the user does not have. Anything that carries
- * data — or reports a failure — is passed on unchanged.
+ * arrive that the widget already knows better: complaining about a replay that
+ * carries nothing — see {@link carriesNoResult} — underneath a list restored
+ * from this widget's own last render would be noise about a problem the user
+ * does not have. Anything that carries a page — or reports a failure — is
+ * passed on unchanged.
  */
 function presentFromHost(payload: ToolPayload): void {
-  if (restored && payload.source === 'missing' && !payload.isError) return;
+  if (restored && !payload.isError && carriesNoResult(payload)) return;
 
   present(payload);
 }
