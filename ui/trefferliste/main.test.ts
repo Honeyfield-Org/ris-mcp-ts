@@ -173,6 +173,19 @@ describe('reopening a conversation', () => {
     expect(noticeTitle()).toBeUndefined();
   });
 
+  it('keeps the restore alive after dropping such a replay', async () => {
+    hostHolding(LAW_RESULT);
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: { nothing: 'useful' }, source: 'host-global' }));
+    deliver(payload({ structuredContent: COURT_RESULT }));
+
+    // Dropping a replay must stay a decision about that one payload: a real
+    // result arriving afterwards still replaces the restored page.
+    expect(titles()).toEqual(['2Ob535/90', 'Ra 2025/09/0038']);
+  });
+
   it('lets a usable host global win over the stored page', async () => {
     hostHolding(LAW_RESULT);
 
@@ -181,6 +194,7 @@ describe('reopening a conversation', () => {
     deliver(payload({ structuredContent: COURT_RESULT, source: 'host-global' }));
 
     expect(titles()).toEqual(['2Ob535/90', 'Ra 2025/09/0038']);
+    expect(noticeTitle()).toBeUndefined();
   });
 
   it('lets fresh data win over the stored page', async () => {
