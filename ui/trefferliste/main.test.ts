@@ -124,6 +124,16 @@ describe('mount without a stored page', () => {
 
     expect(titles()).toHaveLength(2);
   });
+
+  it('says so when the host global holds something that is not a search result', async () => {
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: { nothing: 'useful' }, source: 'host-global' }));
+
+    // With nothing restored there is no better answer on screen to protect, so
+    // the notice is the honest one — the suppression is strictly for a restore.
+    expect(noticeTitle()).toBe(COPY.invalidPayloadTitle);
+  });
 });
 
 describe('reopening a conversation', () => {
@@ -148,6 +158,29 @@ describe('reopening a conversation', () => {
 
     expect(titles()).toHaveLength(2);
     expect(noticeTitle()).toBeUndefined();
+  });
+
+  it('stays quiet when the host global no longer holds this search', async () => {
+    hostHolding(LAW_RESULT);
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: { nothing: 'useful' }, source: 'host-global' }));
+
+    // ChatGPT answers the stripped replay out of its own global, which by then
+    // carries something unrelated. The restored list is the better answer.
+    expect(titles()).toHaveLength(2);
+    expect(noticeTitle()).toBeUndefined();
+  });
+
+  it('lets a usable host global win over the stored page', async () => {
+    hostHolding(LAW_RESULT);
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: COURT_RESULT, source: 'host-global' }));
+
+    expect(titles()).toEqual(['2Ob535/90', 'Ra 2025/09/0038']);
   });
 
   it('lets fresh data win over the stored page', async () => {
