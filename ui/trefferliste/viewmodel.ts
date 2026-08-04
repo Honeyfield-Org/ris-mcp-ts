@@ -96,6 +96,7 @@ export interface ResultViewModel {
   isEmpty: boolean;
   hasPrev: boolean;
   hasNext: boolean;
+  fassung: { value: string } | null;
   rows: DocumentRow[];
 }
 
@@ -363,6 +364,54 @@ export function nextQuery(query: SearchQueryEcho | undefined, delta: number): To
   return { name, arguments: { ...rest, [PAGINATION_KEY]: target } };
 }
 
+/** The two tools whose documents have dated legal states (`fassung_vom`). */
+const FASSUNG_TOOLS = new Set(['ris_bundesrecht', 'ris_landesrecht']);
+
+/**
+ * Whether the echoed search can carry a legal-state date at all.
+ *
+ * Only consolidated federal and state law have dated Fassungen — and not their
+ * English translations: `ris_bundesrecht` with `applikation: 'Erv'` speaks a
+ * different parameter vocabulary and the server drops `FassungVom` for it
+ * (`buildBundesrechtParams`). A date the results do not honour would be a lie
+ * in the header, so the control stays away rather than showing one.
+ */
+function hasFassung(query: SearchQueryEcho): boolean {
+  return FASSUNG_TOOLS.has(text(query.tool)) && text(query.applikation) !== 'Erv';
+}
+
+/**
+ * What the header's „Rechtslage am" control shows, or `null` where the concept
+ * does not apply — see {@link hasFassung}; without a query echo there is
+ * nothing to re-issue either.
+ */
+export function fassungControl(query: SearchQueryEcho | undefined): { value: string } | null {
+  if (!query || !hasFassung(query)) return null;
+
+  return { value: text(query.fassung_vom) };
+}
+
+/**
+ * Re-issue the echoed search for a different legal-state date.
+ *
+ * The page resets to 1 because the result set changes wholesale — page 4 of a
+ * different Rechtslage is not „the page the user was on". Clearing the date
+ * removes the argument entirely: the RIS default is the current version, and an
+ * echoed stale date must not survive the round trip.
+ */
+export function fassungQuery(
+  query: SearchQueryEcho | undefined,
+  fassungVom: string | null,
+): ToolCall | null {
+  if (!query || !hasFassung(query)) return null;
+
+  const { tool: _tool, fassung_vom: _fassungVom, ...rest } = query;
+  const args: Record<string, unknown> = { ...rest, [PAGINATION_KEY]: 1 };
+  if (fassungVom !== null) args.fassung_vom = fassungVom;
+
+  return { name: text(query.tool), arguments: args };
+}
+
 /** Map one page of search results onto the view model the DOM renders. */
 export function toViewModel(result: SearchResultPayload): ResultViewModel {
   const rows = result.documents.map(toRow);
@@ -380,6 +429,7 @@ export function toViewModel(result: SearchResultPayload): ResultViewModel {
     isEmpty: rows.length === 0,
     hasPrev: nextQuery(result.query, -1) !== null,
     hasNext: result.has_more && nextQuery(result.query, 1) !== null,
+    fassung: fassungControl(result.query),
     rows,
   };
 }

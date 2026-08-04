@@ -12,6 +12,7 @@ import { COPY, createNotice, createSkeleton, type NoticeKind } from '../shared/s
 import { createSnapshotStore } from '../shared/widget-state.js';
 
 import {
+  focusFassung,
   focusPagination,
   interpretPayload,
   renderResults,
@@ -19,11 +20,13 @@ import {
   type ResultHandlers,
 } from './view.js';
 import {
+  fassungQuery,
   fullTextPrompt,
   nextQuery,
   parseSearchResult,
   toViewModel,
   type SearchResultPayload,
+  type ToolCall,
 } from './viewmodel.js';
 
 /** This widget's own snapshot slot; the viewer keeps a separate one. */
@@ -122,30 +125,50 @@ async function requestFullText(dokumentnummer: string): Promise<void> {
 }
 
 /**
- * Fetch another page by re-issuing the search the server echoed back.
+ * Re-issue the echoed search and put whatever comes back on screen.
  *
- * A rejected `callTool` means the transport failed — typically an evicted
- * session — which is the one case where the list must survive the error.
+ * Shared by every reason the widget has to ask again — another page, another
+ * legal-state date — because they differ only in the call they build. A
+ * rejected `callTool` means the transport failed, typically an evicted session,
+ * which is the one case where the list must survive the error. `host` is passed
+ * in rather than read from `bridge`, so the caller's guard is what proves there
+ * is one.
  */
-async function goToPage(delta: -1 | 1): Promise<void> {
-  const call = nextQuery(current?.query, delta);
-  if (!call || !bridge || pending) return;
-
+async function runQuery(host: Bridge, call: ToolCall): Promise<void> {
   pending = true;
   clearStatus();
   view.replaceChildren(createSkeleton(current?.documents.length));
 
   try {
-    present(await bridge.callTool(call));
+    present(await host.callTool(call));
   } catch {
     renderCurrent();
     showStatus('error', 'pagination', COPY.sessionExpired);
   } finally {
     pending = false;
-    // Whether the page arrived or the old one was put back, the button the user
-    // pressed was replaced along with the rest of the list.
-    focusPagination(view, delta);
   }
+}
+
+/** Fetch another page of the search the server echoed back. */
+async function goToPage(delta: -1 | 1): Promise<void> {
+  const call = nextQuery(current?.query, delta);
+  if (!call || !bridge || pending) return;
+
+  await runQuery(bridge, call);
+  // Whether the page arrived or the old one was put back, the button the user
+  // pressed was replaced along with the rest of the list.
+  focusPagination(view, delta);
+}
+
+/** Show the same search for a different legal state, or for none at all. */
+async function changeFassung(value: string | null): Promise<void> {
+  const call = fassungQuery(current?.query, value);
+  if (!call || !bridge || pending) return;
+
+  await runQuery(bridge, call);
+  // Same reasoning as the pagination focus above: the field the user just left
+  // was replaced along with the header.
+  focusFassung(view);
 }
 
 const handlers: ResultHandlers = {
@@ -153,6 +176,7 @@ const handlers: ResultHandlers = {
   onPdf: (row) => void openExternal(row.pdfUrl),
   onFullText: (row) => void requestFullText(row.id),
   onPage: (delta) => void goToPage(delta),
+  onFassungVom: (value) => void changeFassung(value),
 };
 
 /**

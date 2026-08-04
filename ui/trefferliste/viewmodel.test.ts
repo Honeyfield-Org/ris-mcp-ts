@@ -12,6 +12,8 @@ import {
 } from '../__fixtures__/search-results.js';
 
 import {
+  fassungControl,
+  fassungQuery,
   fullTextPrompt,
   nextQuery,
   parseSearchResult,
@@ -130,6 +132,14 @@ describe('toViewModel — header', () => {
 
     expect(model.toolLabel).toBe('zukunft');
     expect(model.queryLabel).toBe('');
+  });
+
+  it('offers the Rechtslage control for a law search', () => {
+    expect(toViewModel(LAW_RESULT).fassung).toEqual({ value: '' });
+  });
+
+  it('offers no Rechtslage control for a Judikatur search', () => {
+    expect(toViewModel(COURT_RESULT).fassung).toBeNull();
   });
 
   it('renders a header without a query echo', () => {
@@ -331,6 +341,74 @@ describe('nextQuery', () => {
 
   it('refuses to page when the echo names no tool', () => {
     expect(nextQuery({ tool: '', seite: 1 }, 1)).toBeNull();
+  });
+});
+
+describe('fassungControl', () => {
+  it('offers the control for a Bundesrecht query without a date', () => {
+    expect(fassungControl(LAW_RESULT.query)).toEqual({ value: '' });
+  });
+
+  it('carries the echoed date', () => {
+    expect(
+      fassungControl({ ...LAW_RESULT.query, tool: 'ris_landesrecht', fassung_vom: '2020-01-01' }),
+    ).toEqual({
+      value: '2020-01-01',
+    });
+  });
+
+  it('stays away from other tools and from a missing echo', () => {
+    expect(fassungControl(COURT_RESULT.query)).toBeNull();
+    expect(fassungControl(undefined)).toBeNull();
+  });
+
+  it('stays away from the English translations, which have no dated Fassung', () => {
+    expect(
+      fassungControl({ ...LAW_RESULT.query, tool: 'ris_bundesrecht', applikation: 'Erv' }),
+    ).toBeNull();
+  });
+});
+
+describe('fassungQuery', () => {
+  it('re-issues the search with the date and resets the page', () => {
+    const call = fassungQuery(
+      { ...LAW_RESULT.query, tool: 'ris_bundesrecht', seite: 4 },
+      '2020-01-01',
+    );
+    expect(call).toEqual({
+      name: 'ris_bundesrecht',
+      arguments: {
+        applikation: 'BrKons',
+        suchworte: 'Schadenersatz',
+        abschnitt_typ: 'Paragraph',
+        limit: 20,
+        seite: 1,
+        fassung_vom: '2020-01-01',
+      },
+    });
+  });
+
+  it('drops the date entirely when cleared', () => {
+    const call = fassungQuery(
+      { ...LAW_RESULT.query, tool: 'ris_bundesrecht', fassung_vom: '2020-01-01' },
+      null,
+    );
+    expect(call?.arguments).not.toHaveProperty('fassung_vom');
+    expect(call?.arguments.seite).toBe(1);
+  });
+
+  it('refuses other tools and a missing echo', () => {
+    expect(fassungQuery(COURT_RESULT.query, '2020-01-01')).toBeNull();
+    expect(fassungQuery(undefined, '2020-01-01')).toBeNull();
+  });
+
+  it('refuses the English translations, whose results would ignore the date', () => {
+    expect(
+      fassungQuery(
+        { ...LAW_RESULT.query, tool: 'ris_bundesrecht', applikation: 'Erv' },
+        '2020-01-01',
+      ),
+    ).toBeNull();
   });
 });
 

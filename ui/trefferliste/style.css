@@ -32,6 +32,29 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * „Rechtslage am": a native date input, styled only where it would otherwise
+ * clash. Colours and the picker's own light/dark rendering come from the theme
+ * via `color-scheme` on :root — no custom picker, so the empty CSP stays true.
+ */
+.ris-fassung {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-subtle);
+}
+
+.ris-fassung-input {
+  padding: 3px 8px;
+  font-family: inherit;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg);
+  background: var(--ris-bg-raised);
+  border: 1px solid var(--ris-border-strong);
+  border-radius: var(--ris-radius-md);
+}
+
 .ris-hits {
   margin-left: auto;
   font-size: var(--ris-text-sm);

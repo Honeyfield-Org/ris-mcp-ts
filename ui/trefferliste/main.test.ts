@@ -13,6 +13,8 @@ import { COURT_RESULT, LAW_RESULT } from '../__fixtures__/search-results.js';
 import type { Bridge, BridgeOptions, ToolPayload } from '../shared/bridge.js';
 import { COPY } from '../shared/states.js';
 
+import type { SearchResultPayload } from './viewmodel.js';
+
 /** Captured from the mount so a test can play the host's part. */
 let deliver: BridgeOptions['onToolResult'];
 let handshake: Promise<Bridge>;
@@ -248,6 +250,141 @@ describe('reopening a conversation', () => {
     // A list whose buttons cannot reach a host would be worse than the notice.
     expect(noticeTitle()).toBe(COPY.connectFailedTitle);
     expect(titles()).toHaveLength(0);
+  });
+});
+
+describe('changing the Rechtslage', () => {
+  /**
+   * The Bundesrecht fixture as it comes back once a date has been picked.
+   *
+   * `tool` is named again rather than left to the spread: `query` is optional on
+   * the payload, so spreading it alone widens the echo into one without a tool
+   * name — and a nameless echo renders no control at all.
+   */
+  const DATED_LAW_RESULT: SearchResultPayload = {
+    ...LAW_RESULT,
+    query: { ...LAW_RESULT.query, tool: 'ris_bundesrecht', fassung_vom: '2020-01-01' },
+  };
+
+  /** The header's date field; only a Fassung-carrying search renders one. */
+  function dateInput(): HTMLInputElement {
+    const input = view().querySelector<HTMLInputElement>('.ris-fassung-input');
+    if (!input) throw new Error('no date input rendered');
+    return input;
+  }
+
+  /** Ask for the next page, the other way into the shared query path. */
+  function nextPage(): void {
+    const button = view().querySelector<HTMLButtonElement>('.ris-page-next');
+    if (!button) throw new Error('no next-page button rendered');
+    button.click();
+  }
+
+  /** Type a date (or clear it) and leave the field, on a given element. */
+  async function change(input: HTMLInputElement, value: string): Promise<void> {
+    input.value = value;
+    input.dispatchEvent(new Event('change'));
+    await settle();
+  }
+
+  /** Do what the user does on the field currently on screen. */
+  async function pick(value: string): Promise<void> {
+    await change(dateInput(), value);
+  }
+
+  it('re-issues the search with the picked date and page 1', async () => {
+    vi.mocked(bridge.callTool).mockResolvedValue(payload({ structuredContent: COURT_RESULT }));
+
+    await mount();
+    await connect();
+    deliver(payload());
+    await pick('2020-01-01');
+
+    expect(bridge.callTool).toHaveBeenCalledWith({
+      name: 'ris_bundesrecht',
+      arguments: expect.objectContaining({ fassung_vom: '2020-01-01', seite: 1 }),
+    });
+    expect(titles()).toEqual(['2Ob535/90', 'Ra 2025/09/0038']);
+  });
+
+  it('drops the date from the search when the field is cleared', async () => {
+    vi.mocked(bridge.callTool).mockResolvedValue(payload());
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: DATED_LAW_RESULT }));
+    await pick('');
+
+    const [call] = vi.mocked(bridge.callTool).mock.calls[0];
+    // Not `fassung_vom: ''`, which the server rejects as a date: clearing means
+    // the current version, and the echoed date must not survive the round trip.
+    expect(call.arguments).not.toHaveProperty('fassung_vom');
+    expect(call.arguments.seite).toBe(1);
+  });
+
+  it('keeps the list and complains when the re-issue fails', async () => {
+    vi.mocked(bridge.callTool).mockRejectedValue(new Error('weg'));
+
+    await mount();
+    await connect();
+    deliver(payload());
+    await pick('2020-01-01');
+
+    expect(titles()).toHaveLength(2);
+    expect(noticeTitle()).toBe(COPY.sessionExpired);
+  });
+
+  it('puts focus back on the date field afterwards', async () => {
+    vi.mocked(bridge.callTool).mockResolvedValue(payload());
+
+    await mount();
+    await connect();
+    deliver(payload());
+    const before = dateInput();
+    await pick('2020-01-01');
+
+    // The render replaced the header, so this is a different element than the
+    // one the user just used — without the restore, focus would sit on <body>.
+    expect(document.activeElement).toBe(dateInput());
+    expect(document.activeElement).not.toBe(before);
+  });
+
+  it('drops the change while a page request is still in flight', async () => {
+    let release: (result: ToolPayload) => void = () => undefined;
+    const inFlight = new Promise<ToolPayload>((resolve) => {
+      release = resolve;
+    });
+    vi.mocked(bridge.callTool).mockReturnValue(inFlight);
+
+    await mount();
+    await connect();
+    deliver(payload());
+
+    // Captured before the click, because the skeleton replaces the header for
+    // the duration of the call — a change can still arrive from the detached
+    // field, which is how a native date picker left open delivers one.
+    const input = dateInput();
+    nextPage();
+    await settle();
+    await change(input, '2020-01-01');
+
+    expect(bridge.callTool).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(bridge.callTool).mock.calls[0][0].arguments).toMatchObject({ seite: 2 });
+
+    // Let the page land so the module is not left waiting on a dead promise.
+    release(payload());
+    await settle();
+  });
+
+  it('puts focus back even when the re-issue failed', async () => {
+    vi.mocked(bridge.callTool).mockRejectedValue(new Error('weg'));
+
+    await mount();
+    await connect();
+    deliver(payload());
+    await pick('2020-01-01');
+
+    expect(document.activeElement).toBe(dateInput());
   });
 });
 
