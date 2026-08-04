@@ -22,6 +22,8 @@ export interface ResultHandlers {
   onPdf(row: DocumentRow): void;
   onFullText(row: DocumentRow): void;
   onPage(delta: -1 | 1): void;
+  /** A legal-state date was picked, or `null` when it was cleared. */
+  onFassungVom(value: string | null): void;
 }
 
 /** Either a result to render, or a notice explaining why there is none. */
@@ -81,11 +83,35 @@ export function interpretPayload(payload: ToolPayload, context: ResultContext): 
   return { kind: 'result', result };
 }
 
-function renderHeader(model: ResultViewModel): HTMLElement {
+/**
+ * The „Rechtslage am" control: which legal state the results are shown for.
+ *
+ * An empty input travels as `null`, not as `''`: the empty string would be
+ * re-issued as a real `fassung_vom` argument and fail the server's date
+ * validation, where `null` means what the user did — no date, current version.
+ */
+function renderFassung(control: { value: string }, handlers: ResultHandlers): HTMLElement {
+  const field = element('label', 'ris-fassung');
+  field.append(element('span', 'ris-fassung-label', 'Rechtslage am'));
+
+  const input = document.createElement('input');
+  input.type = 'date';
+  input.className = 'ris-fassung-input';
+  input.value = control.value;
+  input.addEventListener('change', () => {
+    handlers.onFassungVom(input.value === '' ? null : input.value);
+  });
+
+  field.append(input);
+  return field;
+}
+
+function renderHeader(model: ResultViewModel, handlers: ResultHandlers): HTMLElement {
   const header = element('header', 'ris-header');
 
   if (model.toolLabel) header.append(element('span', 'ris-tool-badge', model.toolLabel));
   if (model.queryLabel) header.append(element('span', 'ris-query', model.queryLabel));
+  if (model.fassung) header.append(renderFassung(model.fassung, handlers));
   header.append(element('span', 'ris-hits', model.hitsLabel));
 
   return header;
@@ -177,7 +203,7 @@ export function renderResults(
   model: ResultViewModel,
   handlers: ResultHandlers,
 ): void {
-  const header = renderHeader(model);
+  const header = renderHeader(model, handlers);
 
   if (model.isEmpty) {
     container.replaceChildren(header, createNotice('info', COPY.emptyTitle, COPY.emptyDetail));

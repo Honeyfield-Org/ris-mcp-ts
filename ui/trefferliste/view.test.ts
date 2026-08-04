@@ -7,8 +7,20 @@ import { focusPagination, interpretPayload, renderResults, type ResultHandlers }
 import { toViewModel } from './viewmodel.js';
 
 function handlers(): ResultHandlers {
-  return { onOpen: vi.fn(), onPdf: vi.fn(), onFullText: vi.fn(), onPage: vi.fn() };
+  return {
+    onOpen: vi.fn(),
+    onPdf: vi.fn(),
+    onFullText: vi.fn(),
+    onPage: vi.fn(),
+    onFassungVom: vi.fn(),
+  };
 }
+
+/** The Bundesrecht fixture with a legal-state date already picked. */
+const DATED_LAW_RESULT = {
+  ...LAW_RESULT,
+  query: { ...LAW_RESULT.query, tool: 'ris_bundesrecht', fassung_vom: '2020-01-01' },
+};
 
 function render(result = LAW_RESULT, actions = handlers()): [HTMLElement, ResultHandlers] {
   const container = document.createElement('div');
@@ -40,6 +52,37 @@ describe('renderResults — header', () => {
     expect(container.querySelector('.ris-tool-badge')).toBeNull();
     expect(container.querySelector('.ris-query')).toBeNull();
     expect(container.querySelector('.ris-hits')?.textContent).toBe('2.570 Treffer');
+  });
+
+  it('renders the Rechtslage-am control when the model offers one', () => {
+    const [container] = render(DATED_LAW_RESULT);
+    const input = container.querySelector<HTMLInputElement>('.ris-fassung-input');
+
+    expect(container.querySelector('.ris-fassung-label')?.textContent).toBe('Rechtslage am');
+    expect(input?.type).toBe('date');
+    expect(input?.value).toBe('2020-01-01');
+  });
+
+  it('leaves the header without the control otherwise', () => {
+    const [container] = render(COURT_RESULT);
+
+    expect(container.querySelector('.ris-fassung')).toBeNull();
+  });
+
+  it('reports a picked date and a cleared one', () => {
+    const [container, actions] = render(DATED_LAW_RESULT);
+    const input = container.querySelector<HTMLInputElement>('.ris-fassung-input');
+    if (!input) throw new Error('no date input rendered');
+
+    input.value = '2021-06-15';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(actions.onFassungVom).toHaveBeenCalledWith('2021-06-15');
+
+    input.value = '';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(actions.onFassungVom).toHaveBeenLastCalledWith(null);
   });
 });
 
