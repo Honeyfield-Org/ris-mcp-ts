@@ -15,3 +15,7 @@ package-lock.json
 
 dist-ui/
 src/generated/
+
+# Written by `pnpm run test:host` on every run, green or red.
+test-results/
+playwright-report/

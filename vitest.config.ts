@@ -3,11 +3,14 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     // ui/** belongs to vitest.ui.config.ts — it needs a DOM environment, which
-    // this project deliberately does not provide.
+    // this project deliberately does not provide. tests/** belongs to
+    // playwright.host.config.ts; its *.spec.ts files match vitest's default
+    // glob but only Playwright's runner can execute them.
     exclude: [
       "dist/**",
       "node_modules/**",
       "src/__tests__/integration/**",
+      "tests/**",
       "ui/**",
     ],
     coverage: {
