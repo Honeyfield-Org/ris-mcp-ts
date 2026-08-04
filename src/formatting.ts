@@ -8,6 +8,7 @@
 
 import * as cheerio from 'cheerio';
 
+import { JUDIKATUR_GERICHTSBARKEITEN } from './facets.js';
 import type { Document, SearchResult } from './types.js';
 
 // =============================================================================
@@ -19,28 +20,12 @@ export const CHARACTER_LIMIT = 25000;
 
 /**
  * All RIS Judikatur applikationen (court systems). Documents from these are
- * formatted as court citations rather than law citations. Includes the courts
- * dissolved in 2014 (Verg/Uvs/Ubas/Umse/Bks) whose stock is still searchable.
- * Verified against the RIS API v2.6 Judikatur court list.
+ * formatted as court citations rather than law citations. Derived from the
+ * shared vocabulary (#53), which is verified against the RIS API v2.6 court
+ * list and includes the courts dissolved in 2014 (Verg/Uvs/Ubas/Umse/Bks)
+ * whose stock is still searchable.
  */
-const JUDIKATUR_APPLIKATIONEN = new Set([
-  'Justiz',
-  'Vfgh',
-  'Vwgh',
-  'Bvwg',
-  'Lvwg',
-  'Dsk',
-  'Gbk',
-  'Pvak',
-  'Dok',
-  'AsylGH',
-  'Normenliste',
-  'Verg',
-  'Uvs',
-  'Ubas',
-  'Umse',
-  'Bks',
-]);
+const JUDIKATUR_APPLIKATIONEN = new Set<string>(JUDIKATUR_GERICHTSBARKEITEN);
 
 // =============================================================================
 // Date Formatting

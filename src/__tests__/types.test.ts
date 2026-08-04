@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, it, expect } from 'vitest';
 
 import {
@@ -116,6 +118,16 @@ describe('Judikatur schemas built from the shared facet vocabulary', () => {
 
   it('should build JudikaturRechtsgebietSchema from JUDIKATUR_RECHTSGEBIETE', () => {
     expect(JudikaturRechtsgebietSchema.options).toEqual([...JUDIKATUR_RECHTSGEBIETE]);
+  });
+
+  // facets.ts is imported across the tsconfig boundary and travels into every
+  // widget bundle, so whatever it imports travels too — a stray `import { z }`
+  // would ship zod to the browser. Being dependency-free is the property that
+  // lets both sides share the file at all, so it is asserted, not just stated.
+  it('should keep src/facets.ts dependency-free', () => {
+    const source = readFileSync(new URL('../facets.ts', import.meta.url), 'utf8');
+
+    expect(source).not.toMatch(/^import\s/m);
   });
 });
 

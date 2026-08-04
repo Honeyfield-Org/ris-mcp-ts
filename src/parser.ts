@@ -5,6 +5,7 @@
  * structured Document and SearchResult models.
  */
 
+import { JUDIKATUR_GERICHTSBARKEITEN } from './facets.js';
 import { formatCitation } from './formatting.js';
 import type {
   Citation,
@@ -49,32 +50,18 @@ export function extractText(elem: unknown): string | null {
 }
 
 /**
- * Judikatur metadata keys that carry a court-specific head-note block. The
- * remaining keys (Geschaeftszahl, Entscheidungsdatum) are not courts.
+ * Judikatur metadata keys that carry a court-specific head-note block: the
+ * courts, and nothing else — the remaining keys (Geschaeftszahl,
+ * Entscheidungsdatum) are not courts. Derived from the shared vocabulary so a
+ * new court reaches the parser with the schemas (#53); only membership is read,
+ * never the order.
  */
-const JUDIKATUR_COURT_KEYS = [
-  'Justiz',
-  'Vfgh',
-  'Vwgh',
-  'Bvwg',
-  'Lvwg',
-  'Dsk',
-  'Gbk',
-  'Pvak',
-  'Dok',
-  'AsylGH',
-  'Normenliste',
-  'Verg',
-  'Uvs',
-  'Ubas',
-  'Umse',
-  'Bks',
-] as const;
+type JudikaturCourtKey = (typeof JUDIKATUR_GERICHTSBARKEITEN)[number];
 
-type JudikaturCourtKey = (typeof JUDIKATUR_COURT_KEYS)[number];
+const JUDIKATUR_COURT_KEYS = new Set<string>(JUDIKATUR_GERICHTSBARKEITEN);
 
 function isCourtKey(key: string): key is JudikaturCourtKey {
-  return (JUDIKATUR_COURT_KEYS as readonly string[]).includes(key);
+  return JUDIKATUR_COURT_KEYS.has(key);
 }
 
 /**
