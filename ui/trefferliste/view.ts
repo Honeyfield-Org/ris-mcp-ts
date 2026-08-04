@@ -125,6 +125,11 @@ function renderFassung(control: { value: string }, handlers: ResultHandlers): HT
   // clear. That is self-consistent — the field is empty and the results match
   // what it says — and it is the same thing the user gets by clearing on
   // purpose.
+  //
+  // A re-render does not cancel a pending report either — the timer fires on
+  // the by-then detached input. Harmless: `changeFassung` drops it while a
+  // re-issue is in flight, and otherwise applies it to the query echo on
+  // screen, which is the search the replaced header was showing too.
   let timer: ReturnType<typeof setTimeout> | undefined;
   input.addEventListener('change', () => {
     clearTimeout(timer);
