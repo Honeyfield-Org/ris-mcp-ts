@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { COURT_RESULT, EMPTY_RESULT, LAW_RESULT } from '../__fixtures__/search-results.js';
 import { COPY } from '../shared/states.js';
 
 import {
+  FASSUNG_DEBOUNCE_MS,
   focusFacet,
   focusFassung,
   focusPagination,
@@ -134,21 +135,104 @@ describe('renderResults — header', () => {
     expect(fassung).toBeGreaterThanOrEqual(0);
     expect(fassung).toBeLessThan(hits);
   });
+});
+
+/**
+ * What the Rechtslage-am field reports, and when.
+ *
+ * Fake timers throughout: the control debounces, so nothing is reported until
+ * {@link FASSUNG_DEBOUNCE_MS} has passed without a further change.
+ */
+describe('renderResults — Rechtslage-am control', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function dateInput(container: HTMLElement): HTMLInputElement {
+    const input = container.querySelector<HTMLInputElement>('.ris-fassung-input');
+    if (!input) throw new Error('no date input rendered');
+    return input;
+  }
+
+  /** One committed edit as the browser reports it: new value, then `change`. */
+  function commit(input: HTMLInputElement, value: string): void {
+    input.value = value;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 
   it('reports a picked date and a cleared one', () => {
     const [container, actions] = render(DATED_LAW_RESULT);
-    const input = container.querySelector<HTMLInputElement>('.ris-fassung-input');
-    if (!input) throw new Error('no date input rendered');
+    const input = dateInput(container);
 
-    input.value = '2021-06-15';
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    commit(input, '2021-06-15');
+    vi.advanceTimersByTime(FASSUNG_DEBOUNCE_MS);
 
     expect(actions.onFassungVom).toHaveBeenCalledWith('2021-06-15');
 
-    input.value = '';
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    commit(input, '');
+    vi.advanceTimersByTime(FASSUNG_DEBOUNCE_MS);
 
+    // An emptied field is `null`, never `''`: the empty string would be
+    // re-issued as a real `fassung_vom` and fail the server's date validation.
     expect(actions.onFassungVom).toHaveBeenLastCalledWith(null);
+    expect(actions.onFassungVom).toHaveBeenCalledTimes(2);
+  });
+
+  it('coalesces the segment commits of a typed date into one report', () => {
+    const [container, actions] = render(DATED_LAW_RESULT);
+    const input = dateInput(container);
+
+    // What Chrome delivers while a date is typed by hand: one `change` per
+    // committed segment, the middle one on a field that is momentarily blank.
+    commit(input, '2020-01-01');
+    commit(input, '');
+    commit(input, '2021-06-15');
+    vi.advanceTimersByTime(FASSUNG_DEBOUNCE_MS);
+
+    expect(actions.onFassungVom).toHaveBeenCalledTimes(1);
+    expect(actions.onFassungVom).toHaveBeenCalledWith('2021-06-15');
+  });
+
+  it('reports a single clear once, and only once', () => {
+    const [container, actions] = render(DATED_LAW_RESULT);
+
+    commit(dateInput(container), '');
+    vi.advanceTimersByTime(FASSUNG_DEBOUNCE_MS);
+
+    expect(actions.onFassungVom).toHaveBeenCalledTimes(1);
+    expect(actions.onFassungVom).toHaveBeenCalledWith(null);
+  });
+
+  it('reports nothing before the delay has elapsed', () => {
+    const [container, actions] = render(DATED_LAW_RESULT);
+
+    commit(dateInput(container), '2021-06-15');
+    vi.advanceTimersByTime(FASSUNG_DEBOUNCE_MS - 1);
+
+    expect(actions.onFassungVom).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+
+    expect(actions.onFassungVom).toHaveBeenCalledWith('2021-06-15');
+  });
+
+  it('reports the value the field holds when the timer fires', () => {
+    const [container, actions] = render(DATED_LAW_RESULT);
+    const input = dateInput(container);
+
+    commit(input, '');
+    // No event for this one: it stands for the state the field ends up in
+    // regardless of which commit was the last one to be announced. Reading the
+    // value at event time would report the blank the user has left behind.
+    input.value = '2021-06-15';
+    vi.advanceTimersByTime(FASSUNG_DEBOUNCE_MS);
+
+    expect(actions.onFassungVom).toHaveBeenCalledTimes(1);
+    expect(actions.onFassungVom).toHaveBeenCalledWith('2021-06-15');
   });
 });
 

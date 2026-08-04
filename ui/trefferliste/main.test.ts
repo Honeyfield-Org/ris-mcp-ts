@@ -13,6 +13,7 @@ import { COURT_RESULT, LAW_RESULT, VWGH_DOCUMENT } from '../__fixtures__/search-
 import type { Bridge, BridgeOptions, ToolPayload } from '../shared/bridge.js';
 import { COPY } from '../shared/states.js';
 
+import { FASSUNG_DEBOUNCE_MS } from './view.js';
 import type { SearchResultPayload } from './viewmodel.js';
 
 /** Captured from the mount so a test can play the host's part. */
@@ -254,6 +255,17 @@ describe('reopening a conversation', () => {
 });
 
 describe('changing the Rechtslage', () => {
+  // The date field debounces its change, so every test here has to move time
+  // on. Scoped to this block rather than the file: no other control defers
+  // anything, and a faked clock is not worth handing to tests that ignore it.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   /**
    * The Bundesrecht fixture as it comes back once a date has been picked.
    *
@@ -284,6 +296,10 @@ describe('changing the Rechtslage', () => {
   async function change(input: HTMLInputElement, value: string): Promise<void> {
     input.value = value;
     input.dispatchEvent(new Event('change'));
+    // The control debounces, so the change is not reported until the delay has
+    // run — and the timer has to fire before the microtasks its handler queues,
+    // which is why the advance comes first and `settle` second.
+    vi.advanceTimersByTime(FASSUNG_DEBOUNCE_MS);
     await settle();
   }
 
@@ -366,6 +382,11 @@ describe('changing the Rechtslage', () => {
     const input = dateInput();
     nextPage();
     await settle();
+    // `change` runs the debounce out, so the guard is met by a report that
+    // really was made: the page request is still in flight when the timer
+    // fires, and the deferred date has to be dropped exactly as an immediate
+    // one was. Without the advance this test would pass on a change that never
+    // reached `changeFassung` at all.
     await change(input, '2020-01-01');
 
     expect(bridge.callTool).toHaveBeenCalledTimes(1);
