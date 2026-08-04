@@ -9,5 +9,8 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: 'tests/host-sim',
   timeout: 30_000,
+  // Unconditional, not `!!process.env.CI`: this suite has no CI gate behind it,
+  // so a committed `test.only` would shrink the run to one spec and still exit 0.
+  forbidOnly: true,
   use: { browserName: 'chromium' },
 });

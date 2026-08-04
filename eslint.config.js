@@ -45,7 +45,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.test.ts", "**/__tests__/**/*.ts"],
+    files: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**/*.ts"],
     rules: {
       "@typescript-eslint/explicit-function-return-type": "off",
     },

@@ -16,6 +16,7 @@ package-lock.json
 dist-ui/
 src/generated/
 
-# Written by `pnpm run test:host` on every run, green or red.
+# test-results/ is written by `pnpm run test:host` on every run, green or red.
+# playwright-report/ only appears if an html reporter is ever configured.
 test-results/
 playwright-report/
