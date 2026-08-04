@@ -20,6 +20,17 @@ export type HostSimCallAnswer = { delayMs?: number } & (
   | { rpcError: string; result?: never }
 );
 
+/**
+ * One request the widget sent, as `window.__hostSim.calls` hands it back.
+ *
+ * `params` stays unknown: its shape is per-method and the recorder never reads
+ * it — the spec that asks for a specific method narrows it itself.
+ */
+export interface HostSimCall {
+  method: string;
+  params: unknown;
+}
+
 export interface HostSimConfig {
   widgetHtml: string;
   /** Delivered as `ui/notifications/tool-result` right after the handshake. */
@@ -30,7 +41,7 @@ export interface HostSimConfig {
 }
 
 export function installHostSim(config: HostSimConfig): void {
-  const calls: { method: string; params: unknown }[] = [];
+  const calls: HostSimCall[] = [];
   const answers = [...(config.callAnswers ?? [])];
 
   const iframe = document.createElement('iframe');
