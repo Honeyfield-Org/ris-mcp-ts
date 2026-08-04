@@ -243,7 +243,12 @@ Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(serve
 Since v1.4.0 the 11 search tools render their results as an interactive result
 list in hosts that support the MCP Apps extension
 (`@modelcontextprotocol/ext-apps`); since v1.5.0 `ris_dokument` renders a
-document viewer. The mechanism, in the order it happens:
+document viewer. Since v1.6.0 the result list's header carries a native
+„Rechtslage am“ date input for `ris_bundesrecht`/`ris_landesrecht` results (not
+for `applikation: 'Erv'`, whose English translations have no dated Fassung),
+re-issuing the echoed query with a changed `fassung_vom` and a page reset — the
+same normal-tool-call path the pagination uses. The mechanism, in the order it
+happens:
 
 1. `registerWidgetResources()` (`src/widgets.ts`) registers two resources,
    `ui://ris-mcp/trefferliste` and `ui://ris-mcp/viewer`, whose content is the
