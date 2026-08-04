@@ -42,25 +42,25 @@ not have one: `vitest.config.ts` (node, excludes `ui/**`) and
 `vitest.ui.config.ts` (jsdom, only `ui/**/*.test.ts`). `pnpm run check` runs
 both.
 
-The host-sim suite (`tests/host-sim/`, 7 specs in 2 files) is the third suite and
-the only one outside vitest: Playwright mounts the *built* bundles in real
-iframes and drives them with real clicks,
-against a hand-rolled stub of the host side of the ext-apps postMessage protocol
-(`host-stub.ts`, injected via `page.evaluate`). It is not in `check`, so its
-files reach the static gates by other means — `tests/tsconfig.json` is a third
-`tsc` pass in `typecheck`, and eslint/prettier target `tests/` and the Playwright
-config. Pass Playwright flags through
-`pnpm exec playwright test --config playwright.host.config.ts <flags>`;
+The host-sim suite (`tests/host-sim/`, 7 specs in 2 files) is the third suite
+and the only one outside vitest: Playwright mounts the *built* bundles in real
+iframes and drives them with real clicks, against a hand-rolled stub of the
+host side of the ext-apps postMessage protocol (`host-stub.ts`, injected via
+`page.evaluate`). It is not in `check`, so its files reach the static gates by
+other means — `tests/tsconfig.json` is a third `tsc` pass in `typecheck`, and
+eslint/prettier target `tests/` and the Playwright config. Playwright flags go
+through `pnpm exec playwright test --config playwright.host.config.ts <flags>`;
 `pnpm run test:host -- <flags>` swallows them silently.
 
 Two harness facts a new spec needs. Every scenario that triggers a widget call
 needs a `callAnswers` entry — the stub's default answer is an rpcError, which
 renders the same „Verbindung abgelaufen“ notice as a real transport failure, so
-a forgotten entry lets a sloppy spec pass. And the viewer *always* issues one
-`ris_dokument_abschnitt` call at offset 0 on mount, because its mount run is
-provisional by design (see [The viewer's first render](#the-viewers-first-render));
-a viewer scenario therefore needs at least one scripted section answer even when
-it only means to measure the mount.
+a forgotten entry lets a sloppy spec pass. And the viewer always issues one
+`ris_dokument_abschnitt` call at offset 0 on mount for a document it can name
+(`dokumentnummer` or `url`), because its mount run is provisional by design
+(see [The viewer's first render](#the-viewers-first-render)); a viewer scenario
+therefore needs at least one scripted section answer even when it only means to
+measure the mount.
 
 ### Manual Testing with MCP Inspector
 
@@ -162,6 +162,7 @@ tests/host-sim/        # Playwright host simulation: mounts the built bundles in
 └── viewer.spec.ts     # Mount + section adoption, slow section call
 
 vite.ui.config.ts      # Widget build: one widget per pass, named by RIS_UI_WIDGET
+playwright.host.config.ts # Host-sim suite: testDir tests/host-sim, chromium
 scripts/gen-ui.mjs     # Drives the builds, then writes src/generated/<widget>-html.ts
 ```
 
