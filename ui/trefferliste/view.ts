@@ -237,3 +237,15 @@ export function focusPagination(container: HTMLElement, delta: -1 | 1): void {
 
   container.querySelector<HTMLButtonElement>('.ris-page:not(:disabled)')?.focus();
 }
+
+/**
+ * Put keyboard focus back after a change of the legal-state date.
+ *
+ * Same reason as {@link focusPagination}: the re-issued search re-renders the
+ * header, so the field the user just left is gone and focus would fall to
+ * `<body>`. Silent where the new page carries no control — a search whose
+ * results no longer offer a Fassung has nothing to hand the focus to.
+ */
+export function focusFassung(container: HTMLElement): void {
+  container.querySelector<HTMLInputElement>('.ris-fassung-input')?.focus();
+}

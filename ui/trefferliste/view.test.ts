@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COURT_RESULT, EMPTY_RESULT, LAW_RESULT } from '../__fixtures__/search-results.js';
 import { COPY } from '../shared/states.js';
 
-import { focusPagination, interpretPayload, renderResults, type ResultHandlers } from './view.js';
+import {
+  focusFassung,
+  focusPagination,
+  interpretPayload,
+  renderResults,
+  type ResultHandlers,
+} from './view.js';
 import { toViewModel } from './viewmodel.js';
 
 function handlers(): ResultHandlers {
@@ -67,6 +73,18 @@ describe('renderResults — header', () => {
     const [container] = render(COURT_RESULT);
 
     expect(container.querySelector('.ris-fassung')).toBeNull();
+  });
+
+  it('places the control before the hit count', () => {
+    const [container] = render(DATED_LAW_RESULT);
+    const parts = [...(container.querySelector('.ris-header')?.children ?? [])];
+    const fassung = parts.findIndex((node) => node.classList.contains('ris-fassung'));
+    const hits = parts.findIndex((node) => node.classList.contains('ris-hits'));
+
+    // Both facts matter: the control belongs to the header rather than sitting
+    // above it, and the hit count keeps the last slot it is right-aligned into.
+    expect(fassung).toBeGreaterThanOrEqual(0);
+    expect(fassung).toBeLessThan(hits);
   });
 
   it('reports a picked date and a cleared one', () => {
@@ -247,6 +265,14 @@ describe('renderResults — empty result', () => {
     expect(container.querySelector('.ris-footer')).toBeNull();
     expect(container.querySelector('.ris-notice-title')?.textContent).toBe(COPY.emptyTitle);
   });
+
+  it('still offers the Rechtslage-am control', () => {
+    const [container] = render(EMPTY_RESULT);
+
+    // With no rows and no pagination, the date is the only thing left to act on
+    // — dropping it here would leave the user with a dead end.
+    expect(container.querySelector('.ris-fassung-input')).not.toBeNull();
+  });
 });
 
 describe('renderResults — repeated renders', () => {
@@ -395,5 +421,17 @@ describe('focusPagination', () => {
     focusPagination(container, 1);
 
     expect(document.activeElement).toBe(before);
+  });
+});
+
+describe('focusFassung', () => {
+  it('returns focus to the date field of the re-rendered header', () => {
+    const container = document.createElement('div');
+    document.body.replaceChildren(container);
+    renderResults(container, toViewModel(DATED_LAW_RESULT), handlers());
+
+    focusFassung(container);
+
+    expect(document.activeElement).toBe(container.querySelector('.ris-fassung-input'));
   });
 });
