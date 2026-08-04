@@ -464,6 +464,15 @@ const FACET_TOOL = 'ris_judikatur';
  */
 const JUSTIZ_ONLY_ARGS = ['gericht', 'rechtsgebiet', 'fachgebiet'] as const;
 
+/**
+ * The jurisdiction {@link JUSTIZ_ONLY_ARGS} belong to.
+ *
+ * Named because two places encode one rule: the Rechtsgebiet control exists
+ * exactly where its argument survives a change of jurisdiction. Splitting them
+ * would offer a control whose value the next re-issue throws away.
+ */
+const JUSTIZ_ONLY_GERICHTSBARKEIT = 'Justiz';
+
 /** German names for the jurisdictions — see {@link gerichtsbarkeitLabel}. */
 const GERICHTSBARKEIT_LABELS: Record<string, string> = {
   Justiz: 'Justiz (OGH/OLG/LG/BG)',
@@ -552,7 +561,7 @@ export function facetControls(query: SearchQueryEcho | undefined): FacetControls
     ),
     dokumenttyp: facetSelect(JUDIKATUR_DOKUMENTTYPEN, text(query.dokumenttyp), dokumenttypLabel),
     rechtsgebiet:
-      gerichtsbarkeit === 'Justiz'
+      gerichtsbarkeit === JUSTIZ_ONLY_GERICHTSBARKEIT
         ? facetSelect(JUDIKATUR_RECHTSGEBIETE, text(query.rechtsgebiet), rechtsgebietLabel)
         : null,
     gericht: text(query.gericht) || null,
@@ -576,6 +585,18 @@ function facetArgs(query: SearchQueryEcho, drop: readonly string[]): Record<stri
   return args;
 }
 
+/**
+ * Compile-time fence for the dispatch below: a {@link FacetChange} variant added
+ * without its own branch makes this call fail to typecheck.
+ *
+ * Without it the last branch would be reached by elimination, and a new variant
+ * — `fachgebiet` is the obvious candidate, it is already in
+ * {@link JUSTIZ_ONLY_ARGS} — would silently remove `gericht` instead.
+ */
+function assertNever(value: never): never {
+  throw new Error(`unhandled facet change: ${JSON.stringify(value)}`);
+}
+
 /** Re-issue the echoed Judikatur search with one facet changed. */
 export function facetQuery(
   query: SearchQueryEcho | undefined,
@@ -589,7 +610,8 @@ export function facetQuery(
   });
 
   if ('gerichtsbarkeit' in change) {
-    const args = facetArgs(query, change.gerichtsbarkeit === 'Justiz' ? [] : JUSTIZ_ONLY_ARGS);
+    const staysInJustiz = change.gerichtsbarkeit === JUSTIZ_ONLY_GERICHTSBARKEIT;
+    const args = facetArgs(query, staysInJustiz ? [] : JUSTIZ_ONLY_ARGS);
     args.gerichtsbarkeit = change.gerichtsbarkeit;
     return call(args);
   }
@@ -606,7 +628,9 @@ export function facetQuery(
     if (change.rechtsgebiet !== null) args.rechtsgebiet = change.rechtsgebiet;
     return call(args);
   }
-  return call(facetArgs(query, ['gericht']));
+  if ('gericht' in change) return call(facetArgs(query, ['gericht']));
+
+  return assertNever(change);
 }
 
 /** Map one page of search results onto the view model the DOM renders. */
