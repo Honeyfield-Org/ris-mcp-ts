@@ -89,6 +89,19 @@ export function interpretPayload(payload: ToolPayload, context: ResultContext): 
 }
 
 /**
+ * How long the „Rechtslage am" control waits before it reports a change.
+ *
+ * Measured live in both hosts (#88): Chrome commits an `input[type=date]`
+ * segment by segment and fires a `change` for every committed segment, so a
+ * date typed by hand reported several dates instead of one — including the
+ * empty string a half-typed field carries, which means „no date" and re-issued
+ * the search with the filter dropped. 700ms is longer than the gap between two
+ * typed segments and short enough that a date picked from the calendar still
+ * answers promptly.
+ */
+export const FASSUNG_DEBOUNCE_MS = 700;
+
+/**
  * The „Rechtslage am" control: which legal state the results are shown for.
  *
  * An empty input travels as `null`, not as `''`: the empty string would be
@@ -103,8 +116,26 @@ function renderFassung(control: { value: string }, handlers: ResultHandlers): HT
   input.type = 'date';
   input.className = 'ris-fassung-input';
   input.value = control.value;
+
+  // One search per settled date, not one per committed segment — see
+  // {@link FASSUNG_DEBOUNCE_MS}. The value is read when the timer fires rather
+  // than when the change arrived, so the blank a half-typed field carries never
+  // travels once a later segment has completed the date. Residual: pausing
+  // longer than the delay on a field the user has emptied does report the
+  // clear. That is self-consistent — the field is empty and the results match
+  // what it says — and it is the same thing the user gets by clearing on
+  // purpose.
+  //
+  // A re-render does not cancel a pending report either — the timer fires on
+  // the by-then detached input. Harmless: `changeFassung` drops it while a
+  // re-issue is in flight, and otherwise applies it to the query echo on
+  // screen, which is the search the replaced header was showing too.
+  let timer: ReturnType<typeof setTimeout> | undefined;
   input.addEventListener('change', () => {
-    handlers.onFassungVom(input.value === '' ? null : input.value);
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      handlers.onFassungVom(input.value === '' ? null : input.value);
+    }, FASSUNG_DEBOUNCE_MS);
   });
 
   field.append(input);
