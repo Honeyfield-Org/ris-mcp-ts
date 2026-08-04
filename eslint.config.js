@@ -45,9 +45,21 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.test.ts", "**/__tests__/**/*.ts"],
+    files: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**/*.ts"],
     rules: {
       "@typescript-eslint/explicit-function-return-type": "off",
+    },
+  },
+  {
+    // Files under tests/ find tests/tsconfig.json by themselves via
+    // `project: true`; this root-level config file is in that same project but
+    // its nearest tsconfig.json is the root one, which covers only src/**.
+    files: ["playwright.host.config.ts"],
+    languageOptions: {
+      parserOptions: {
+        project: "./tests/tsconfig.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
   {
