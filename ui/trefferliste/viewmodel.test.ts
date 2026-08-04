@@ -361,6 +361,12 @@ describe('fassungControl', () => {
     expect(fassungControl(COURT_RESULT.query)).toBeNull();
     expect(fassungControl(undefined)).toBeNull();
   });
+
+  it('stays away from the English translations, which have no dated Fassung', () => {
+    expect(
+      fassungControl({ ...LAW_RESULT.query, tool: 'ris_bundesrecht', applikation: 'Erv' }),
+    ).toBeNull();
+  });
 });
 
 describe('fassungQuery', () => {
@@ -394,6 +400,15 @@ describe('fassungQuery', () => {
   it('refuses other tools and a missing echo', () => {
     expect(fassungQuery(COURT_RESULT.query, '2020-01-01')).toBeNull();
     expect(fassungQuery(undefined, '2020-01-01')).toBeNull();
+  });
+
+  it('refuses the English translations, whose results would ignore the date', () => {
+    expect(
+      fassungQuery(
+        { ...LAW_RESULT.query, tool: 'ris_bundesrecht', applikation: 'Erv' },
+        '2020-01-01',
+      ),
+    ).toBeNull();
   });
 });
 

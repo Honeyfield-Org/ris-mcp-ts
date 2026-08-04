@@ -368,12 +368,25 @@ export function nextQuery(query: SearchQueryEcho | undefined, delta: number): To
 const FASSUNG_TOOLS = new Set(['ris_bundesrecht', 'ris_landesrecht']);
 
 /**
+ * Whether the echoed search can carry a legal-state date at all.
+ *
+ * Only consolidated federal and state law have dated Fassungen — and not their
+ * English translations: `ris_bundesrecht` with `applikation: 'Erv'` speaks a
+ * different parameter vocabulary and the server drops `FassungVom` for it
+ * (`buildBundesrechtParams`). A date the results do not honour would be a lie
+ * in the header, so the control stays away rather than showing one.
+ */
+function hasFassung(query: SearchQueryEcho): boolean {
+  return FASSUNG_TOOLS.has(text(query.tool)) && text(query.applikation) !== 'Erv';
+}
+
+/**
  * What the header's „Rechtslage am" control shows, or `null` where the concept
- * does not apply: only consolidated federal and state law carry a dated legal
- * state, and without a query echo there is nothing to re-issue.
+ * does not apply — see {@link hasFassung}; without a query echo there is
+ * nothing to re-issue either.
  */
 export function fassungControl(query: SearchQueryEcho | undefined): { value: string } | null {
-  if (!query || !FASSUNG_TOOLS.has(text(query.tool))) return null;
+  if (!query || !hasFassung(query)) return null;
 
   return { value: text(query.fassung_vom) };
 }
@@ -390,16 +403,13 @@ export function fassungQuery(
   query: SearchQueryEcho | undefined,
   fassungVom: string | null,
 ): ToolCall | null {
-  if (!query) return null;
-
-  const name = text(query.tool);
-  if (!FASSUNG_TOOLS.has(name)) return null;
+  if (!query || !hasFassung(query)) return null;
 
   const { tool: _tool, fassung_vom: _fassungVom, ...rest } = query;
   const args: Record<string, unknown> = { ...rest, [PAGINATION_KEY]: 1 };
   if (fassungVom !== null) args.fassung_vom = fassungVom;
 
-  return { name, arguments: args };
+  return { name: text(query.tool), arguments: args };
 }
 
 /** Map one page of search results onto the view model the DOM renders. */
