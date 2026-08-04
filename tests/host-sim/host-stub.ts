@@ -8,11 +8,17 @@
  * Protocol reference: node_modules/@modelcontextprotocol/ext-apps/dist/src/app.js
  */
 
-export interface HostSimCallAnswer {
-  delayMs?: number;
-  rpcError?: string;
-  result?: unknown;
-}
+/**
+ * One scripted answer to a `tools/call`, carrying either a result or an error.
+ *
+ * The union is load-bearing: an answer with neither field would send
+ * `result: undefined`, which fails the SDK's `JSONRPCMessageSchema` parse and
+ * so reaches the widget as an unexplained 45s timeout rather than as a reply.
+ */
+export type HostSimCallAnswer = { delayMs?: number } & (
+  | { result: unknown; rpcError?: never }
+  | { rpcError: string; result?: never }
+);
 
 export interface HostSimConfig {
   widgetHtml: string;
@@ -40,11 +46,13 @@ export function installHostSim(config: HostSimConfig): void {
 
   window.addEventListener('message', (event) => {
     if (event.source !== iframe.contentWindow) return;
+    // `params` stays unknown on the envelope: its shape is per-method, and the
+    // recorder hands it to the spec unread.
     const msg = event.data as {
       jsonrpc?: string;
       id?: unknown;
       method?: string;
-      params?: { name?: string; arguments?: unknown };
+      params?: unknown;
     };
     if (msg.jsonrpc !== '2.0' || typeof msg.method !== 'string') return;
     if (msg.method !== 'ui/notifications/size-changed') {
@@ -58,7 +66,10 @@ export function installHostSim(config: HostSimConfig): void {
         result: {
           protocolVersion: '2026-01-26',
           hostInfo: { name: 'host-sim', version: '0.0.0' },
-          hostCapabilities: { openLinks: {}, serverTools: {} },
+          // `message` is advertised because the stub answers `ui/message`; a
+          // host that acks a method it never claimed is not a host worth
+          // testing against.
+          hostCapabilities: { openLinks: {}, serverTools: {}, message: {} },
           hostContext: config.hostContext ?? { theme: 'light' },
         },
       });
@@ -99,6 +110,18 @@ export function installHostSim(config: HostSimConfig): void {
     if (msg.method === 'ui/open-link' || msg.method === 'ui/message') {
       send({ jsonrpc: '2.0', id: msg.id, result: {} });
       return;
+    }
+
+    // A request nobody handled must fail loudly and by name. Staying silent
+    // leaves the widget's promise pending until its own 45s deadline, which
+    // surfaces as a timeout that says nothing about which method was missing.
+    // Notifications carry no id and get no reply, per JSON-RPC.
+    if (msg.id !== undefined) {
+      send({
+        jsonrpc: '2.0',
+        id: msg.id,
+        error: { code: -32601, message: `host-sim: no handler for ${msg.method}` },
+      });
     }
   });
 

@@ -30,12 +30,12 @@
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "pretypecheck": "pnpm run gen:ui",
-    "typecheck": "tsc --noEmit && tsc -p ui/tsconfig.json --noEmit",
-    "lint": "eslint src ui",
-    "lint:fix": "eslint src ui --fix",
+    "typecheck": "tsc --noEmit && tsc -p ui/tsconfig.json --noEmit && tsc -p tests/tsconfig.json --noEmit",
+    "lint": "eslint src ui tests playwright.host.config.ts",
+    "lint:fix": "eslint src ui tests playwright.host.config.ts --fix",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run test && pnpm run test:ui",
-    "format": "prettier --write src/ ui/ scripts/ vite.ui.config.ts vitest.ui.config.ts",
-    "format:check": "prettier --check src/ ui/ scripts/ vite.ui.config.ts vitest.ui.config.ts",
+    "format": "prettier --write src/ ui/ scripts/ tests/ vite.ui.config.ts vitest.ui.config.ts playwright.host.config.ts",
+    "format:check": "prettier --check src/ ui/ scripts/ tests/ vite.ui.config.ts vitest.ui.config.ts playwright.host.config.ts",
     "prepublishOnly": "pnpm run check && pnpm run build",
     "prepare": "husky"
   },
@@ -45,6 +45,10 @@
       "eslint --fix"
     ],
     "ui/**/*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "tests/**/*.ts": [
       "prettier --write",
       "eslint --fix"
     ]

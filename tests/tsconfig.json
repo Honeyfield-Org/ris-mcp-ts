@@ -1,0 +1,20 @@
+{
+  // Typecheck-only project for the host-sim suite. Playwright transpiles these
+  // files without checking them, so without this config they would be the only
+  // TypeScript in the repo that nothing type-checks. The DOM lib is required
+  // because host-stub.ts runs inside the page; the root project is node-only.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["./**/*.ts", "../playwright.host.config.ts"]
+}
