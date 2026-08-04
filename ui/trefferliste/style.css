@@ -107,6 +107,16 @@
   border-radius: var(--ris-radius-full);
 }
 
+/*
+ * The chip's own 2px gap is the one between value and remove button — tight,
+ * because the × belongs to the value. The label is a separate word and needs
+ * the 6px the selects use, in the same subtle tone as their labels.
+ */
+.ris-facet-chip .ris-facet-label {
+  margin-right: 4px;
+  color: var(--ris-fg-subtle);
+}
+
 .ris-facet-remove {
   padding: 0 5px;
   line-height: 1.2;
