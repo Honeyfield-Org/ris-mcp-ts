@@ -29,17 +29,38 @@ generated sources are never stale; you rarely call it by hand.
 ## Testing
 
 ```bash
-pnpm test                # Server unit tests (886 tests, 18 files) — node env
-pnpm run test:ui         # Widget tests under ui/ (287 tests, 9 files) — jsdom env
+pnpm test                # Server unit tests (1055 tests, 21 files) — node env
+pnpm run test:ui         # Widget tests under ui/ (327 tests, 9 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
+pnpm run test:host       # Host-sim harness (Playwright, real Chromium iframes) — needs `pnpm exec playwright install chromium` once; not part of `check`/CI
 ```
 
 Two separate vitest projects, because the widget needs a DOM and the server must
 not have one: `vitest.config.ts` (node, excludes `ui/**`) and
 `vitest.ui.config.ts` (jsdom, only `ui/**/*.test.ts`). `pnpm run check` runs
 both.
+
+The host-sim suite (`tests/host-sim/`, 7 specs in 2 files) is the third suite and
+the only one outside vitest: Playwright mounts the *built* bundles in real
+iframes and drives them with real clicks,
+against a hand-rolled stub of the host side of the ext-apps postMessage protocol
+(`host-stub.ts`, injected via `page.evaluate`). It is not in `check`, so its
+files reach the static gates by other means — `tests/tsconfig.json` is a third
+`tsc` pass in `typecheck`, and eslint/prettier target `tests/` and the Playwright
+config. Pass Playwright flags through
+`pnpm exec playwright test --config playwright.host.config.ts <flags>`;
+`pnpm run test:host -- <flags>` swallows them silently.
+
+Two harness facts a new spec needs. Every scenario that triggers a widget call
+needs a `callAnswers` entry — the stub's default answer is an rpcError, which
+renders the same „Verbindung abgelaufen“ notice as a real transport failure, so
+a forgotten entry lets a sloppy spec pass. And the viewer *always* issues one
+`ris_dokument_abschnitt` call at offset 0 on mount, because its mount run is
+provisional by design (see [The viewer's first render](#the-viewers-first-render));
+a viewer scenario therefore needs at least one scripted section answer even when
+it only means to measure the mount.
 
 ### Manual Testing with MCP Inspector
 
@@ -132,6 +153,13 @@ ui/                    # Widget sources — browser code, own tsconfig (DOM lib)
 │   ├── widget-state.ts # createSnapshotStore(key, version) — one slot per widget
 │   └── theme.css
 └── __fixtures__/      # Search-result and document-chunk fixtures
+
+tests/host-sim/        # Playwright host simulation: mounts the built bundles in
+                       # real iframes, stubs the ext-apps postMessage host side
+├── host-stub.ts       # installHostSim(): handshake, tool-result delivery,
+│                      # scriptable answers (delays, rpcErrors), call recorder
+├── trefferliste.spec.ts # Mount, pagination, rpcError, tool error, latency
+└── viewer.spec.ts     # Mount + section adoption, slow section call
 
 vite.ui.config.ts      # Widget build: one widget per pass, named by RIS_UI_WIDGET
 scripts/gen-ui.mjs     # Drives the builds, then writes src/generated/<widget>-html.ts
