@@ -12,6 +12,7 @@ import { COPY, createNotice, createSkeleton, type NoticeKind } from '../shared/s
 import { createSnapshotStore } from '../shared/widget-state.js';
 
 import {
+  focusFacet,
   focusFassung,
   focusPagination,
   interpretPayload,
@@ -20,11 +21,13 @@ import {
   type ResultHandlers,
 } from './view.js';
 import {
+  facetQuery,
   fassungQuery,
   fullTextPrompt,
   nextQuery,
   parseSearchResult,
   toViewModel,
+  type FacetChange,
   type SearchResultPayload,
   type ToolCall,
 } from './viewmodel.js';
@@ -171,12 +174,24 @@ async function changeFassung(value: string | null): Promise<void> {
   focusFassung(view);
 }
 
+/** Show the same search with one facet narrowed, widened or dropped. */
+async function changeFacet(change: FacetChange): Promise<void> {
+  const call = facetQuery(current?.query, change);
+  if (!call || !bridge || pending) return;
+
+  await runQuery(bridge, call);
+  // Same reasoning as the two focus restores above: the control the user just
+  // used was replaced along with the whole facet row.
+  focusFacet(view, change);
+}
+
 const handlers: ResultHandlers = {
   onOpen: (row) => void openExternal(row.risUrl),
   onPdf: (row) => void openExternal(row.pdfUrl),
   onFullText: (row) => void requestFullText(row.id),
   onPage: (delta) => void goToPage(delta),
   onFassungVom: (value) => void changeFassung(value),
+  onFacet: (change) => void changeFacet(change),
 };
 
 /**
