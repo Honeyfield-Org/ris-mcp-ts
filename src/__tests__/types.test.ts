@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest';
 
-import { limitToDokumenteProSeite, JudikaturGerichtSchema, LimitSchema } from '../types.js';
+import {
+  JUDIKATUR_DOKUMENTTYPEN,
+  JUDIKATUR_GERICHTSBARKEITEN,
+  JUDIKATUR_RECHTSGEBIETE,
+} from '../facets.js';
+import {
+  limitToDokumenteProSeite,
+  JudikaturDokumenttypSchema,
+  JudikaturGerichtSchema,
+  JudikaturRechtsgebietSchema,
+  LimitSchema,
+} from '../types.js';
 
 describe('limitToDokumenteProSeite', () => {
   it("returns 'Ten' for limit 10", () => {
@@ -87,6 +98,24 @@ describe('JudikaturGerichtSchema', () => {
     for (const court of historicalCourts) {
       expect(schemaValues).toContain(court);
     }
+  });
+});
+
+describe('Judikatur schemas built from the shared facet vocabulary', () => {
+  // The widgets cannot import zod schemas, so they used to keep their own copy
+  // of these lists — which drifted from the server in both directions (#53).
+  // src/facets.ts is now the single home and the schemas are derived from it;
+  // these assertions are what keeps the derivation honest.
+  it('should build JudikaturGerichtSchema from JUDIKATUR_GERICHTSBARKEITEN', () => {
+    expect(JudikaturGerichtSchema.options).toEqual([...JUDIKATUR_GERICHTSBARKEITEN]);
+  });
+
+  it('should build JudikaturDokumenttypSchema from JUDIKATUR_DOKUMENTTYPEN', () => {
+    expect(JudikaturDokumenttypSchema.options).toEqual([...JUDIKATUR_DOKUMENTTYPEN]);
+  });
+
+  it('should build JudikaturRechtsgebietSchema from JUDIKATUR_RECHTSGEBIETE', () => {
+    expect(JudikaturRechtsgebietSchema.options).toEqual([...JUDIKATUR_RECHTSGEBIETE]);
   });
 });
 

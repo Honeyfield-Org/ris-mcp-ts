@@ -7,6 +7,8 @@
  * of this model into elements.
  */
 
+import { FASSUNG_EXCLUDED_APPLIKATIONEN, FASSUNG_TOOLS } from '../../src/facets.js';
+
 /** URLs of the renditions RIS offers for a document. */
 export interface ContentUrls {
   xml?: string | null;
@@ -364,8 +366,10 @@ export function nextQuery(query: SearchQueryEcho | undefined, delta: number): To
   return { name, arguments: { ...rest, [PAGINATION_KEY]: target } };
 }
 
-/** The two tools whose documents have dated legal states (`fassung_vom`). */
-const FASSUNG_TOOLS = new Set(['ris_bundesrecht', 'ris_landesrecht']);
+// Lookups over the shared vocabulary, widened to string because the echo
+// carries whatever the host sent, not a value of the union.
+const FASSUNG_TOOL_NAMES = new Set<string>(FASSUNG_TOOLS);
+const FASSUNG_EXCLUDED = new Set<string>(FASSUNG_EXCLUDED_APPLIKATIONEN);
 
 /**
  * Whether the echoed search can carry a legal-state date at all.
@@ -377,7 +381,7 @@ const FASSUNG_TOOLS = new Set(['ris_bundesrecht', 'ris_landesrecht']);
  * in the header, so the control stays away rather than showing one.
  */
 function hasFassung(query: SearchQueryEcho): boolean {
-  return FASSUNG_TOOLS.has(text(query.tool)) && text(query.applikation) !== 'Erv';
+  return FASSUNG_TOOL_NAMES.has(text(query.tool)) && !FASSUNG_EXCLUDED.has(text(query.applikation));
 }
 
 /**
