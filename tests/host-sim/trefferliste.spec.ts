@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test';
 
 import { TREFFERLISTE_HTML } from '../../src/generated/trefferliste-html.js';
 import { COURT_RESULT, LAW_RESULT } from '../../ui/__fixtures__/search-results.js';
+import { COPY } from '../../ui/shared/states.js';
 
-import { installHostSim } from './host-stub.js';
+import { installHostSim, type HostSimCall } from './host-stub.js';
 
 /** A CallToolResult as the host would deliver it to the widget. */
 function toolResult(structuredContent: unknown): unknown {
@@ -39,12 +40,48 @@ test('a pagination click issues tools/call with seite+1 and renders the answer',
   await expect(widget.locator('.ris-row-title').first()).toHaveText('2Ob535/90');
 
   const calls = await page.evaluate(
-    () =>
-      (window as unknown as { __hostSim: { calls: { method: string; params: unknown }[] } })
-        .__hostSim.calls,
+    () => (window as unknown as { __hostSim: { calls: HostSimCall[] } }).__hostSim.calls,
   );
-  const pageCall = calls.find((call) => call.method === 'tools/call');
-  const params = pageCall?.params as { name: string; arguments: Record<string, unknown> };
+  // Exactly one: the `pending` guard in `goToPage` must keep a re-render of the
+  // pagination buttons from firing the same page a second time.
+  const pageCalls = calls.filter((call) => call.method === 'tools/call');
+  expect(pageCalls).toHaveLength(1);
+
+  const params = pageCalls[0]?.params as { name: string; arguments: Record<string, unknown> };
   expect(params.name).toBe(String(LAW_RESULT.query?.tool));
-  expect(params.arguments.seite).toBe(2);
+  // The whole echo travels, not just the page number — the next page of *this*
+  // search is only the same search with `seite` incremented.
+  expect(params.arguments).toMatchObject({ suchworte: 'Schadenersatz', seite: 2 });
+});
+
+test('a rejected page call keeps the list and shows the notice beneath it', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.evaluate(installHostSim, {
+    widgetHtml: TREFFERLISTE_HTML,
+    mountResult: toolResult(LAW_RESULT),
+    callAnswers: [{ rpcError: 'session evicted' }],
+  });
+
+  const widget = page.frameLocator('iframe');
+  await widget.getByRole('button', { name: 'Nächste Seite' }).click();
+
+  await expect(widget.locator('.ris-notice-title')).toHaveText(COPY.sessionExpired);
+  // The rows are the point: the skeleton replaced them for the duration of the
+  // call, and the failure has to put the page the user was reading back.
+  await expect(widget.locator('.ris-row-title')).toHaveCount(2);
+});
+
+test('a slow page call shows the skeleton until the answer arrives', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.evaluate(installHostSim, {
+    widgetHtml: TREFFERLISTE_HTML,
+    mountResult: toolResult(LAW_RESULT),
+    callAnswers: [{ delayMs: 1_000, result: toolResult(COURT_RESULT) }],
+  });
+
+  const widget = page.frameLocator('iframe');
+  await widget.getByRole('button', { name: 'Nächste Seite' }).click();
+
+  await expect(widget.locator('.ris-skeleton')).toBeVisible();
+  await expect(widget.locator('.ris-row-title').first()).toHaveText('2Ob535/90');
 });
