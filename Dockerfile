@@ -12,6 +12,12 @@ COPY src/ ./src/
 # lookup, nothing extra to copy into the runtime stage.
 COPY ui/ ./ui/
 COPY scripts/ ./scripts/
+# The build runs the three-project typecheck (root, ui, tests) — the host-sim
+# suite itself never runs here, but its tsconfig and the files it includes must
+# exist or `tsc -p tests/tsconfig.json` fails the image build (v1.6.0 lesson:
+# the image build only runs on tag pushes, so a PR never catches this).
+COPY tests/ ./tests/
+COPY playwright.host.config.ts ./
 RUN pnpm run build
 
 FROM node:22-alpine
