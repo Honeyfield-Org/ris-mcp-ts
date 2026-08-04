@@ -273,12 +273,23 @@ describe('changing the Rechtslage', () => {
     return input;
   }
 
-  /** Do what the user does: type a date (or clear it) and leave the field. */
-  async function pick(value: string): Promise<void> {
-    const input = dateInput();
+  /** Ask for the next page, the other way into the shared query path. */
+  function nextPage(): void {
+    const button = view().querySelector<HTMLButtonElement>('.ris-page-next');
+    if (!button) throw new Error('no next-page button rendered');
+    button.click();
+  }
+
+  /** Type a date (or clear it) and leave the field, on a given element. */
+  async function change(input: HTMLInputElement, value: string): Promise<void> {
     input.value = value;
     input.dispatchEvent(new Event('change'));
     await settle();
+  }
+
+  /** Do what the user does on the field currently on screen. */
+  async function pick(value: string): Promise<void> {
+    await change(dateInput(), value);
   }
 
   it('re-issues the search with the picked date and page 1', async () => {
@@ -336,6 +347,33 @@ describe('changing the Rechtslage', () => {
     // one the user just used — without the restore, focus would sit on <body>.
     expect(document.activeElement).toBe(dateInput());
     expect(document.activeElement).not.toBe(before);
+  });
+
+  it('drops the change while a page request is still in flight', async () => {
+    let release: (result: ToolPayload) => void = () => undefined;
+    const inFlight = new Promise<ToolPayload>((resolve) => {
+      release = resolve;
+    });
+    vi.mocked(bridge.callTool).mockReturnValue(inFlight);
+
+    await mount();
+    await connect();
+    deliver(payload());
+
+    // Captured before the click, because the skeleton replaces the header for
+    // the duration of the call — a change can still arrive from the detached
+    // field, which is how a native date picker left open delivers one.
+    const input = dateInput();
+    nextPage();
+    await settle();
+    await change(input, '2020-01-01');
+
+    expect(bridge.callTool).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(bridge.callTool).mock.calls[0][0].arguments).toMatchObject({ seite: 2 });
+
+    // Let the page land so the module is not left waiting on a dead promise.
+    release(payload());
+    await settle();
   });
 
   it('puts focus back even when the re-issue failed', async () => {
