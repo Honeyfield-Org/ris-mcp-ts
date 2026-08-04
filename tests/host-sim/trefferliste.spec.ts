@@ -369,10 +369,10 @@ test('removing the Gericht chip re-issues the search without that filter', async
   await expect(widget.locator('.ris-facet-rechtsgebiet .ris-facet-select')).toHaveValue(
     'Zivilrecht',
   );
-  // Nothing is focused in its place, deliberately: the chip that carried the
-  // button is gone, and grabbing a neighbouring select would drop the user
+  // No select is focused in its place, deliberately: the chip that carried the
+  // button is gone, and grabbing any neighbouring select would drop the user
   // somewhere they never asked to be.
-  await expect(widget.locator('.ris-facet-gerichtsbarkeit .ris-facet-select')).not.toBeFocused();
+  await expect(widget.locator('.ris-facet-select:focus')).toHaveCount(0);
 
   const toolCalls = await recordedToolCalls(page);
   expect(toolCalls).toHaveLength(1);
