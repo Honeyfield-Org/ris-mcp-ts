@@ -30,7 +30,7 @@ generated sources are never stale; you rarely call it by hand.
 
 ```bash
 pnpm test                # Server unit tests (1055 tests, 21 files) — node env
-pnpm run test:ui         # Widget tests under ui/ (327 tests, 9 files) — jsdom env
+pnpm run test:ui         # Widget tests under ui/ (349 tests, 9 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
@@ -42,7 +42,7 @@ not have one: `vitest.config.ts` (node, excludes `ui/**`) and
 `vitest.ui.config.ts` (jsdom, only `ui/**/*.test.ts`). `pnpm run check` runs
 both.
 
-The host-sim suite (`tests/host-sim/`, 7 specs in 2 files) is the third suite
+The host-sim suite (`tests/host-sim/`, 11 specs in 2 files) is the third suite
 and the only one outside vitest: Playwright mounts the *built* bundles in real
 iframes and drives them with real clicks, against a hand-rolled stub of the
 host side of the ext-apps postMessage protocol (`host-stub.ts`, injected via
@@ -158,7 +158,7 @@ tests/host-sim/        # Playwright host simulation: mounts the built bundles in
                        # real iframes, stubs the ext-apps postMessage host side
 ├── host-stub.ts       # installHostSim(): handshake, tool-result delivery,
 │                      # scriptable answers (delays, rpcErrors), call recorder
-├── trefferliste.spec.ts # Mount, pagination, rpcError, tool error, latency
+├── trefferliste.spec.ts # Mount, pagination, Rechtslage am, failures, latency
 └── viewer.spec.ts     # Mount + section adoption, slow section call
 
 vite.ui.config.ts      # Widget build: one widget per pass, named by RIS_UI_WIDGET

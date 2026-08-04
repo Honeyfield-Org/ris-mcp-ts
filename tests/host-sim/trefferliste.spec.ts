@@ -128,7 +128,19 @@ test('picking a Rechtslage date re-issues the search with fassung_vom and page 1
   await page.evaluate(installHostSim, {
     widgetHtml: TREFFERLISTE_HTML,
     mountResult: toolResult(LAW_RESULT),
-    callAnswers: [{ result: toolResult(COURT_RESULT) }],
+    // What a re-issued `ris_bundesrecht` really answers with: law results whose
+    // echo carries the new date. A judikatur payload would do to prove the
+    // round trip, but it renders no control — and `focusFassung` is silent
+    // where the new page has none, so focus would have nothing to return to.
+    callAnswers: [
+      {
+        result: toolResult({
+          ...LAW_RESULT,
+          total_hits: 7,
+          query: { ...LAW_RESULT.query, fassung_vom: '2020-01-01' },
+        }),
+      },
+    ],
   });
 
   const widget = page.frameLocator('iframe');
@@ -137,7 +149,14 @@ test('picking a Rechtslage date re-issues the search with fassung_vom and page 1
   // running this scenario outside jsdom.
   await widget.locator('.ris-fassung-input').fill('2020-01-01');
 
-  await expect(widget.locator('.ris-row-title').first()).toHaveText('2Ob535/90');
+  // The answer's own hit count — the mount payload says 2.570, so this is what
+  // separates the new page from the one the user was looking at.
+  await expect(widget.locator('.ris-hits')).toHaveText('7 Treffer');
+  await expect(widget.locator('.ris-row-title')).toHaveCount(2);
+  await expect(widget.locator('.ris-fassung-input')).toHaveValue('2020-01-01');
+  // The header was replaced along with the list, so the field the user just
+  // left is a different element — restoring focus is not a no-op.
+  await expect(widget.locator('.ris-fassung-input')).toBeFocused();
 
   const calls = await page.evaluate(
     () => (window as unknown as { __hostSim: { calls: HostSimCall[] } }).__hostSim.calls,
@@ -212,4 +231,7 @@ test('a failed Rechtslage change keeps the list on screen', async ({ page }) => 
 
   await expect(widget.locator('.ris-notice-title')).toHaveText(COPY.sessionExpired);
   await expect(widget.locator('.ris-row-title')).toHaveCount(2);
+  // The restored render is a new header too, so focus has to be put back on
+  // the failure path as much as on the successful one.
+  await expect(widget.locator('.ris-fassung-input')).toBeFocused();
 });
