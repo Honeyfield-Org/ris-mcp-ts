@@ -62,6 +62,75 @@
   white-space: nowrap;
 }
 
+/*
+ * The Judikatur facets: native <select>s styled as chips, wrapping onto as many
+ * lines as the host's width needs. Native for the same reason as the date input
+ * above — a custom listbox would need assets or a popup layer, and the widget
+ * resource declares an empty CSP.
+ */
+.ris-facets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+.ris-facet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-subtle);
+}
+
+.ris-facet-select {
+  max-width: 15rem;
+  padding: 3px 8px;
+  font-family: inherit;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg);
+  background: var(--ris-bg-raised);
+  border: 1px solid var(--ris-border-strong);
+  border-radius: var(--ris-radius-md);
+}
+
+/* The court filter, which is shown and dropped rather than chosen. */
+.ris-facet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 3px 2px 10px;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-muted);
+  background: var(--ris-bg-hover);
+  border-radius: var(--ris-radius-full);
+}
+
+/*
+ * The chip's own 2px gap is the one between value and remove button — tight,
+ * because the × belongs to the value. The label is a separate word and needs
+ * the 6px the selects use, in the same subtle tone as their labels.
+ */
+.ris-facet-chip .ris-facet-label {
+  margin-right: 4px;
+  color: var(--ris-fg-subtle);
+}
+
+.ris-facet-remove {
+  padding: 0 5px;
+  line-height: 1.2;
+  color: var(--ris-fg-subtle);
+  background: none;
+  border: 0;
+  border-radius: var(--ris-radius-full);
+}
+
+.ris-facet-remove:hover {
+  color: var(--ris-fg);
+  background: var(--ris-bg-raised);
+}
+
 .ris-rows {
   margin: 0;
   padding: 0;

@@ -29,8 +29,8 @@ generated sources are never stale; you rarely call it by hand.
 ## Testing
 
 ```bash
-pnpm test                # Server unit tests (1055 tests, 21 files) — node env
-pnpm run test:ui         # Widget tests under ui/ (349 tests, 9 files) — jsdom env
+pnpm test                # Server unit tests (1060 tests, 21 files) — node env
+pnpm run test:ui         # Widget tests under ui/ (397 tests, 9 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
@@ -42,7 +42,7 @@ not have one: `vitest.config.ts` (node, excludes `ui/**`) and
 `vitest.ui.config.ts` (jsdom, only `ui/**/*.test.ts`). `pnpm run check` runs
 both.
 
-The host-sim suite (`tests/host-sim/`, 11 specs in 2 files) is the third suite
+The host-sim suite (`tests/host-sim/`, 15 specs in 2 files) is the third suite
 and the only one outside vitest: Playwright mounts the *built* bundles in real
 iframes and drives them with real clicks, against a hand-rolled stub of the
 host side of the ext-apps postMessage protocol (`host-stub.ts`, injected via
@@ -89,6 +89,7 @@ src/
 ├── server.ts          # MCP server init, delegates to tools/
 ├── client.ts          # HTTP client for RIS API, error classes, URL construction
 ├── types.ts           # Zod schemas + TypeScript types
+├── facets.ts          # Zod-free vocabulary shared with the widget (see Key Patterns)
 ├── parser.ts          # JSON parsing and response normalization
 ├── formatting.ts      # Output formatting (markdown/json), truncation, chunking, outline
 ├── document-loader.ts # Shared resolve+fetch+format path for the two document tools
@@ -158,7 +159,8 @@ tests/host-sim/        # Playwright host simulation: mounts the built bundles in
                        # real iframes, stubs the ext-apps postMessage host side
 ├── host-stub.ts       # installHostSim(): handshake, tool-result delivery,
 │                      # scriptable answers (delays, rpcErrors), call recorder
-├── trefferliste.spec.ts # Mount, pagination, Rechtslage am, failures, latency
+├── trefferliste.spec.ts # Mount, pagination, Rechtslage am, Judikatur-Facetten,
+│                      # failures, latency
 └── viewer.spec.ts     # Mount + section adoption, slow section call
 
 vite.ui.config.ts      # Widget build: one widget per pass, named by RIS_UI_WIDGET
@@ -230,6 +232,21 @@ Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(serve
 - **Pagination**: 10/20/50/100 documents per page (mapped via `limitToDokumenteProSeite()` in types.ts)
 - **Allowed document hosts**: `data.bka.gv.at`, `www.ris.bka.gv.at`, `ris.bka.gv.at` (SSRF protection in client.ts)
 
+### Shared Vocabulary (`src/facets.ts`)
+
+The Judikatur enum values (`JUDIKATUR_GERICHTSBARKEITEN`,
+`JUDIKATUR_DOKUMENTTYPEN`, `JUDIKATUR_RECHTSGEBIETE`) and the Fassung rules
+(`FASSUNG_TOOLS`, `FASSUNG_EXCLUDED_APPLIKATIONEN`) live here — zod-free and
+dependency-free, because the widget bundle imports this file across the tsconfig
+boundary. `types.ts` builds its `z.enum()`s from these arrays, `parser.ts` and
+`formatting.ts` derive their court-key lookups from them, and
+`ui/trefferliste/viewmodel.ts` builds the facet selects from them, so a
+jurisdiction is added here rather than in four places in parallel. Adding one
+without extending `RawJudikaturMetadata` (types.ts) is a **compile error** in
+`parser.ts` — verified, `TS7053` on the typed head-note lookup. German labels
+stay in the widget and fall back to the raw code, so a value the widget has no
+label for still renders, as itself.
+
 ### Conventions
 
 - **Language**: User-facing error messages are in **German**; tool descriptions and parameter `.describe()` text are in **English** (existing convention). Tool `title` (display name via `registerTool`) is German.
@@ -247,8 +264,18 @@ document viewer. Since v1.6.0 the result list's header carries a native
 „Rechtslage am“ date input for `ris_bundesrecht`/`ris_landesrecht` results (not
 for `applikation: 'Erv'`, whose English translations have no dated Fassung),
 re-issuing the echoed query with a changed `fassung_vom` and a page reset — the
-same normal-tool-call path the pagination uses. The mechanism, in the order it
-happens:
+same normal-tool-call path the pagination uses. `ris_judikatur` results carry a
+facet row under the header instead: native selects for Gerichtsbarkeit and
+Dokumenttyp, a Rechtsgebiet select that exists only inside
+`gerichtsbarkeit: 'Justiz'`, and a labelled chip for an echoed `gericht` filter
+that can be removed but not set — `gericht` is free text the caller supplied and
+RIS has no list of courts to offer. Leaving Justiz drops `gericht`,
+`rechtsgebiet` and `fachgebiet` from the re-issue, because RIS honours them in no
+other jurisdiction and an argument that keeps riding the echo narrows a search
+nobody can see it narrowing. Both rows re-issue the same way — whole echo,
+`seite` back to 1 — and neither implies the other: a Bundesrecht list has the
+date and no facets, a Judikatur list the facets and no date. The mechanism, in
+the order it happens:
 
 1. `registerWidgetResources()` (`src/widgets.ts`) registers two resources,
    `ui://ris-mcp/trefferliste` and `ui://ris-mcp/viewer`, whose content is the

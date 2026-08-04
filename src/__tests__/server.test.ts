@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { RISAPIError, RISTimeoutError, RISParsingError } from '../client.js';
+import { FASSUNG_EXCLUDED_APPLIKATIONEN } from '../facets.js';
 import { server } from '../server.js';
 import { buildBundesrechtParams as buildBundesrechtParamsReal } from '../tools/bundesrecht.js';
 import { buildJudikaturParams as buildJudikaturParamsReal } from '../tools/judikatur.js';
@@ -575,6 +576,23 @@ describe('Bundesrecht API parameter mapping', () => {
       expect(params['Abschnitt.Typ']).toBeUndefined();
       expect(params['FassungVom']).toBeUndefined();
     });
+
+    // The Trefferliste hides its „Rechtslage am"-Kontrolle for exactly the
+    // Applikationen in FASSUNG_EXCLUDED_APPLIKATIONEN (src/facets.ts), because
+    // a date the results do not honour would be a lie in the header. This pins
+    // the server behaviour that justifies the gate, per value.
+    it.each(FASSUNG_EXCLUDED_APPLIKATIONEN)(
+      'should drop fassung_vom for applikation "%s" (FASSUNG_EXCLUDED_APPLIKATIONEN)',
+      (applikation) => {
+        const params = buildBundesrechtParams({
+          applikation,
+          titel: 'Civil Code',
+          fassung_vom: '2020-01-01',
+        });
+
+        expect(params['FassungVom']).toBeUndefined();
+      },
+    );
 
     it('should still use Suchworte/Titel for the default BrKons application', () => {
       const params = buildBundesrechtParams({ applikation: 'BrKons', suchworte: 'Mietrecht' });

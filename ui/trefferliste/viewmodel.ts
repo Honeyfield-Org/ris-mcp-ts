@@ -7,6 +7,14 @@
  * of this model into elements.
  */
 
+import {
+  FASSUNG_EXCLUDED_APPLIKATIONEN,
+  FASSUNG_TOOLS,
+  JUDIKATUR_DOKUMENTTYPEN,
+  JUDIKATUR_GERICHTSBARKEITEN,
+  JUDIKATUR_RECHTSGEBIETE,
+} from '../../src/facets.js';
+
 /** URLs of the renditions RIS offers for a document. */
 export interface ContentUrls {
   xml?: string | null;
@@ -87,6 +95,35 @@ export interface DocumentRow {
   pdfUrl: string | null;
 }
 
+/** One entry of a facet select: the argument value and what the user reads. */
+export interface FacetOption {
+  value: string;
+  label: string;
+}
+
+/** A facet select: the value the search ran with, and everything selectable. */
+export interface FacetSelect {
+  value: string;
+  options: FacetOption[];
+}
+
+/** The facet row of a Judikatur result — see {@link facetControls}. */
+export interface FacetControls {
+  gerichtsbarkeit: FacetSelect;
+  dokumenttyp: FacetSelect;
+  /** Only for Justiz; value '' means „alle" (argument absent). */
+  rechtsgebiet: FacetSelect | null;
+  /** Free-text court filter — display + removal only, never settable here. */
+  gericht: string | null;
+}
+
+/** One facet the user changed; `null` means „drop this argument". */
+export type FacetChange =
+  | { gerichtsbarkeit: string }
+  | { dokumenttyp: string }
+  | { rechtsgebiet: string | null }
+  | { gericht: null };
+
 /** Everything the Trefferliste needs to render one page of results. */
 export interface ResultViewModel {
   toolLabel: string;
@@ -97,6 +134,7 @@ export interface ResultViewModel {
   hasPrev: boolean;
   hasNext: boolean;
   fassung: { value: string } | null;
+  facets: FacetControls | null;
   rows: DocumentRow[];
 }
 
@@ -364,8 +402,10 @@ export function nextQuery(query: SearchQueryEcho | undefined, delta: number): To
   return { name, arguments: { ...rest, [PAGINATION_KEY]: target } };
 }
 
-/** The two tools whose documents have dated legal states (`fassung_vom`). */
-const FASSUNG_TOOLS = new Set(['ris_bundesrecht', 'ris_landesrecht']);
+// Lookups over the shared vocabulary, widened to string because the echo
+// carries whatever the host sent, not a value of the union.
+const FASSUNG_TOOL_NAMES = new Set<string>(FASSUNG_TOOLS);
+const FASSUNG_EXCLUDED = new Set<string>(FASSUNG_EXCLUDED_APPLIKATIONEN);
 
 /**
  * Whether the echoed search can carry a legal-state date at all.
@@ -377,7 +417,7 @@ const FASSUNG_TOOLS = new Set(['ris_bundesrecht', 'ris_landesrecht']);
  * in the header, so the control stays away rather than showing one.
  */
 function hasFassung(query: SearchQueryEcho): boolean {
-  return FASSUNG_TOOLS.has(text(query.tool)) && text(query.applikation) !== 'Erv';
+  return FASSUNG_TOOL_NAMES.has(text(query.tool)) && !FASSUNG_EXCLUDED.has(text(query.applikation));
 }
 
 /**
@@ -412,6 +452,187 @@ export function fassungQuery(
   return { name: text(query.tool), arguments: args };
 }
 
+/** The one tool whose results carry facets. */
+const FACET_TOOL = 'ris_judikatur';
+
+/**
+ * Filters RIS only honours inside the Justiz jurisdiction.
+ *
+ * They are dropped from the re-issue when the jurisdiction leaves Justiz: the
+ * API ignores them everywhere else, and an argument that rides the echo forever
+ * would keep narrowing a search nobody can see it narrowing.
+ */
+const JUSTIZ_ONLY_ARGS = ['gericht', 'rechtsgebiet', 'fachgebiet'] as const;
+
+/**
+ * The jurisdiction {@link JUSTIZ_ONLY_ARGS} belong to.
+ *
+ * Named because two places encode one rule: the Rechtsgebiet control exists
+ * exactly where its argument survives a change of jurisdiction. Splitting them
+ * would offer a control whose value the next re-issue throws away.
+ */
+const JUSTIZ_ONLY_GERICHTSBARKEIT = 'Justiz';
+
+/** German names for the jurisdictions — see {@link gerichtsbarkeitLabel}. */
+const GERICHTSBARKEIT_LABELS: Record<string, string> = {
+  Justiz: 'Justiz (OGH/OLG/LG/BG)',
+  Vfgh: 'VfGH',
+  Vwgh: 'VwGH',
+  Bvwg: 'BVwG',
+  Lvwg: 'LVwG',
+  Dsk: 'Datenschutz (DSB)',
+  AsylGH: 'AsylGH (historisch)',
+  Normenliste: 'Normenliste',
+  Pvak: 'PVAK',
+  Gbk: 'Gleichbehandlungskommission',
+  Dok: 'Disziplinarkommission',
+  Verg: 'Vergabeamt (historisch)',
+  Uvs: 'UVS (historisch)',
+  Ubas: 'UBAS (historisch)',
+  Umse: 'Umweltsenat (historisch)',
+  Bks: 'BKS (historisch)',
+};
+
+const DOKUMENTTYP_LABELS: Record<string, string> = {
+  rechtssatz: 'Rechtssätze',
+  entscheidungstext: 'Entscheidungstexte',
+  beide: 'Rechtssätze + Entscheidungen',
+};
+
+/**
+ * German name of a jurisdiction, or the raw code.
+ *
+ * Same contract as {@link toolLabelFor}: a value the server learns later still
+ * renders, as itself, rather than blanking the select.
+ */
+export function gerichtsbarkeitLabel(value: string): string {
+  return GERICHTSBARKEIT_LABELS[value] ?? value;
+}
+
+function dokumenttypLabel(value: string): string {
+  return DOKUMENTTYP_LABELS[value] ?? value;
+}
+
+/** Rechtsgebiete are German words already — they are their own label. */
+function rechtsgebietLabel(value: string): string {
+  return value;
+}
+
+/**
+ * Build one select from the vocabulary and the value the search ran with.
+ *
+ * An echoed value outside the vocabulary is appended rather than dropped: the
+ * select must be able to show the current state, or it would claim the search
+ * ran with a filter it never had.
+ */
+function facetSelect(
+  vocabulary: readonly string[],
+  value: string,
+  label: (value: string) => string,
+): FacetSelect {
+  const values = value === '' || vocabulary.includes(value) ? vocabulary : [...vocabulary, value];
+
+  return { value, options: values.map((option) => ({ value: option, label: label(option) })) };
+}
+
+function hasFacets(query: SearchQueryEcho): boolean {
+  return text(query.tool) === FACET_TOOL;
+}
+
+/**
+ * What the facet row above a Judikatur result shows, or `null` where facets do
+ * not apply — every other tool, and a result without an echo to re-issue.
+ *
+ * `gerichtsbarkeit` and `dokumenttyp` are zod defaults on the server, so a live
+ * echo always names them; an echo that does not gets an empty value rather than
+ * an invented one. `rechtsgebiet` has no default — empty means „alle" — and it
+ * only appears for Justiz, the one jurisdiction RIS honours it in.
+ */
+export function facetControls(query: SearchQueryEcho | undefined): FacetControls | null {
+  if (!query || !hasFacets(query)) return null;
+
+  const gerichtsbarkeit = text(query.gerichtsbarkeit);
+
+  return {
+    gerichtsbarkeit: facetSelect(
+      JUDIKATUR_GERICHTSBARKEITEN,
+      gerichtsbarkeit,
+      gerichtsbarkeitLabel,
+    ),
+    dokumenttyp: facetSelect(JUDIKATUR_DOKUMENTTYPEN, text(query.dokumenttyp), dokumenttypLabel),
+    rechtsgebiet:
+      gerichtsbarkeit === JUSTIZ_ONLY_GERICHTSBARKEIT
+        ? facetSelect(JUDIKATUR_RECHTSGEBIETE, text(query.rechtsgebiet), rechtsgebietLabel)
+        : null,
+    gericht: text(query.gericht) || null,
+  };
+}
+
+/**
+ * The echoed search minus its tool name and `drop`, back on page 1.
+ *
+ * Every facet change resets the page for the reason {@link fassungQuery} does:
+ * a differently filtered result set has no „page the user was on".
+ */
+function facetArgs(query: SearchQueryEcho, drop: readonly string[]): Record<string, unknown> {
+  const { tool: _tool, ...rest } = query;
+  const args: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(rest)) {
+    if (!drop.includes(key)) args[key] = value;
+  }
+  args[PAGINATION_KEY] = 1;
+  return args;
+}
+
+/**
+ * Compile-time fence for the dispatch below: a {@link FacetChange} variant added
+ * without its own branch makes this call fail to typecheck.
+ *
+ * Without it the last branch would be reached by elimination, and a new variant
+ * — `fachgebiet` is the obvious candidate, it is already in
+ * {@link JUSTIZ_ONLY_ARGS} — would silently remove `gericht` instead.
+ */
+function assertNever(value: never): never {
+  throw new Error(`unhandled facet change: ${JSON.stringify(value)}`);
+}
+
+/** Re-issue the echoed Judikatur search with one facet changed. */
+export function facetQuery(
+  query: SearchQueryEcho | undefined,
+  change: FacetChange,
+): ToolCall | null {
+  if (!query || !hasFacets(query)) return null;
+
+  const call = (args: Record<string, unknown>): ToolCall => ({
+    name: text(query.tool),
+    arguments: args,
+  });
+
+  if ('gerichtsbarkeit' in change) {
+    const staysInJustiz = change.gerichtsbarkeit === JUSTIZ_ONLY_GERICHTSBARKEIT;
+    const args = facetArgs(query, staysInJustiz ? [] : JUSTIZ_ONLY_ARGS);
+    args.gerichtsbarkeit = change.gerichtsbarkeit;
+    return call(args);
+  }
+  if ('dokumenttyp' in change) {
+    const args = facetArgs(query, []);
+    args.dokumenttyp = change.dokumenttyp;
+    return call(args);
+  }
+  // „alle" removes the argument rather than sending an empty one: the server
+  // validates `rechtsgebiet` against an enum ('' is no member of), so an empty
+  // value would come back as a tool error instead of an unfiltered search.
+  if ('rechtsgebiet' in change) {
+    const args = facetArgs(query, ['rechtsgebiet']);
+    if (change.rechtsgebiet !== null) args.rechtsgebiet = change.rechtsgebiet;
+    return call(args);
+  }
+  if ('gericht' in change) return call(facetArgs(query, ['gericht']));
+
+  return assertNever(change);
+}
+
 /** Map one page of search results onto the view model the DOM renders. */
 export function toViewModel(result: SearchResultPayload): ResultViewModel {
   const rows = result.documents.map(toRow);
@@ -430,6 +651,7 @@ export function toViewModel(result: SearchResultPayload): ResultViewModel {
     hasPrev: nextQuery(result.query, -1) !== null,
     hasNext: result.has_more && nextQuery(result.query, 1) !== null,
     fassung: fassungControl(result.query),
+    facets: facetControls(result.query),
     rows,
   };
 }

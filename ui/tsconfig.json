@@ -13,5 +13,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["./**/*.ts"]
+  // The widget shares the server's facet vocabulary (src/facets.ts) instead of
+  // keeping a copy that drifts; it lives outside this directory, so it has to
+  // be pulled into the program explicitly.
+  "include": ["./**/*.ts", "../src/facets.ts"]
 }

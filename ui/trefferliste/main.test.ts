@@ -9,7 +9,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { COURT_RESULT, LAW_RESULT } from '../__fixtures__/search-results.js';
+import { COURT_RESULT, LAW_RESULT, VWGH_DOCUMENT } from '../__fixtures__/search-results.js';
 import type { Bridge, BridgeOptions, ToolPayload } from '../shared/bridge.js';
 import { COPY } from '../shared/states.js';
 
@@ -385,6 +385,216 @@ describe('changing the Rechtslage', () => {
     await pick('2020-01-01');
 
     expect(document.activeElement).toBe(dateInput());
+  });
+});
+
+describe('changing a facet', () => {
+  /**
+   * The Judikatur fixture with both Justiz-bound filters set.
+   *
+   * `tool` is named again for the reason the Rechtslage fixture above names it:
+   * spreading the optional echo alone widens it into one without a tool name,
+   * and a nameless echo renders no facet row to click at all.
+   */
+  const FILTERED_COURT_RESULT: SearchResultPayload = {
+    ...COURT_RESULT,
+    query: {
+      ...COURT_RESULT.query,
+      tool: 'ris_judikatur',
+      rechtsgebiet: 'Zivilrecht',
+      gericht: 'OGH',
+    },
+  };
+
+  /** What the narrowed search comes back with: fewer rows than were on screen. */
+  const NARROWED_COURT_RESULT: SearchResultPayload = {
+    ...COURT_RESULT,
+    documents: [VWGH_DOCUMENT],
+    query: { ...COURT_RESULT.query, tool: 'ris_judikatur', gerichtsbarkeit: 'Vwgh' },
+  };
+
+  /** The same search with a further page to fetch, so paging is available. */
+  const PAGED_COURT_RESULT: SearchResultPayload = {
+    ...COURT_RESULT,
+    has_more: true,
+    query: { ...COURT_RESULT.query, tool: 'ris_judikatur' },
+  };
+
+  /** One facet select of the row currently on screen. */
+  function facetSelect(facet: string): HTMLSelectElement {
+    const select = view().querySelector<HTMLSelectElement>(`.ris-facet-${facet} .ris-facet-select`);
+    if (!select) throw new Error(`no select for the facet "${facet}"`);
+    return select;
+  }
+
+  /** Ask for the next page, the other way into the shared query path. */
+  function nextPage(): void {
+    const button = view().querySelector<HTMLButtonElement>('.ris-page-next');
+    if (!button) throw new Error('no next-page button rendered');
+    button.click();
+  }
+
+  /** Pick an option the way a user does, on a given element. */
+  async function choose(select: HTMLSelectElement, value: string): Promise<void> {
+    select.value = value;
+    select.dispatchEvent(new Event('change'));
+    await settle();
+  }
+
+  /** Do what the user does on the row currently on screen. */
+  async function pick(facet: string, value: string): Promise<void> {
+    await choose(facetSelect(facet), value);
+  }
+
+  /** Take the court filter off, the one facet that is a button, not a select. */
+  async function removeGericht(): Promise<void> {
+    const button = view().querySelector<HTMLButtonElement>('.ris-facet-remove');
+    if (!button) throw new Error('no court chip rendered');
+    button.click();
+    await settle();
+  }
+
+  it('re-issues the search for a picked jurisdiction, on page 1', async () => {
+    vi.mocked(bridge.callTool).mockResolvedValue(
+      payload({ structuredContent: NARROWED_COURT_RESULT }),
+    );
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: FILTERED_COURT_RESULT }));
+    await pick('gerichtsbarkeit', 'Vwgh');
+
+    const [call] = vi.mocked(bridge.callTool).mock.calls[0];
+    expect(call.name).toBe('ris_judikatur');
+    expect(call.arguments).toMatchObject({ gerichtsbarkeit: 'Vwgh', seite: 1 });
+    // The narrowed page is on screen, not merely requested.
+    expect(titles()).toEqual(['Ra 2025/09/0038']);
+  });
+
+  it('drops the Justiz-only filters when the jurisdiction leaves Justiz', async () => {
+    vi.mocked(bridge.callTool).mockResolvedValue(
+      payload({ structuredContent: NARROWED_COURT_RESULT }),
+    );
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: FILTERED_COURT_RESULT }));
+    await pick('gerichtsbarkeit', 'Vwgh');
+
+    const [call] = vi.mocked(bridge.callTool).mock.calls[0];
+    // RIS ignores both outside Justiz, and an argument that rides the echo
+    // forever would keep narrowing a search nobody can see it narrowing.
+    expect(call.arguments).not.toHaveProperty('gericht');
+    expect(call.arguments).not.toHaveProperty('rechtsgebiet');
+  });
+
+  it('re-issues the search with a picked document kind', async () => {
+    vi.mocked(bridge.callTool).mockResolvedValue(payload({ structuredContent: COURT_RESULT }));
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: COURT_RESULT }));
+    await pick('dokumenttyp', 'entscheidungstext');
+
+    expect(bridge.callTool).toHaveBeenCalledWith({
+      name: 'ris_judikatur',
+      arguments: expect.objectContaining({ dokumenttyp: 'entscheidungstext', seite: 1 }),
+    });
+  });
+
+  it('re-issues the search with a picked legal area', async () => {
+    vi.mocked(bridge.callTool).mockResolvedValue(payload({ structuredContent: COURT_RESULT }));
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: COURT_RESULT }));
+    await pick('rechtsgebiet', 'Strafrecht');
+
+    expect(bridge.callTool).toHaveBeenCalledWith({
+      name: 'ris_judikatur',
+      arguments: expect.objectContaining({ rechtsgebiet: 'Strafrecht', seite: 1 }),
+    });
+  });
+
+  it('re-issues the search without the court filter when the chip is removed', async () => {
+    vi.mocked(bridge.callTool).mockResolvedValue(payload({ structuredContent: COURT_RESULT }));
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: FILTERED_COURT_RESULT }));
+    await removeGericht();
+
+    const [call] = vi.mocked(bridge.callTool).mock.calls[0];
+    expect(call.arguments).not.toHaveProperty('gericht');
+    // Only that one filter goes: the jurisdiction never changed, so the legal
+    // area the user picked earlier is still honoured.
+    expect(call.arguments).toMatchObject({ rechtsgebiet: 'Zivilrecht', seite: 1 });
+  });
+
+  it('keeps the list and complains when the re-issue fails', async () => {
+    vi.mocked(bridge.callTool).mockRejectedValue(new Error('weg'));
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: COURT_RESULT }));
+    await pick('gerichtsbarkeit', 'Vwgh');
+
+    expect(titles()).toHaveLength(2);
+    expect(noticeTitle()).toBe(COPY.sessionExpired);
+  });
+
+  it('drops the change while a page request is still in flight', async () => {
+    let release: (result: ToolPayload) => void = () => undefined;
+    const inFlight = new Promise<ToolPayload>((resolve) => {
+      release = resolve;
+    });
+    vi.mocked(bridge.callTool).mockReturnValue(inFlight);
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: PAGED_COURT_RESULT }));
+
+    // Captured before the click, because the skeleton replaces the facet row
+    // for the duration of the call — a change can still arrive from the
+    // detached select, which is how an open native dropdown delivers one.
+    const select = facetSelect('gerichtsbarkeit');
+    nextPage();
+    await settle();
+    await choose(select, 'Vwgh');
+
+    expect(bridge.callTool).toHaveBeenCalledTimes(1);
+    // Page 3 of the running request, not page 1 of the dropped facet change.
+    expect(vi.mocked(bridge.callTool).mock.calls[0][0].arguments).toMatchObject({ seite: 3 });
+
+    // Let the page land so the module is not left waiting on a dead promise.
+    release(payload({ structuredContent: PAGED_COURT_RESULT }));
+    await settle();
+  });
+
+  it('puts focus back on the changed select afterwards', async () => {
+    vi.mocked(bridge.callTool).mockResolvedValue(payload({ structuredContent: COURT_RESULT }));
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: COURT_RESULT }));
+    const before = facetSelect('gerichtsbarkeit');
+    await pick('gerichtsbarkeit', 'Vwgh');
+
+    // The render replaced the whole row, so this is a different element than
+    // the one the user just used — without the restore, focus sits on <body>.
+    expect(document.activeElement).toBe(facetSelect('gerichtsbarkeit'));
+    expect(document.activeElement).not.toBe(before);
+  });
+
+  it('puts focus back even when the re-issue failed', async () => {
+    vi.mocked(bridge.callTool).mockRejectedValue(new Error('weg'));
+
+    await mount();
+    await connect();
+    deliver(payload({ structuredContent: COURT_RESULT }));
+    await pick('dokumenttyp', 'entscheidungstext');
+
+    expect(document.activeElement).toBe(facetSelect('dokumenttyp'));
   });
 });
 

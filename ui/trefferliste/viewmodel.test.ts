@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { JUDIKATUR_GERICHTSBARKEITEN } from '../../src/facets.js';
 import {
   COURT_RESULT,
   DSB_DOCUMENT,
@@ -12,9 +13,12 @@ import {
 } from '../__fixtures__/search-results.js';
 
 import {
+  facetControls,
+  facetQuery,
   fassungControl,
   fassungQuery,
   fullTextPrompt,
+  gerichtsbarkeitLabel,
   nextQuery,
   parseSearchResult,
   splitCaseNumbers,
@@ -140,6 +144,11 @@ describe('toViewModel — header', () => {
 
   it('offers no Rechtslage control for a Judikatur search', () => {
     expect(toViewModel(COURT_RESULT).fassung).toBeNull();
+  });
+
+  it('offers the facet row for a Judikatur search and nothing else', () => {
+    expect(toViewModel(COURT_RESULT).facets?.gerichtsbarkeit.value).toBe('Justiz');
+    expect(toViewModel(LAW_RESULT).facets).toBeNull();
   });
 
   it('renders a header without a query echo', () => {
@@ -409,6 +418,233 @@ describe('fassungQuery', () => {
         '2020-01-01',
       ),
     ).toBeNull();
+  });
+});
+
+/**
+ * The Judikatur echo as the server really ships it: `gerichtsbarkeit` and
+ * `dokumenttyp` are zod defaults, so they are materialized in every echo even
+ * when the caller named neither. The fixture predates `dokumenttyp`.
+ */
+const JUDIKATUR_ECHO = { ...COURT_RESULT.query, tool: 'ris_judikatur', dokumenttyp: 'beide' };
+
+/** The same search with all three Justiz-bound filters set, on a later page. */
+const FILTERED_ECHO = {
+  ...JUDIKATUR_ECHO,
+  gericht: 'OGH',
+  rechtsgebiet: 'Zivilrecht',
+  fachgebiet: 'Arbeitsrecht',
+  seite: 4,
+};
+
+describe('facetControls', () => {
+  it('stays away from other tools and from a missing echo', () => {
+    expect(facetControls(LAW_RESULT.query)).toBeNull();
+    expect(facetControls(undefined)).toBeNull();
+  });
+
+  it('offers every jurisdiction, with the echoed one as the current value', () => {
+    const controls = facetControls(JUDIKATUR_ECHO);
+
+    expect(controls?.gerichtsbarkeit.value).toBe('Justiz');
+    expect(controls?.gerichtsbarkeit.options).toHaveLength(16);
+    expect(controls?.gerichtsbarkeit.options[0]).toEqual({
+      value: 'Justiz',
+      label: 'Justiz (OGH/OLG/LG/BG)',
+    });
+    expect(controls?.gerichtsbarkeit.options).toContainEqual({ value: 'Vwgh', label: 'VwGH' });
+  });
+
+  it('offers the three document kinds', () => {
+    expect(facetControls(JUDIKATUR_ECHO)?.dokumenttyp).toEqual({
+      value: 'beide',
+      options: [
+        { value: 'rechtssatz', label: 'Rechtssätze' },
+        { value: 'entscheidungstext', label: 'Entscheidungstexte' },
+        { value: 'beide', label: 'Rechtssätze + Entscheidungen' },
+      ],
+    });
+  });
+
+  it('offers the legal areas only for Justiz, where RIS honours them', () => {
+    expect(facetControls(JUDIKATUR_ECHO)?.rechtsgebiet).toEqual({
+      value: '',
+      options: [
+        { value: 'Zivilrecht', label: 'Zivilrecht' },
+        { value: 'Strafrecht', label: 'Strafrecht' },
+      ],
+    });
+    expect(facetControls({ ...JUDIKATUR_ECHO, gerichtsbarkeit: 'Vwgh' })?.rechtsgebiet).toBeNull();
+  });
+
+  it('carries the echoed legal area', () => {
+    expect(facetControls(FILTERED_ECHO)?.rechtsgebiet?.value).toBe('Zivilrecht');
+  });
+
+  it('reports the court filter only when the echo carries one', () => {
+    expect(facetControls(FILTERED_ECHO)?.gericht).toBe('OGH');
+    expect(facetControls(JUDIKATUR_ECHO)?.gericht).toBeNull();
+  });
+
+  // A jurisdiction the widget has never heard of must still be selectable as
+  // the current state — otherwise the select would silently claim the search
+  // ran somewhere else.
+  it('keeps an unknown echoed jurisdiction representable, labelled with its raw value', () => {
+    const controls = facetControls({ ...JUDIKATUR_ECHO, gerichtsbarkeit: 'Hexenkammer' });
+
+    expect(controls?.gerichtsbarkeit.value).toBe('Hexenkammer');
+    expect(controls?.gerichtsbarkeit.options).toHaveLength(17);
+    expect(controls?.gerichtsbarkeit.options.at(-1)).toEqual({
+      value: 'Hexenkammer',
+      label: 'Hexenkammer',
+    });
+  });
+
+  it('keeps an unknown echoed document kind and legal area representable too', () => {
+    const controls = facetControls({
+      ...JUDIKATUR_ECHO,
+      dokumenttyp: 'gutachten',
+      rechtsgebiet: 'Weltraumrecht',
+    });
+
+    expect(controls?.dokumenttyp.options).toHaveLength(4);
+    expect(controls?.dokumenttyp.options.at(-1)).toEqual({
+      value: 'gutachten',
+      label: 'gutachten',
+    });
+    expect(controls?.rechtsgebiet?.options.at(-1)).toEqual({
+      value: 'Weltraumrecht',
+      label: 'Weltraumrecht',
+    });
+  });
+
+  // Every live echo carries the zod default, so this is the shape of an echo
+  // from somewhere else — a stale snapshot, another server. Inventing a value
+  // would claim a filter the search never ran with.
+  it('invents no value when the echo names no document kind', () => {
+    const { dokumenttyp: _dokumenttyp, ...withoutTyp } = JUDIKATUR_ECHO;
+    const controls = facetControls({ ...withoutTyp, tool: 'ris_judikatur' });
+
+    expect(controls?.dokumenttyp.value).toBe('');
+    expect(controls?.dokumenttyp.options).toHaveLength(3);
+  });
+});
+
+describe('gerichtsbarkeitLabel', () => {
+  it('names all sixteen jurisdictions in German', () => {
+    expect(JUDIKATUR_GERICHTSBARKEITEN.map(gerichtsbarkeitLabel)).toEqual([
+      'Justiz (OGH/OLG/LG/BG)',
+      'VfGH',
+      'VwGH',
+      'BVwG',
+      'LVwG',
+      'Datenschutz (DSB)',
+      'AsylGH (historisch)',
+      'Normenliste',
+      'PVAK',
+      'Gleichbehandlungskommission',
+      'Disziplinarkommission',
+      'Vergabeamt (historisch)',
+      'UVS (historisch)',
+      'UBAS (historisch)',
+      'Umweltsenat (historisch)',
+      'BKS (historisch)',
+    ]);
+  });
+
+  it('falls back to the raw value for a jurisdiction added server-side', () => {
+    expect(gerichtsbarkeitLabel('Hexenkammer')).toBe('Hexenkammer');
+  });
+});
+
+describe('facetQuery', () => {
+  it('refuses other tools and a missing echo', () => {
+    expect(facetQuery(LAW_RESULT.query, { dokumenttyp: 'beide' })).toBeNull();
+    expect(facetQuery(undefined, { dokumenttyp: 'beide' })).toBeNull();
+  });
+
+  it('drops the Justiz-bound filters when the jurisdiction leaves Justiz', () => {
+    expect(facetQuery(FILTERED_ECHO, { gerichtsbarkeit: 'Vwgh' })).toEqual({
+      name: 'ris_judikatur',
+      arguments: {
+        gerichtsbarkeit: 'Vwgh',
+        dokumenttyp: 'beide',
+        suchworte: 'Verjährung',
+        limit: 20,
+        seite: 1,
+      },
+    });
+  });
+
+  it('keeps them when the jurisdiction stays Justiz', () => {
+    const call = facetQuery(FILTERED_ECHO, { gerichtsbarkeit: 'Justiz' });
+
+    expect(call?.arguments).toEqual({
+      gerichtsbarkeit: 'Justiz',
+      dokumenttyp: 'beide',
+      suchworte: 'Verjährung',
+      gericht: 'OGH',
+      rechtsgebiet: 'Zivilrecht',
+      fachgebiet: 'Arbeitsrecht',
+      limit: 20,
+      seite: 1,
+    });
+  });
+
+  it('changes the document kind and leaves the rest of the search alone', () => {
+    const call = facetQuery(FILTERED_ECHO, { dokumenttyp: 'entscheidungstext' });
+
+    expect(call?.arguments).toEqual({
+      gerichtsbarkeit: 'Justiz',
+      dokumenttyp: 'entscheidungstext',
+      suchworte: 'Verjährung',
+      gericht: 'OGH',
+      rechtsgebiet: 'Zivilrecht',
+      fachgebiet: 'Arbeitsrecht',
+      limit: 20,
+      seite: 1,
+    });
+  });
+
+  it('picks a legal area', () => {
+    expect(facetQuery(JUDIKATUR_ECHO, { rechtsgebiet: 'Strafrecht' })?.arguments).toMatchObject({
+      rechtsgebiet: 'Strafrecht',
+      seite: 1,
+    });
+  });
+
+  it('removes the legal area entirely for „alle" instead of sending an empty one', () => {
+    const call = facetQuery(FILTERED_ECHO, { rechtsgebiet: null });
+
+    expect(call?.arguments).not.toHaveProperty('rechtsgebiet');
+    expect(call?.arguments).toMatchObject({ gericht: 'OGH', fachgebiet: 'Arbeitsrecht', seite: 1 });
+  });
+
+  it('removes the court filter and keeps the other filters', () => {
+    const call = facetQuery(FILTERED_ECHO, { gericht: null });
+
+    expect(call?.arguments).not.toHaveProperty('gericht');
+    expect(call?.arguments).toMatchObject({
+      rechtsgebiet: 'Zivilrecht',
+      fachgebiet: 'Arbeitsrecht',
+      seite: 1,
+    });
+  });
+
+  it('resets to the first page on every change and never echoes the tool name', () => {
+    for (const change of [
+      { gerichtsbarkeit: 'Vwgh' },
+      { dokumenttyp: 'rechtssatz' },
+      { rechtsgebiet: 'Strafrecht' },
+      { rechtsgebiet: null },
+      { gericht: null },
+    ] as const) {
+      const call = facetQuery(FILTERED_ECHO, change);
+
+      expect(call?.name).toBe('ris_judikatur');
+      expect(call?.arguments.seite).toBe(1);
+      expect(call?.arguments).not.toHaveProperty('tool');
+    }
   });
 });
 
