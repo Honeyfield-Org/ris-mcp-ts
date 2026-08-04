@@ -6,25 +6,44 @@ import { NORM_MARKDOWN, SHORT_CHUNK } from '../../ui/__fixtures__/document-chunk
 import { installHostSim, type HostSimCall } from './host-stub.js';
 
 /**
+ * The § 1295 Abs 2 line the mount text stops short of.
+ *
+ * The mounting text is a *truncated* rendering, so the canonical first section
+ * legitimately carries more than it — and here that difference is also what
+ * makes adoption observable: this line can only be on screen because the
+ * `ris_dokument_abschnitt` answer replaced the provisional run.
+ */
+const SECTION_ONLY_LINE =
+  '(2) Auch wer in einer gegen die guten Sitten verstoßenden Weise absichtlich Schaden zufügt, ist dafür verantwortlich.';
+
+/** The canonical first section: the mount text plus the line it was cut before. */
+const SECTION_TEXT = `${NORM_MARKDOWN}\n${SECTION_ONLY_LINE}`;
+
+/**
  * A `ris_dokument` result as the server emits it: the same text in the text
  * block and in the structured payload, which is what lets a host deliver either
- * one. `total_length` matches the text, so this document needs no further
- * section beyond the canonical first one.
+ * one, alongside the document's *untruncated* length.
  */
 const MOUNT_RESULT = {
   content: [{ type: 'text', text: NORM_MARKDOWN }],
   structuredContent: {
     text: NORM_MARKDOWN,
-    total_length: NORM_MARKDOWN.length,
+    total_length: SECTION_TEXT.length,
     dokumentnummer: SHORT_CHUNK.dokumentnummer,
     source_url: SHORT_CHUNK.source_url,
   },
 };
 
-/** The `ris_dokument_abschnitt` answer that supersedes the provisional mount. */
+/**
+ * The `ris_dokument_abschnitt` answer that supersedes the provisional mount.
+ *
+ * `total_length` agrees with the mount's, so the viewer treats this as the same
+ * document rather than as one refetched at a different length, and
+ * `next_offset: null` ends the series.
+ */
 const SECTION_RESULT = {
-  content: [{ type: 'text', text: SHORT_CHUNK.text }],
-  structuredContent: SHORT_CHUNK,
+  content: [{ type: 'text', text: SECTION_TEXT }],
+  structuredContent: { ...SHORT_CHUNK, text: SECTION_TEXT, total_length: SECTION_TEXT.length },
 };
 
 test('mounts the viewer and renders the document text', async ({ page }) => {
@@ -46,9 +65,10 @@ test('mounts the viewer and renders the document text', async ({ page }) => {
   // The nojs marker answers "did the bundle run at all" — it must be gone.
   await expect(widget.locator('#nojs-marker')).toBeHidden();
 
-  // The provisional run always carries a sentinel; the canonical section says
-  // `next_offset: null` and takes it away. Its absence is what tells the two
-  // renders apart, since both hold the same text.
+  // Only the canonical section carries this line: the answer was adopted, not
+  // merely fetched.
+  await expect(widget.locator('.ris-doc-text')).toContainText(SECTION_ONLY_LINE);
+  // And the series ended — `next_offset: null` takes the sentinel away.
   await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(0);
 
   const calls = await page.evaluate(
@@ -65,4 +85,23 @@ test('mounts the viewer and renders the document text', async ({ page }) => {
 
   // Nothing degraded on the way: every failure state of the viewer is a notice.
   await expect(widget.locator('.ris-notice-title')).toHaveCount(0);
+});
+
+test('a slow section call keeps the mount text on screen until it arrives', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.evaluate(installHostSim, {
+    widgetHtml: VIEWER_HTML,
+    mountResult: MOUNT_RESULT,
+    callAnswers: [{ delayMs: 1_500, result: SECTION_RESULT }],
+  });
+
+  const widget = page.frameLocator('iframe');
+  // While the section is in flight: the sentinel that asked for it is on screen,
+  // and — unlike the Trefferliste's paging — nothing is replaced by a skeleton.
+  // A section is appended, so the text already read must survive the wait.
+  await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(1);
+  await expect(widget.locator('.ris-doc-text')).toContainText('Jedermann ist berechtigt');
+
+  await expect(widget.locator('.ris-doc-text')).toContainText(SECTION_ONLY_LINE);
+  await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(0);
 });
