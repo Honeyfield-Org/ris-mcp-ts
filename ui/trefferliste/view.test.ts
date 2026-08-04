@@ -266,7 +266,12 @@ describe('renderResults — facet row', () => {
     const [container, actions] = render(FILTERED_COURT_RESULT);
     const remove = container.querySelector<HTMLButtonElement>('.ris-facet-remove');
 
-    expect(container.querySelector('.ris-facet-chip')?.textContent).toBe('OGH×');
+    // Labelled like the selects beside it: „OGH" on its own says nothing about
+    // which filter it is, and the chip is the only control without a select.
+    expect(container.querySelector('.ris-facet-chip .ris-facet-label')?.textContent).toBe(
+      'Gericht:',
+    );
+    expect(container.querySelector('.ris-facet-chip')?.textContent).toBe('Gericht:OGH×');
     expect(remove?.getAttribute('aria-label')).toBe('Gericht-Filter entfernen');
 
     remove?.click();

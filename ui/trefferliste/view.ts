@@ -154,14 +154,16 @@ function renderFacet(
  *
  * RIS has no list of courts to offer — `gericht` is free text the caller
  * supplied — so the only thing the row can do with it is display it and let the
- * user take it off again.
+ * user take it off again. It is labelled like the selects beside it because a
+ * bare „OGH" in the row says nothing about which filter it is — the remove
+ * button's aria-label says it, but only to assistive technology.
  */
 function renderGericht(gericht: string, handlers: ResultHandlers): HTMLElement {
-  const chip = element('span', 'ris-facet-chip', gericht);
+  const chip = element('span', 'ris-facet-chip');
   const remove = button('ris-facet-remove', '×', () => handlers.onFacet({ gericht: null }));
   remove.setAttribute('aria-label', 'Gericht-Filter entfernen');
 
-  chip.append(remove);
+  chip.append(element('span', 'ris-facet-label', 'Gericht:'), gericht, remove);
   return chip;
 }
 
