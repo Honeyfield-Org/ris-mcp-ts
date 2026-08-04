@@ -12,6 +12,9 @@ import { COPY, createNotice } from '../shared/states.js';
 import {
   parseSearchResult,
   type DocumentRow,
+  type FacetChange,
+  type FacetControls,
+  type FacetOption,
   type ResultViewModel,
   type SearchResultPayload,
 } from './viewmodel.js';
@@ -24,6 +27,8 @@ export interface ResultHandlers {
   onPage(delta: -1 | 1): void;
   /** A legal-state date was picked, or `null` when it was cleared. */
   onFassungVom(value: string | null): void;
+  /** One facet was changed or dropped — see {@link FacetChange}. */
+  onFacet(change: FacetChange): void;
 }
 
 /** Either a result to render, or a notice explaining why there is none. */
@@ -104,6 +109,109 @@ function renderFassung(control: { value: string }, handlers: ResultHandlers): HT
 
   field.append(input);
   return field;
+}
+
+/**
+ * One facet select: a short German label and the options the model handed over.
+ *
+ * The current value is assigned after the options exist, and it is assigned
+ * even when it is `''`: appending the first option makes the DOM select it, and
+ * a select reading „Rechtssätze" for a search that never named a document kind
+ * would claim a filter the results do not have. With no option carrying `''`
+ * that assignment leaves nothing selected — which is precisely the statement
+ * „this search has no such filter". The Rechtsgebiet select is the deliberate
+ * exception: it does have an option for `''`, see {@link RECHTSGEBIET_ALL}.
+ */
+function renderFacet(
+  facet: string,
+  label: string,
+  value: string,
+  options: FacetOption[],
+  report: (chosen: string) => void,
+): HTMLElement {
+  const field = element('label', `ris-facet ris-facet-${facet}`);
+  field.append(element('span', 'ris-facet-label', label));
+
+  const select = document.createElement('select');
+  select.className = 'ris-facet-select';
+
+  for (const option of options) {
+    const node = document.createElement('option');
+    node.value = option.value;
+    node.textContent = option.label;
+    select.append(node);
+  }
+
+  select.value = value;
+  select.addEventListener('change', () => report(select.value));
+
+  field.append(select);
+  return field;
+}
+
+/**
+ * The court filter: shown and removable, never settable.
+ *
+ * RIS has no list of courts to offer — `gericht` is free text the caller
+ * supplied — so the only thing the row can do with it is display it and let the
+ * user take it off again.
+ */
+function renderGericht(gericht: string, handlers: ResultHandlers): HTMLElement {
+  const chip = element('span', 'ris-facet-chip', gericht);
+  const remove = button('ris-facet-remove', '×', () => handlers.onFacet({ gericht: null }));
+  remove.setAttribute('aria-label', 'Gericht-Filter entfernen');
+
+  chip.append(remove);
+  return chip;
+}
+
+/** The one facet whose absence is itself a choice, so it gets an option. */
+const RECHTSGEBIET_ALL: FacetOption = { value: '', label: '(alle)' };
+
+/**
+ * The facet row of a Judikatur result.
+ *
+ * Every control reports a {@link FacetChange} and stops there: which argument
+ * that becomes, which filters survive a change of jurisdiction and what the
+ * options mean is `viewmodel.ts`'s business, not this layer's.
+ */
+function renderFacets(facets: FacetControls, handlers: ResultHandlers): HTMLElement {
+  const row = element('div', 'ris-facets');
+
+  row.append(
+    renderFacet(
+      'gerichtsbarkeit',
+      'Gerichtsbarkeit',
+      facets.gerichtsbarkeit.value,
+      facets.gerichtsbarkeit.options,
+      (value) => handlers.onFacet({ gerichtsbarkeit: value }),
+    ),
+    renderFacet(
+      'dokumenttyp',
+      'Dokumenttyp',
+      facets.dokumenttyp.value,
+      facets.dokumenttyp.options,
+      (value) => handlers.onFacet({ dokumenttyp: value }),
+    ),
+  );
+
+  if (facets.rechtsgebiet) {
+    row.append(
+      renderFacet(
+        'rechtsgebiet',
+        'Rechtsgebiet',
+        facets.rechtsgebiet.value,
+        [RECHTSGEBIET_ALL, ...facets.rechtsgebiet.options],
+        // „(alle)" is the absence of the filter, which travels as `null` — an
+        // empty string would be re-issued as a real argument.
+        (value) => handlers.onFacet({ rechtsgebiet: value === '' ? null : value }),
+      ),
+    );
+  }
+
+  if (facets.gericht) row.append(renderGericht(facets.gericht, handlers));
+
+  return row;
 }
 
 function renderHeader(model: ResultViewModel, handlers: ResultHandlers): HTMLElement {
@@ -195,25 +303,27 @@ function renderFooter(model: ResultViewModel, handlers: ResultHandlers): HTMLEle
 /**
  * Render one page of results into `container`, replacing whatever was there.
  *
- * An empty result keeps the header — the user still wants to see which search
- * came back with nothing — and drops list and pagination.
+ * An empty result keeps the header and the facet row — the user still wants to
+ * see which search came back with nothing, and widening a facet is the only way
+ * out of it — and drops list and pagination.
  */
 export function renderResults(
   container: HTMLElement,
   model: ResultViewModel,
   handlers: ResultHandlers,
 ): void {
-  const header = renderHeader(model, handlers);
+  const controls = [renderHeader(model, handlers)];
+  if (model.facets) controls.push(renderFacets(model.facets, handlers));
 
   if (model.isEmpty) {
-    container.replaceChildren(header, createNotice('info', COPY.emptyTitle, COPY.emptyDetail));
+    container.replaceChildren(...controls, createNotice('info', COPY.emptyTitle, COPY.emptyDetail));
     return;
   }
 
   const list = element('ul', 'ris-rows');
   model.rows.forEach((row, index) => list.append(renderRow(row, index, handlers)));
 
-  container.replaceChildren(header, list, renderFooter(model, handlers));
+  container.replaceChildren(...controls, list, renderFooter(model, handlers));
 }
 
 /**
@@ -248,4 +358,24 @@ export function focusPagination(container: HTMLElement, delta: -1 | 1): void {
  */
 export function focusFassung(container: HTMLElement): void {
   container.querySelector<HTMLInputElement>('.ris-fassung-input')?.focus();
+}
+
+/**
+ * Put keyboard focus back after a facet change.
+ *
+ * Same reason as {@link focusFassung}: the re-issued search replaces the whole
+ * row, so the select the user just left is gone. Which select to return to is
+ * read off the change itself rather than matched against a list of facet names
+ * — a variant added later needs nothing here.
+ *
+ * A removed court filter focuses nothing, deliberately: the chip that carried
+ * the button went away with the filter, there is no control that stands for it,
+ * and grabbing a neighbouring select would drop the user somewhere they never
+ * asked to be.
+ */
+export function focusFacet(container: HTMLElement, change: FacetChange): void {
+  if ('gericht' in change) return;
+
+  const [facet] = Object.keys(change);
+  container.querySelector<HTMLSelectElement>(`.ris-facet-${facet} .ris-facet-select`)?.focus();
 }
