@@ -52,6 +52,11 @@ test('a pagination click issues tools/call with seite+1 and renders the answer',
   // The whole echo travels, not just the page number — the next page of *this*
   // search is only the same search with `seite` incremented.
   expect(params.arguments).toMatchObject({ suchworte: 'Schadenersatz', seite: 2 });
+
+  // The call count above is one snapshot in time. A second call arriving after
+  // it would consume the stub's default rpcError and put a notice on screen, so
+  // this retrying assertion is what makes "exactly one" hold for good.
+  await expect(widget.locator('.ris-notice-title')).toHaveCount(0);
 });
 
 test('a rejected page call keeps the list and shows the notice beneath it', async ({ page }) => {
@@ -68,6 +73,36 @@ test('a rejected page call keeps the list and shows the notice beneath it', asyn
   await expect(widget.locator('.ris-notice-title')).toHaveText(COPY.sessionExpired);
   // The rows are the point: the skeleton replaced them for the duration of the
   // call, and the failure has to put the page the user was reading back.
+  await expect(widget.locator('.ris-row-title')).toHaveCount(2);
+});
+
+test('a server-side tool error keeps the list and reports the RIS message', async ({ page }) => {
+  await page.goto('about:blank');
+  await page.evaluate(installHostSim, {
+    widgetHtml: TREFFERLISTE_HTML,
+    mountResult: toolResult(LAW_RESULT),
+    // A different branch from the rejection above: the call itself succeeded and
+    // the *tool* failed, so the widget has German prose from the server to show
+    // rather than a transport failure to explain.
+    callAnswers: [
+      {
+        result: {
+          content: [{ type: 'text', text: 'RIS-Fehler: Upstream nicht erreichbar' }],
+          isError: true,
+        },
+      },
+    ],
+  });
+
+  const widget = page.frameLocator('iframe');
+  await widget.getByRole('button', { name: 'Nächste Seite' }).click();
+
+  await expect(widget.locator('.ris-notice-title')).toHaveText(COPY.toolErrorTitle);
+  // The server's own words, not a generic failure line — that is what separates
+  // this notice from the evicted-session one.
+  await expect(widget.locator('.ris-notice-detail')).toHaveText(
+    'RIS-Fehler: Upstream nicht erreichbar',
+  );
   await expect(widget.locator('.ris-row-title')).toHaveCount(2);
 });
 
