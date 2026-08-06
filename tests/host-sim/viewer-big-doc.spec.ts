@@ -82,7 +82,7 @@ test('mounting a big document fetches the first section eagerly: rail and canoni
   await expect(widget.locator('.ris-notice-title')).toHaveCount(0);
 });
 
-test('scrolling to the end fetches the next section: progress grows past the eager half', async ({
+test('scrolling to the end fetches the next section: progress grows past the eager first section', async ({
   page,
 }) => {
   await page.goto('about:blank');
@@ -139,6 +139,10 @@ test('a rail click jumps, fetching an unloaded target with visible loading feedb
   const textPane = widget.locator('.ris-doc-text');
   // Getting to the starting position of the click: the eager section plus one
   // scrolled-for section, so everything from offset 50000 on is still unloaded.
+  // The rail is the gate rather than the text — the mount run carries the same
+  // opening line, so waiting on that would let the scroll land on either side of
+  // the eager adoption. Waiting for the outline pins it to the side after.
+  await expect(widget.locator('.ris-outline-jump')).toHaveCount(10);
   await expect(textPane).toContainText('Abschnitt 1 — Geltungsbereich');
   await textPane.evaluate((pane) => {
     pane.scrollTop = pane.scrollHeight;
