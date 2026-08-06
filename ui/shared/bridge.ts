@@ -6,7 +6,12 @@
  * tool result's `structuredContent` comes from, which differs per host.
  */
 
-import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
+import {
+  App,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  type McpUiDisplayMode,
+} from '@modelcontextprotocol/ext-apps';
 
 /**
  * The part of the ext-apps `App` surface the bridge uses.
@@ -17,7 +22,13 @@ import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextp
  */
 export type HostApp = Pick<
   App,
-  'addEventListener' | 'callServerTool' | 'connect' | 'getHostContext' | 'openLink' | 'sendMessage'
+  | 'addEventListener'
+  | 'callServerTool'
+  | 'connect'
+  | 'getHostContext'
+  | 'openLink'
+  | 'requestDisplayMode'
+  | 'sendMessage'
 >;
 
 /** Where a payload's `structuredContent` was found. */
@@ -53,6 +64,16 @@ export interface BridgeOptions {
   onHostContext?(context: unknown): void;
   /** Identifies the widget to the host. Defaults to the Trefferliste. */
   appName?: string;
+  /**
+   * Display modes this widget can lay itself out in, declared to the host
+   * during the handshake.
+   *
+   * Per widget rather than global, and left unset by one that only ever renders
+   * inline: the declaration is what makes a host offer its fullscreen
+   * affordance, so declaring a mode the widget has no layout for advertises a
+   * control that leads nowhere.
+   */
+  displayModes?: McpUiDisplayMode[];
 }
 
 /** Host-bound actions a widget performs. */
@@ -69,6 +90,16 @@ export interface Bridge {
   openLink(url: string): Promise<boolean>;
   /** Sends a user message into the conversation; `false` when it was rejected. */
   sendPrompt(text: string): Promise<boolean>;
+  /**
+   * Ask the host to switch display mode.
+   *
+   * Resolves with the mode that is actually in effect afterwards, which is not
+   * necessarily the requested one: a host may grant something else, and one
+   * that cannot answer at all leaves the widget where it was. Never rejects —
+   * the caller renders against the resolved mode, so an unhandled rejection
+   * would strand it between two layouts.
+   */
+  requestDisplayMode(mode: McpUiDisplayMode): Promise<McpUiDisplayMode>;
 }
 
 /**
@@ -234,7 +265,11 @@ function rejected(result: unknown): boolean {
  */
 export async function connectBridge(options: BridgeOptions, app?: HostApp): Promise<Bridge> {
   const host =
-    app ?? new App({ name: options.appName ?? 'ris-mcp-trefferliste', version: '1.0.0' });
+    app ??
+    new App(
+      { name: options.appName ?? 'ris-mcp-trefferliste', version: '1.0.0' },
+      options.displayModes ? { availableDisplayModes: options.displayModes } : undefined,
+    );
 
   host.addEventListener('toolresult', (params) => {
     options.onToolResult(readMountResult(params));
@@ -272,6 +307,13 @@ export async function connectBridge(options: BridgeOptions, app?: HostApp): Prom
         );
       } catch {
         return false;
+      }
+    },
+    async requestDisplayMode(mode): Promise<McpUiDisplayMode> {
+      try {
+        return (await host.requestDisplayMode({ mode })).mode;
+      } catch {
+        return host.getHostContext()?.displayMode ?? 'inline';
       }
     },
   };

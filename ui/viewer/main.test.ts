@@ -34,6 +34,7 @@ const bridge: Bridge = {
   callTool: vi.fn(),
   openLink: vi.fn(async () => true),
   sendPrompt: vi.fn(async () => true),
+  requestDisplayMode: vi.fn(async () => 'inline' as const),
 };
 
 // Only `connectBridge` is replaced: `readMountInput` is the real one, so the
