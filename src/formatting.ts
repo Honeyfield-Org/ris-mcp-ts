@@ -154,6 +154,49 @@ export function htmlToText(htmlContent: string): string {
   return text;
 }
 
+/**
+ * Reduce a full RIS *website* page to the document it displays.
+ *
+ * `ris_dokument` mostly fetches bare document HTML, but two of its routes serve
+ * a rendered page instead — `GeltendeFassung.wxe` (a whole consolidated law) and
+ * `Dokument.wxe` (a single norm). Those carry the site around the text: skip
+ * links ("Seitenbereiche:"), the header menu, a version navigation, the footer
+ * ("Zum Seitenanfang", the Bundeskanzleramt copyright line). Handed to
+ * {@link htmlToText} whole, the reader gets the navigation first and the law
+ * somewhere below it, and {@link extractOutline} offers the chrome headings as
+ * jump targets (issue #94).
+ *
+ * The site is dropped by *keeping* `.documentContent` rather than by removing
+ * the chrome, because the chrome is not addressable: the version navigation on
+ * `Dokument.wxe` is an attribute-less `<div>` that no selector can name. The one
+ * exception is `.Warning` — chrome by position, content by meaning, since it
+ * says whether the Fassung below is still in force. It is kept from its place in
+ * the document, not appended, so it stays above the text it qualifies.
+ *
+ * `.onlyScreenreader` survives inside the kept fragments: unlike the `.sr-only`
+ * pairs htmlToText drops as spoken duplicates, it is the only carrier of the
+ * `§ n` section markers of a consolidated law.
+ *
+ * A page without `.documentContent` — every bare document route — is returned
+ * as the identical string, so the far more common path is not re-serialised.
+ */
+export function scopeRisContent(html: string): { html: string; pageTitle: string | null } {
+  const $ = cheerio.load(html);
+
+  if ($('.documentContent').length === 0) {
+    return { html, pageTitle: null };
+  }
+
+  // A union selector yields its matches in document order, which is what keeps
+  // the Warning above the text rather than behind it.
+  const kept = $('.documentContent, .document > .Warning')
+    .map((_, element) => $.html(element))
+    .get();
+  const pageTitle = $('head > title').first().text().trim();
+
+  return { html: kept.join('\n'), pageTitle: pageTitle.length > 0 ? pageTitle : null };
+}
+
 // =============================================================================
 // Citation Formatting
 // =============================================================================

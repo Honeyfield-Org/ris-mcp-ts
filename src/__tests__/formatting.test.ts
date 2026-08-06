@@ -19,6 +19,7 @@ import {
   truncateResponse,
   chunkResponse,
   extractOutline,
+  scopeRisContent,
   CHARACTER_LIMIT,
   type DocumentMetadata,
 } from '../formatting.js';
@@ -1760,5 +1761,151 @@ describe('extractOutline', () => {
     );
 
     expect(extractOutline(html, text).map((entry) => entry.level)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+});
+
+// =============================================================================
+// scopeRisContent() — site chrome (issue #94)
+// =============================================================================
+
+describe('scopeRisContent (issue #94)', () => {
+  const gfHtml = readFileSync(new URL('./fixtures/gf-dsg-excerpt.html', import.meta.url), 'utf8');
+  const wxeHtml = readFileSync(
+    new URL('./fixtures/dokumentwxe-nor-excerpt.html', import.meta.url),
+    'utf8',
+  );
+
+  describe('a "Gesamte Rechtsvorschrift" page (GeltendeFassung.wxe)', () => {
+    const scoped = scopeRisContent(gfHtml);
+    const text = htmlToText(scoped.html);
+
+    it('should be scoping a fixture that really carries .documentContent', () => {
+      // The loud-failure pin: RIS renaming the wrapper turns this red first, and
+      // names the cause, instead of leaving the assertions below to fail as
+      // "chrome is gone" while scoping silently passed the whole page through.
+      expect(gfHtml).toContain('class="documentContent"');
+      expect(scoped.html).not.toBe(gfHtml);
+    });
+
+    it('should drop the surrounding site chrome', () => {
+      // Skip links at the top, footer at the bottom — both verbatim in the fixture.
+      expect(gfHtml).toContain('Seitenbereiche');
+      expect(scoped.html).not.toContain('Seitenbereiche');
+      expect(scoped.html).not.toContain('Zum Seitenanfang');
+      expect(scoped.html).not.toContain('© 2026 Bundeskanzleramt');
+
+      // …and at the text level, which is what reaches the reader and, unlike the
+      // markup above, cannot go quiet on an entity-encoding change in cheerio's
+      // re-serialisation. The unscoped page carries all three, so this bites.
+      const full = htmlToText(gfHtml);
+      expect(full).toContain('Zum Seitenanfang');
+      expect(full).toContain('Bundeskanzleramt der Republik');
+      expect(text).not.toContain('Zum Seitenanfang');
+      expect(text).not.toContain('Bundeskanzleramt der Republik');
+    });
+
+    it('should start the text at the law itself', () => {
+      expect(text.split('\n').slice(0, 3)).toEqual(['§ 0', '', 'Langtitel']);
+      expect(text).toContain(
+        'Bundesgesetz zum Schutz natürlicher Personen bei der Verarbeitung ' +
+          'personenbezogener Daten (Datenschutzgesetz – DSG)',
+      );
+      expect(htmlToText(gfHtml)).toContain('Seitenbereiche'); // the unscoped control
+    });
+
+    it('should keep the § markers that .onlyScreenreader carries', () => {
+      // Measured: removing .onlyScreenreader from the scoped fragment removes
+      // both markers — they exist nowhere else. The class is not the .sr-only
+      // that htmlToText strips as a spoken duplicate, so it must survive.
+      expect(text).toContain('§ 0');
+      expect(text).toContain('Art. 1 § 1');
+    });
+
+    it('should keep the chrome headings out of the outline', () => {
+      const labels = extractOutline(scoped.html, text).map((entry) => entry.label);
+
+      expect(labels).not.toContain('Über diese Seite');
+      expect(labels).not.toContain(
+        'Bundesrecht konsolidiert: Gesamte Rechtsvorschrift für Datenschutzgesetz, ' +
+          'Fassung vom 06.08.2026',
+      );
+      // Both are in the outline of the unscoped page, so the assertions bite.
+      const unscoped = extractOutline(gfHtml, htmlToText(gfHtml)).map((entry) => entry.label);
+      expect(unscoped).toContain('Über diese Seite');
+      expect(labels[0]).toBe('§ 0');
+    });
+
+    it('should report the page title', () => {
+      expect(scoped.pageTitle).toBe(
+        'RIS - Datenschutzgesetz - Bundesrecht konsolidiert, Fassung vom 06.08.2026',
+      );
+    });
+  });
+
+  describe('a single-norm page (Dokument.wxe)', () => {
+    const scoped = scopeRisContent(wxeHtml);
+    const text = htmlToText(scoped.html);
+
+    it('should drop the version navigation, which has no class of its own', () => {
+      // An attribute-less <div> inside .document: nothing selects it, so it can
+      // only go by keeping .documentContent rather than by removing chrome.
+      expect(wxeHtml).toContain('Alle Fassungen');
+      expect(scoped.html).not.toContain('Alle Fassungen');
+      expect(scoped.html).not.toContain('Gesamte Rechtsvorschrift');
+    });
+
+    it('should keep the legal status of the displayed Fassung', () => {
+      // .Warning is chrome by position but content by meaning: it says the text
+      // below is not in force. Losing it would misinform the reader.
+      expect(text).toContain('Diese Fassung ist nicht aktuell');
+    });
+
+    it('should keep the kept fragments in document order', () => {
+      // .Warning precedes .documentContent on the page, and must precede it here
+      // — an implementation that collects the two groups one after the other
+      // instead of in document order fails this.
+      expect(text.indexOf('Diese Fassung ist nicht aktuell')).toBeLessThan(
+        text.indexOf('Begleitende Dokumente'),
+      );
+      expect(text.split('\n')[0]).toBe('Diese Fassung ist nicht aktuell');
+    });
+
+    it('should drop the chrome heading above the document', () => {
+      const labels = extractOutline(scoped.html, text).map((entry) => entry.label);
+
+      expect(labels).not.toContain('Bundesfinanzgerichtsgesetz § 1');
+      expect(labels).not.toContain('Navigation im Suchergebnis');
+      expect(labels).not.toContain('Über diese Seite');
+      expect(labels).toContain('Begleitende Dokumente'); // .onlyScreenreader, but inside
+    });
+
+    it('should report the page title', () => {
+      expect(scoped.pageTitle).toBe(
+        'RIS - Bundesfinanzgerichtsgesetz § 1 - Bundesrecht konsolidiert',
+      );
+    });
+  });
+
+  describe('a document page without site chrome', () => {
+    // The two shapes ris_dokument has always fetched: no .documentContent, no
+    // chrome to scope. They must come through untouched — same string, not an
+    // equal one, so no re-serialisation can creep in behind the assertion.
+    const cases = ['nor12019037-excerpt.html', 'bgbla-2012-ii-371-excerpt.html'];
+
+    for (const name of cases) {
+      it(`should pass ${name} through unchanged`, () => {
+        const html = readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
+        const scoped = scopeRisContent(html);
+
+        expect(scoped.html).toBe(html);
+        expect(scoped.pageTitle).toBeNull();
+      });
+    }
+
+    it('should pass a fragment without any HTML structure through unchanged', () => {
+      const fragment = '<p>Nur ein Absatz.</p>';
+
+      expect(scopeRisContent(fragment)).toEqual({ html: fragment, pageTitle: null });
+    });
   });
 });
