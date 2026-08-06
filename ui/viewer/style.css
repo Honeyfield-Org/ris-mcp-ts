@@ -149,6 +149,15 @@
   margin: 16px 0;
 }
 
+/* Sits where the next section will appear, for as long as it is being fetched. */
+.ris-doc-loading {
+  padding: 16px 0;
+  margin: 16px 0;
+  font-size: var(--ris-text-sm);
+  color: var(--ris-fg-subtle);
+  text-align: center;
+}
+
 .ris-doc-sentinel {
   height: 1px;
 }

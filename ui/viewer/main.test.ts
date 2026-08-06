@@ -221,6 +221,10 @@ function sentinelOffset(): string | undefined {
   return view().querySelector<HTMLElement>('.ris-doc-sentinel')?.dataset.offset;
 }
 
+function loadingLabel(): HTMLElement | null {
+  return view().querySelector<HTMLElement>('.ris-doc-loading');
+}
+
 function railLabels(): string[] {
   return [...view().querySelectorAll('.ris-outline-jump')].map(
     (jump) => jump.firstChild?.textContent ?? '',
@@ -308,19 +312,33 @@ describe('rung 1: the mounting result carries the text', () => {
     expect(document.getElementById('nojs-marker')?.hidden).toBe(true);
   });
 
-  it('replaces the mount text with the canonical section once the reader scrolls', async () => {
+  it('replaces the mount text with the canonical section immediately at mount', async () => {
     // The mounting response is a truncated prefix with no length and no
-    // outline, so the first section the viewer fetches supersedes it whole.
+    // outline, so the first section the viewer fetches supersedes it whole —
+    // and it fetches it as soon as it has a host, not when the reader scrolls.
     await mount();
     deliverInput?.({ dokumentnummer: 'NOR12019037' });
     deliver(payload());
-    await connect();
-
     expect(sentinelOffset()).toBe('0');
-    await scrollToEnd();
+
+    await connect();
 
     expect(text()).toContain('Erster Abschnitt.');
     expect(text()).not.toContain('§ 1295.');
+    expect(sentinelOffset()).toBe('37');
+  });
+
+  it('does not fire at mount for a document it cannot name', async () => {
+    // A text block carries no identifier and no tool input arrived, so there is
+    // nothing to address a section call to. The mount run stays what is on
+    // screen, and no control promises more of it.
+    await mount();
+    deliver(payload());
+    await connect();
+
+    expect(bridge.callTool).not.toHaveBeenCalled();
+    expect(text()).toContain('§ 1295.');
+    expect(view().querySelector('.ris-doc-sentinel')).toBeNull();
   });
 
   it('reports a failed document load with the prose the server sent', async () => {
@@ -340,29 +358,75 @@ describe('rung 1: the mounting result carries the text', () => {
 // =============================================================================
 
 describe('rung 1: the mounting result arrives as structured content', () => {
-  it('renders the document without asking the server for anything', async () => {
+  it('renders the document before it has a host, then fetches its first section', async () => {
     // claude.ai delivers neither content blocks nor tool input to a widget. Its
-    // one measured channel carries the text itself, so this rung still costs
-    // nothing (Live-Befund 2026-08-02).
+    // one measured channel carries the text itself, so the first render costs
+    // nothing and happens before the handshake resolves (Live-Befund
+    // 2026-08-02); the canonical series replaces it as soon as there is a host.
     await mount();
     deliver(structuredPayload());
-    await connect();
-
     expect(text()).toContain('§ 1295.');
     expect(bridge.callTool).not.toHaveBeenCalled();
+
+    await connect();
+
+    expect(calls()).toEqual([
+      { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'BVWGT_1', offset: 0 } },
+    ]);
+    expect(text()).toContain('Erster Abschnitt.');
+  });
+
+  it('fires the first section call at mount, before any scrolling', async () => {
+    // #92: the outline arrives with the offset-0 section, and a document whose
+    // outline blew the mount budget carries none. Waiting for the sentinel left
+    // the rail invisible until the reader had scrolled the whole mount run.
+    answersWith(section({ outline: GAZETTE_OUTLINE, total_length: GAZETTE_TOTAL }));
+
+    await mount();
+    deliver(structuredPayload({ outline: undefined, total_length: GAZETTE_TOTAL }));
+    expect(railLabels()).toEqual([]);
+
+    await connect();
+
+    expect(calls()).toEqual([
+      { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'BVWGT_1', offset: 0 } },
+    ]);
+    expect(text()).toContain('Erster Abschnitt.');
+    expect(railLabels()).toContain('Steuersätze');
+  });
+
+  it('fires it for a document that only arrives after the handshake', async () => {
+    // The other order: the host had nothing to deliver during the handshake, so
+    // the ladder ended in its notice and the result replaces it later. The
+    // eager call cannot ride on the handshake here — it has already resolved.
+    await mount();
+    await connect();
+    expect(noticeTitle()).toBe(COPY.degradedTitle);
+
+    deliver(structuredPayload());
+    await settle();
+
+    expect(calls()).toEqual([
+      { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'BVWGT_1', offset: 0 } },
+    ]);
+    expect(text()).toContain('Erster Abschnitt.');
   });
 
   it('draws the outline rail and the progress from the same payload', async () => {
-    // Without the structured channel both need a section call whose only new
-    // information is metadata — it would refetch the 25 000 characters already
-    // on screen.
+    // A mount payload that carried its outline draws the rail with no call at
+    // all; the eager section then supersedes the text without taking it away.
+    answersWith(section({ outline: GAZETTE_OUTLINE, total_length: GAZETTE_TOTAL }));
+
     await mount();
     deliver(structuredPayload({ outline: GAZETTE_OUTLINE, total_length: GAZETTE_TOTAL }));
+    expect(railLabels()).toContain('Steuersätze');
+    expect(bridge.callTool).not.toHaveBeenCalled();
+
     await connect();
 
     expect(railLabels()).toContain('Steuersätze');
     expect(view().querySelector('.ris-doc-progress')?.textContent).toMatch(/geladen$/);
-    expect(bridge.callTool).not.toHaveBeenCalled();
+    expect(calls()).toHaveLength(1);
   });
 
   it('names the document, so the reader can keep scrolling', async () => {
@@ -373,11 +437,12 @@ describe('rung 1: the mounting result arrives as structured content', () => {
     deliver(structuredPayload());
     await connect();
 
-    expect(sentinelOffset()).toBe('0');
+    expect(sentinelOffset()).toBe('37');
     await scrollToEnd();
 
     expect(calls()).toEqual([
       { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'BVWGT_1', offset: 0 } },
+      { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'BVWGT_1', offset: 37 } },
     ]);
     expect(text()).toContain('Erster Abschnitt.');
   });
@@ -388,7 +453,6 @@ describe('rung 1: the mounting result arrives as structured content', () => {
     await mount();
     deliver(structuredPayload({ dokumentnummer: undefined, source_url: url }));
     await connect();
-    await scrollToEnd();
 
     // Never both identifiers: the chunk tool given a `url` resolves through the
     // URL branch of the loader, which builds a different metadata header and
@@ -399,12 +463,17 @@ describe('rung 1: the mounting result arrives as structured content', () => {
   it('prefers the structured payload over the text block when a host sends both', async () => {
     await mount();
     deliver({ ...structuredPayload(), text: 'Etwas ganz anderes.' });
-    await connect();
 
     // Identical strings on the wire, so the choice shows only in what comes with
-    // them — here, the identifier that makes the sentinel possible.
+    // them — here, the identifier the section call is addressed to.
     expect(text()).toContain('§ 1295.');
-    expect(sentinelOffset()).toBe('0');
+
+    await connect();
+
+    expect(calls()).toEqual([
+      { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'BVWGT_1', offset: 0 } },
+    ]);
+    expect(sentinelOffset()).toBe('37');
   });
 
   it('keeps the text on screen when the structured payload is unusable', async () => {
@@ -604,6 +673,46 @@ describe('loading further sections', () => {
     expect(text()).toContain('Zweiter Abschnitt.');
   });
 
+  it('says at the foot of the text that a section is on its way', async () => {
+    await openDocument();
+    const finish = answersWhenTold();
+
+    await scrollToEnd();
+
+    // #93: the prefetch fires 2 000 pixels before the end of the text, so the
+    // reader is still several screens away when the call starts and nothing on
+    // screen would otherwise say that more is coming.
+    expect(loadingLabel()?.textContent).toBe(COPY.loadingMore);
+    // Announced rather than hidden — it sits beside the sentinel, which is
+    // `aria-hidden` and would swallow it.
+    expect(loadingLabel()?.getAttribute('role')).toBe('status');
+    // A targeted insert, not a re-render: re-rendering here would re-arm the
+    // observer this very call disarmed, and one section at a time would go.
+    expect(liveObservers()).toHaveLength(0);
+
+    await finish(section({ text: 'Zweiter Abschnitt.', next_offset: null, outline: undefined }));
+
+    expect(loadingLabel()).toBeNull();
+    expect(text()).toContain('Zweiter Abschnitt.');
+  });
+
+  it('takes the label away again when the section fails', async () => {
+    await openDocument();
+    const finish = answersWhenTold();
+
+    await scrollToEnd();
+    expect(loadingLabel()?.textContent).toBe(COPY.loadingMore);
+
+    await finish(nonsense());
+
+    // The failure semantics are the existing ones — a notice under the text and
+    // the gap marker as the way back. What must not survive is a label that
+    // promises a section which is no longer coming.
+    expect(loadingLabel()).toBeNull();
+    expect(noticeTitle()).toBe(COPY.invalidPayloadTitle);
+    expect(view().querySelector('.ris-doc-gap button')).not.toBeNull();
+  });
+
   it('asks for one section at a time, however often the reader presses', async () => {
     await openDocument();
     answersWith(nonsense());
@@ -752,14 +861,18 @@ describe('reopening a conversation', () => {
 
     await mount();
     deliver(structuredPayload());
+    expect(text()).toContain('§ 1295.');
+
     await connect();
 
-    expect(text()).toContain('§ 1295.');
-    // Fresh data wins whole: the stored reading position is not restored, so
-    // nothing is fetched and the header names the document that just arrived
-    // rather than the one the snapshot remembers.
-    expect(bridge.callTool).not.toHaveBeenCalled();
-    expect(view().querySelector('.ris-doc-title')?.textContent).toContain('§ 1295');
+    // Fresh data wins whole: the stored reading position is not restored — the
+    // one call opens the document that just arrived at its first section, and
+    // the header names it rather than the one the snapshot remembers.
+    expect(calls()).toEqual([
+      { name: 'ris_dokument_abschnitt', arguments: { dokumentnummer: 'BVWGT_1', offset: 0 } },
+    ]);
+    expect(view().querySelector('.ris-doc-title')?.textContent).toBe('Titel');
+    expect(text()).toContain('Erster Abschnitt.');
   });
 
   it('keeps the canonical section when a stripped replay arrives after it', async () => {

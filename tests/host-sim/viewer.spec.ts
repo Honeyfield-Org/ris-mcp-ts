@@ -52,9 +52,10 @@ test('mounts the viewer and renders the document text', async ({ page }) => {
   await page.evaluate(installHostSim, {
     widgetHtml: VIEWER_HTML,
     mountResult: MOUNT_RESULT,
-    // The mount text is a truncated prefix, so the viewer always continues it
-    // with the canonical first section. Without an answer for that call the
-    // smoke would measure the expired-session branch instead.
+    // The mount text is a truncated prefix, so the viewer continues it with the
+    // canonical first section — since #92 eagerly, at mount, for every document
+    // it can name. Without an answer for that call the smoke would measure the
+    // expired-session branch instead.
     callAnswers: [{ result: SECTION_RESULT }],
   });
 
@@ -72,8 +73,10 @@ test('mounts the viewer and renders the document text', async ({ page }) => {
   // And the series ended — `next_offset: null` takes the sentinel away.
   await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(0);
 
-  // Exactly one: the observer is disconnected while a call runs, and a document
-  // that ends with its first section must not keep asking for more.
+  // Exactly one: the mount asks for offset 0 by itself, and a document that ends
+  // with that section — `next_offset: null` — has nothing left to ask for. That
+  // the observer is disconnected while a call runs only matters for the
+  // documents that do continue.
   const sectionCalls = await recordedToolCalls(page);
   expect(sectionCalls).toHaveLength(1);
 
@@ -94,12 +97,16 @@ test('a slow section call keeps the mount text on screen until it arrives', asyn
   });
 
   const widget = page.frameLocator('iframe');
-  // While the section is in flight: the sentinel that asked for it is on screen,
-  // and — unlike the Trefferliste's paging — nothing is replaced by a skeleton.
-  // A section is appended, so the text already read must survive the wait.
+  const loading = widget.locator('.ris-doc-text .ris-doc-loading');
+  // While the eager section is in flight the wait is *both* signposted and
+  // harmless: the reader sees a label beside the text saying a section is
+  // coming, and — unlike the Trefferliste's paging — the text it is about stays
+  // where it is. A section is appended, so the mount run must survive the wait.
   await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(1);
+  await expect(loading).toHaveText('Abschnitt lädt …');
   await expect(widget.locator('.ris-doc-text')).toContainText('Jedermann ist berechtigt');
 
   await expect(widget.locator('.ris-doc-text')).toContainText(SECTION_ONLY_LINE);
+  await expect(loading).toHaveCount(0);
   await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(0);
 });
