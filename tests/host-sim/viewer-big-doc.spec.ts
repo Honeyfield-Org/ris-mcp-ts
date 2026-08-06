@@ -16,9 +16,11 @@ import { installHostSim } from './host-stub.js';
 
 /**
  * The #95 scenario class: a document far over the 25k budget whose outline
- * travels only in the offset-0 section. The mount is therefore blind — no
- * rail, progress at the mount share — and everything else must be earned by
- * scrolling and clicking, which only this harness can do.
+ * travels only in the offset-0 section. Since #92 the viewer fetches that
+ * section at mount, so the rail is on screen before anything is scrolled; the
+ * mount run itself is still the truncated prefix it always was, and every
+ * section past the first is still earned by scrolling and clicking, which only
+ * this harness can do.
  */
 const BIG_MOUNT_RESULT = {
   content: [{ type: 'text', text: BIG_MOUNT_TEXT }],
@@ -44,38 +46,52 @@ async function callOffsets(page: Parameters<typeof recordedToolCalls>[0]): Promi
   return calls.map((call) => (call.params as { arguments: { offset: number } }).arguments.offset);
 }
 
-test('mounting a big document shows the mount share, no rail, no section call', async ({
+test('mounting a big document fetches the first section eagerly: rail and canonical progress without scrolling', async ({
   page,
 }) => {
   await page.goto('about:blank');
   await page.evaluate(installHostSim, {
     widgetHtml: VIEWER_HTML,
     mountResult: BIG_MOUNT_RESULT,
-    callAnswers: [],
+    // The delay is what makes the mount run assertable at all: without it the
+    // eager answer lands before the first poll and the transient state below
+    // could never be observed.
+    callAnswers: [{ delayMs: 800, result: sectionResult(bigChunk(0)) }],
   });
 
   const widget = page.frameLocator('iframe');
-  await expect(widget.locator('.ris-doc-text')).toContainText('Abschnitt 1 — Geltungsbereich');
-  // The mount is provisional: progress states exactly the truncated share.
+  // While the eager answer is in flight the blind mount is still exactly what it
+  // was before #92 — the truncated share, and no rail, because the outline
+  // travels only in the offset-0 section. What changed is how long it lasts.
   await expect(widget.locator('.ris-doc-progress')).toHaveText(BIG_MOUNT_PROGRESS);
-  // The outline only exists in the offset-0 section, which nothing asked for:
-  // the sentinel is in the DOM but thousands of pixels below the fold.
   await expect(widget.locator('.ris-outline')).toHaveCount(0);
+
+  // Arrival, and not one scroll was needed for it: the rail is on screen and
+  // the progress is the canonical first section's rather than the mount's.
+  await expect(widget.locator('.ris-outline-jump')).toHaveCount(10);
+  await expect(widget.locator('.ris-doc-progress')).toHaveText('25,0 % geladen');
+  // The series continues, and the sentinel that continues it sits far below the
+  // fold: eager means the first section, not a cascade through the document.
   await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(1);
-  expect(await recordedToolCalls(page)).toHaveLength(0);
+
+  expect(await callOffsets(page)).toEqual([0]);
+  const [first] = await recordedToolCalls(page);
+  const params = first?.params as { name: string; arguments: Record<string, unknown> };
+  expect(params.name).toBe('ris_dokument_abschnitt');
+  expect(params.arguments).toMatchObject({ dokumentnummer: BIG_DOKUMENTNUMMER, offset: 0 });
   await expect(widget.locator('.ris-notice-title')).toHaveCount(0);
 });
 
-test('scrolling to the end fires the section call, adopts the rail, grows the progress', async ({
+test('scrolling to the end fetches the next section: progress grows past the eager half', async ({
   page,
 }) => {
   await page.goto('about:blank');
   await page.evaluate(installHostSim, {
     widgetHtml: VIEWER_HTML,
     mountResult: BIG_MOUNT_RESULT,
-    // Offset 0 answers the sentinel the scroll pushes into the margin; offset
-    // 25000 answers the cascade — after adoption the restored scroll position
-    // is still at the bottom, so the follow-up sentinel intersects at once.
+    // Offset 0 answers the eager mount call; offset 25000 is the one the scroll
+    // earns, when the sentinel below the adopted first section enters the
+    // prefetch margin.
     callAnswers: [
       { result: sectionResult(bigChunk(0)) },
       { result: sectionResult(bigChunk(25_000)) },
@@ -84,26 +100,22 @@ test('scrolling to the end fires the section call, adopts the rail, grows the pr
 
   const widget = page.frameLocator('iframe');
   const textPane = widget.locator('.ris-doc-text');
-  await expect(textPane).toContainText('Abschnitt 1 — Geltungsbereich');
-  await expect(widget.locator('.ris-outline')).toHaveCount(0);
+  // The rail before the scroll, so what follows measures the scroll alone.
+  await expect(widget.locator('.ris-outline-summary')).toHaveText('Gliederung');
+  await expect(widget.locator('.ris-outline-jump')).toHaveCount(10);
+  await expect(widget.locator('.ris-doc-progress')).toHaveText('25,0 % geladen');
 
   await textPane.evaluate((pane) => {
     pane.scrollTop = pane.scrollHeight;
   });
 
-  // The offset-0 section brings the outline: only now is there a rail.
-  await expect(widget.locator('.ris-outline-summary')).toHaveText('Gliederung');
-  await expect(widget.locator('.ris-outline-jump')).toHaveCount(10);
-
-  // The cascade settles at half the document, one sentinel still waiting.
+  // One scroll, one section: half the document held, one sentinel still waiting.
   await expect(widget.locator('.ris-doc-progress')).toHaveText('50,0 % geladen');
   await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(1);
 
+  // What the offset-0 call carries is spec 1's business; here only the second
+  // offset is new, and that it was never computed but read off `next_offset`.
   expect(await callOffsets(page)).toEqual([0, 25_000]);
-  const [first] = await recordedToolCalls(page);
-  const params = first?.params as { name: string; arguments: Record<string, unknown> };
-  expect(params.name).toBe('ris_dokument_abschnitt');
-  expect(params.arguments).toMatchObject({ dokumentnummer: BIG_DOKUMENTNUMMER, offset: 0 });
   await expect(widget.locator('.ris-notice-title')).toHaveCount(0);
 });
 
@@ -114,6 +126,8 @@ test('a rail click jumps, fetching an unloaded target with visible loading feedb
   await page.evaluate(installHostSim, {
     widgetHtml: VIEWER_HTML,
     mountResult: BIG_MOUNT_RESULT,
+    // The mount's own offset-0 call, the scroll's offset-25000 one, and the
+    // delayed answer to the click this spec is actually about.
     callAnswers: [
       { result: sectionResult(bigChunk(0)) },
       { result: sectionResult(bigChunk(25_000)) },
@@ -123,6 +137,8 @@ test('a rail click jumps, fetching an unloaded target with visible loading feedb
 
   const widget = page.frameLocator('iframe');
   const textPane = widget.locator('.ris-doc-text');
+  // Getting to the starting position of the click: the eager section plus one
+  // scrolled-for section, so everything from offset 50000 on is still unloaded.
   await expect(textPane).toContainText('Abschnitt 1 — Geltungsbereich');
   await textPane.evaluate((pane) => {
     pane.scrollTop = pane.scrollHeight;
