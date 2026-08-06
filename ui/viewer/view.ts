@@ -37,6 +37,8 @@ export interface ViewerHandlers {
   onLoadGap(offset: number): void;
   /** Open a RIS URL in the host's browser. */
   onOpenLink(url: string): void;
+  /** Ask the host for the fullscreen display mode. */
+  onToggleFullscreen(): void;
 }
 
 /** The parts of a rendered document `main.ts` keeps working with. */
@@ -217,6 +219,15 @@ function renderHeader(model: DocumentView, handlers: ViewerHandlers): HTMLElemen
     open.disabled = !model.connected;
     meta.append(open);
   }
+  if (model.showFullscreenToggle) {
+    const fullscreen = button('ris-action', COPY.openFullscreen, () =>
+      handlers.onToggleFullscreen(),
+    );
+    // Switching display mode is a host request like `openLink`, so it survives
+    // an evicted session and only a missing handshake takes it out of service.
+    fullscreen.disabled = !model.connected;
+    meta.append(fullscreen);
+  }
   header.append(meta);
 
   return header;
@@ -347,6 +358,24 @@ export function renderBlocks(
   return nodes;
 }
 
+const INSET_SIDES = ['top', 'right', 'bottom', 'left'] as const;
+
+/**
+ * Publish the host's safe-area insets as custom properties on the root.
+ *
+ * Only in fullscreen: inline the widget sits inside host chrome that already
+ * keeps clear of the notch, and padding the pane there would indent it against
+ * everything around it. Absent insets and every other mode write zeroes rather
+ * than leaving the last value standing.
+ */
+function applySafeArea(container: HTMLElement, model: DocumentView): void {
+  const insets = model.displayMode === 'fullscreen' ? model.safeAreaInsets : null;
+
+  for (const side of INSET_SIDES) {
+    container.style.setProperty(`--ris-inset-${side}`, `${insets?.[side] ?? 0}px`);
+  }
+}
+
 /**
  * Render a document, replacing whatever was in `container`.
  *
@@ -397,6 +426,7 @@ export function renderDocument(
 
   container.classList.add('ris-doc-root');
   container.style.height = `${height}px`;
+  applySafeArea(container, model);
   container.replaceChildren(renderHeader(model, handlers), body);
 
   return { textPane, sentinel };

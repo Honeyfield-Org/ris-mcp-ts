@@ -10,6 +10,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  BIG_DOKUMENTNUMMER,
+  BIG_OUTLINE,
+  bigChunk,
   DECISION_OUTLINE,
   documentResult,
   GAZETTE_OUTLINE,
@@ -34,6 +37,7 @@ const bridge: Bridge = {
   callTool: vi.fn(),
   openLink: vi.fn(async () => true),
   sendPrompt: vi.fn(async () => true),
+  requestDisplayMode: vi.fn(async () => 'inline' as const),
 };
 
 // Only `connectBridge` is replaced: `readMountInput` is the real one, so the
@@ -231,6 +235,12 @@ function railLabels(): string[] {
   );
 }
 
+function fullscreenToggle(): HTMLButtonElement | undefined {
+  return [...view().querySelectorAll('button')].find(
+    (node) => node.textContent === COPY.openFullscreen,
+  );
+}
+
 function calls(): unknown[] {
   return (bridge.callTool as ReturnType<typeof vi.fn>).mock.calls.map((call) => call[0]);
 }
@@ -252,6 +262,26 @@ function answersWhenTold(): (payload: ToolPayload) => Promise<void> {
 
   return async (payload) => {
     release(payload);
+    await settle();
+  };
+}
+
+/** What the host answers the next `requestDisplayMode` with. */
+function grantsMode(mode: 'inline' | 'fullscreen'): void {
+  (bridge.requestDisplayMode as ReturnType<typeof vi.fn>).mockResolvedValue(mode);
+}
+
+/** Hold a display-mode request open, the way a host that never answers does. */
+function answersModeWhenTold(): (mode: 'inline' | 'fullscreen') => Promise<void> {
+  let release: (mode: 'inline' | 'fullscreen') => void;
+  const held = new Promise<'inline' | 'fullscreen'>((resolve) => {
+    release = resolve;
+  });
+
+  (bridge.requestDisplayMode as ReturnType<typeof vi.fn>).mockReturnValue(held);
+
+  return async (mode) => {
+    release(mode);
     await settle();
   };
 }
@@ -281,6 +311,9 @@ beforeEach(() => {
     await settle();
   };
   answersWith(section());
+  // `clearAllMocks` keeps implementations, so the answer a test scripted would
+  // otherwise outlive it.
+  grantsMode('inline');
 });
 
 afterEach(() => {
@@ -1081,5 +1114,210 @@ describe('the height the host allows', () => {
     deliverContext?.({ containerDimensions: { height: 420, width: 800 } });
 
     expect(view().style.height).toBe('420px');
+  });
+
+  it('keeps the pane height when a delta carries no dimensions', async () => {
+    await mount();
+    deliver(payload());
+    await connect();
+    deliverContext?.({ containerDimensions: { height: 420, width: 800 } });
+    expect(view().style.height).toBe('420px');
+
+    // A host-context change carries only the fields that changed. Recomputing
+    // the height from one that says nothing about the container answered "no
+    // dimensions" with the fallback and collapsed a sized pane to 640 pixels.
+    deliverContext?.({ displayMode: 'fullscreen' });
+
+    expect(view().style.height).toBe('420px');
+  });
+});
+
+// =============================================================================
+// The fullscreen display mode
+// =============================================================================
+
+describe('the fullscreen display mode', () => {
+  /** A document on screen, and a host that has a fullscreen mode to give. */
+  async function openWithFullscreen(): Promise<void> {
+    await mount();
+    deliverInput?.({ dokumentnummer: 'NOR1' });
+    deliver(emptyPayload());
+    await connect();
+    deliverContext?.({ displayMode: 'inline', availableDisplayModes: ['inline', 'fullscreen'] });
+  }
+
+  it('shows the toggle once the host offers the mode', async () => {
+    await openWithFullscreen();
+
+    expect(fullscreenToggle()).toBeDefined();
+  });
+
+  it('shows no toggle when the host never offered one', async () => {
+    // The only feature detection there is: a host that does not list the mode
+    // would answer the request with a control that leads nowhere.
+    await mount();
+    deliverInput?.({ dokumentnummer: 'NOR1' });
+    deliver(emptyPayload());
+    await connect();
+    deliverContext?.({ theme: 'dark' });
+
+    expect(fullscreenToggle()).toBeUndefined();
+    expect(text()).toContain('Erster Abschnitt.');
+  });
+
+  it('requests fullscreen on click and takes the toggle away once granted', async () => {
+    grantsMode('fullscreen');
+    await openWithFullscreen();
+
+    fullscreenToggle()?.click();
+    await settle();
+
+    expect(bridge.requestDisplayMode).toHaveBeenCalledTimes(1);
+    expect(bridge.requestDisplayMode).toHaveBeenCalledWith('fullscreen');
+    // The host renders its own way back out of fullscreen; a second control
+    // for it would be a promise this widget cannot keep.
+    expect(fullscreenToggle()).toBeUndefined();
+    expect(text()).toContain('Erster Abschnitt.');
+  });
+
+  it('says so in German when the host declines silently', async () => {
+    // A refusal is not an error: the host answers with the mode still in
+    // effect, and nothing but the answer says the request went nowhere.
+    grantsMode('inline');
+    await openWithFullscreen();
+
+    fullscreenToggle()?.click();
+    await settle();
+
+    expect(noticeTitle()).toBe(COPY.fullscreenRefused);
+    expect(text()).toContain('Erster Abschnitt.');
+    expect(fullscreenToggle()).toBeDefined();
+  });
+
+  it('ignores a second click while the first request is still open', async () => {
+    // `requestDisplayMode` carries no deadline of its own — a silent host holds
+    // it for the SDK's 60 seconds. Nothing on screen waits for it, and the
+    // button stays usable rather than dead for a minute.
+    const finish = answersModeWhenTold();
+    await openWithFullscreen();
+
+    fullscreenToggle()?.click();
+    await settle();
+    fullscreenToggle()?.click();
+    await settle();
+
+    expect(bridge.requestDisplayMode).toHaveBeenCalledTimes(1);
+    expect(fullscreenToggle()?.disabled).toBe(false);
+
+    await finish('fullscreen');
+
+    expect(fullscreenToggle()).toBeUndefined();
+  });
+
+  it('honors a mode the host changed by itself', async () => {
+    await openWithFullscreen();
+    expect(fullscreenToggle()).toBeDefined();
+
+    deliverContext?.({ displayMode: 'fullscreen' });
+    expect(fullscreenToggle()).toBeUndefined();
+
+    deliverContext?.({ displayMode: 'inline' });
+    expect(fullscreenToggle()).toBeDefined();
+  });
+
+  it('takes the safe-area insets the host reports in fullscreen', async () => {
+    await openWithFullscreen();
+
+    deliverContext?.({
+      displayMode: 'fullscreen',
+      safeAreaInsets: { top: 44, right: 0, bottom: 34, left: 0 },
+    });
+
+    expect(view().style.getPropertyValue('--ris-inset-top')).toBe('44px');
+    expect(view().style.getPropertyValue('--ris-inset-bottom')).toBe('34px');
+  });
+});
+
+// =============================================================================
+// A host that changes the geometry under the reader
+// =============================================================================
+
+describe('a geometry change while reading', () => {
+  /** One section of the big document, as the chunk tool answers it. */
+  function bigSection(offset: number): ToolPayload {
+    return {
+      structuredContent: bigChunk(offset),
+      source: 'toolresult',
+      text: '',
+      isError: false,
+    };
+  }
+
+  /** The big document, whose outline offsets are all line starts. */
+  async function openBigDocument(): Promise<void> {
+    answersWith(bigSection(0));
+
+    await mount();
+    deliverInput?.({ dokumentnummer: BIG_DOKUMENTNUMMER });
+    deliver(emptyPayload());
+    await connect();
+  }
+
+  function currentJumpLabel(): string | undefined {
+    return (
+      view().querySelector('.ris-outline-jump[aria-current="true"]')?.firstChild?.textContent ??
+      undefined
+    );
+  }
+
+  it('re-anchors the reading position by content offset', async () => {
+    await openBigDocument();
+
+    view().querySelectorAll<HTMLButtonElement>('.ris-outline-jump')[2].click();
+    await settle();
+    expect(currentJumpLabel()).toBe(BIG_OUTLINE[2].label);
+
+    deliverContext?.({ containerDimensions: { height: 900, width: 1200 } });
+
+    // The whole subtree is rebuilt against the new height, so where the pane
+    // was scrolled to means nothing afterwards — the section the reader was on
+    // is found again by its offset.
+    expect(currentJumpLabel()).toBe(BIG_OUTLINE[2].label);
+    expect(document.activeElement?.id).toBe(`ris-sec-${BIG_OUTLINE[2].offset}`);
+  });
+
+  it('re-anchors when the host switches the mode as well', async () => {
+    await openBigDocument();
+
+    view().querySelectorAll<HTMLButtonElement>('.ris-outline-jump')[2].click();
+    await settle();
+
+    deliverContext?.({ displayMode: 'fullscreen' });
+
+    expect(currentJumpLabel()).toBe(BIG_OUTLINE[2].label);
+  });
+
+  it('lets a jump in flight win over the position it started from', async () => {
+    await openBigDocument();
+
+    // A reading position well inside the loaded text, so restoring it is a real
+    // alternative to the jump and not a no-op.
+    const jumps = view().querySelectorAll<HTMLButtonElement>('.ris-outline-jump');
+    jumps[2].click();
+    await settle();
+
+    const finish = answersWhenTold();
+    jumps[5].click();
+    await settle();
+
+    // The host re-lays the widget out while the section the reader asked for is
+    // still being fetched. Restoring the old position here would consume the
+    // anchor, and the section would arrive with nothing left to scroll to — a
+    // reader who pressed an outline entry and watched the view stay put.
+    deliverContext?.({ containerDimensions: { height: 900, width: 1200 } });
+    await finish(bigSection(BIG_OUTLINE[5].offset));
+
+    expect(currentJumpLabel()).toBe(BIG_OUTLINE[5].label);
+    expect(document.activeElement?.id).toBe(`ris-sec-${BIG_OUTLINE[5].offset}`);
   });
 });

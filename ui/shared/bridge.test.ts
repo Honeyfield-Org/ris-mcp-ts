@@ -1,3 +1,4 @@
+import type * as ExtApps from '@modelcontextprotocol/ext-apps';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -7,6 +8,38 @@ import {
   readToolResult,
   type HostApp,
 } from './bridge.js';
+
+const { appConstructions } = vi.hoisted(() => ({ appConstructions: [] as unknown[][] }));
+
+/**
+ * Record how the bridge constructs the real `App`.
+ *
+ * The display-mode declaration is a constructor argument, and the constructor
+ * is the one part of the bridge that dependency injection cannot reach: every
+ * other test hands in a stub and `new App(...)` never runs. Only that export is
+ * replaced — the theme helpers stay the originals, so the tests that assert on
+ * `data-theme` keep exercising the SDK's own implementation.
+ */
+vi.mock('@modelcontextprotocol/ext-apps', async (importOriginal) => {
+  const actual = await importOriginal<typeof ExtApps>();
+
+  class RecordingApp {
+    constructor(...args: unknown[]) {
+      appConstructions.push(args);
+    }
+    addEventListener(): void {
+      // The construction is the subject here; nothing is ever emitted.
+    }
+    connect(): Promise<void> {
+      return Promise.resolve();
+    }
+    getHostContext(): undefined {
+      return undefined;
+    }
+  }
+
+  return { ...actual, App: RecordingApp as unknown as typeof actual.App };
+});
 
 const STRUCTURED = { total_hits: 3, page: 1, page_size: 20, has_more: false, documents: [] };
 
@@ -36,6 +69,7 @@ function stubApp(overrides: Partial<HostApp> = {}): HostApp & {
     getHostContext: vi.fn(() => undefined),
     callServerTool: vi.fn(async () => toolResult()),
     openLink: vi.fn(async () => ({})),
+    requestDisplayMode: vi.fn(async () => ({ mode: 'inline' as const })),
     sendMessage: vi.fn(async () => ({})),
     ...overrides,
   } as unknown as HostApp;
@@ -420,5 +454,57 @@ describe('bridge actions', () => {
     const bridge = await connectBridge({ onToolResult: vi.fn() }, app);
 
     await expect(bridge.sendPrompt('egal')).resolves.toBe(false);
+  });
+});
+
+describe('display modes', () => {
+  beforeEach(() => {
+    appConstructions.length = 0;
+  });
+
+  it('declares the modes a widget can render in to the host', async () => {
+    await connectBridge({ onToolResult: vi.fn(), displayModes: ['inline', 'fullscreen'] });
+
+    expect(appConstructions).toHaveLength(1);
+    expect(appConstructions[0][1]).toEqual({ availableDisplayModes: ['inline', 'fullscreen'] });
+  });
+
+  it('declares nothing for a widget that only renders inline', async () => {
+    await connectBridge({ onToolResult: vi.fn() });
+
+    expect(appConstructions[0][1]).toBeUndefined();
+  });
+
+  it('reports the mode the host granted, not the one that was asked for', async () => {
+    const app = stubApp({ requestDisplayMode: vi.fn(async () => ({ mode: 'inline' as const })) });
+    const bridge = await connectBridge({ onToolResult: vi.fn() }, app);
+
+    await expect(bridge.requestDisplayMode('fullscreen')).resolves.toBe('inline');
+    expect(app.requestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' });
+  });
+
+  it('keeps the current mode when the host refuses to answer', async () => {
+    const app = stubApp({
+      getHostContext: vi.fn(() => ({
+        displayMode: 'fullscreen' as const,
+      })) as unknown as HostApp['getHostContext'],
+      requestDisplayMode: vi.fn(async () => {
+        throw new Error('no host');
+      }),
+    });
+    const bridge = await connectBridge({ onToolResult: vi.fn() }, app);
+
+    await expect(bridge.requestDisplayMode('inline')).resolves.toBe('fullscreen');
+  });
+
+  it('falls back to inline when a failed request meets a host that names no mode', async () => {
+    const app = stubApp({
+      requestDisplayMode: vi.fn(async () => {
+        throw new Error('no host');
+      }),
+    });
+    const bridge = await connectBridge({ onToolResult: vi.fn() }, app);
+
+    await expect(bridge.requestDisplayMode('fullscreen')).resolves.toBe('inline');
   });
 });

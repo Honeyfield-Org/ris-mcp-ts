@@ -4,8 +4,21 @@
  * No DOM, no host calls. Everything the viewer decides about a document —
  * how its text splits into blocks, whether its outline is worth a rail, which
  * sections are loaded and what to fetch next — is decided here so it can be
- * tested without a browser.
+ * tested without a browser. The host context is unvalidated input like any
+ * other, so the two readers for its display fields live here as well.
  */
+
+/**
+ * The display modes of the ext-apps spec.
+ *
+ * Restated rather than imported from the SDK, and for a measured reason: the
+ * host-sim fixtures pull this file into `tests/tsconfig.json`, which resolves
+ * modules as NodeNext — and under NodeNext the SDK's own `export * from
+ * "./types"` (extensionless, in `dist/src/app.d.ts`) does not resolve, so
+ * `McpUiDisplayMode` is simply not there. Structurally identical to it, which
+ * is what keeps the mode the bridge grants assignable here.
+ */
+export type DisplayMode = 'inline' | 'fullscreen' | 'pip';
 
 /**
  * Largest text a single chunk carries, mirroring `CHARACTER_LIMIT` in
@@ -174,6 +187,20 @@ export interface OutlineRow {
   loaded: boolean;
 }
 
+/**
+ * Mobile safe-area boundaries in pixels, exactly as the host reports them.
+ *
+ * All four sides are required by the spec, and the viewer keeps that: a partial
+ * object says nothing about the sides it omits, and guessing zero for them
+ * would put text under a notch on the strength of an assumption.
+ */
+export interface SafeAreaInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 /** One contiguous stretch of text, with what follows it. */
 export interface RunView {
   offset: number;
@@ -210,6 +237,18 @@ export interface DocumentView {
    * completed leaves nothing on the other end of `openLink` either.
    */
   connected: boolean;
+  /**
+   * Whether to offer the „Vollbild“ button.
+   *
+   * True only while the host listed the mode *and* the widget is not already in
+   * it: a host in fullscreen renders its own way back out, and a control of our
+   * own beside it would be a second answer to the same question.
+   */
+  showFullscreenToggle: boolean;
+  /** The mode the widget is being displayed in, which decides the insets. */
+  displayMode: DisplayMode;
+  /** `null` unless the host reported insets — see {@link SafeAreaInsets}. */
+  safeAreaInsets: SafeAreaInsets | null;
 }
 
 /** What the viewer knows about the document currently open. */
@@ -243,6 +282,18 @@ export interface ViewerState {
   expired: boolean;
   /** Mirrors whether the handshake ever completed — see {@link DocumentView.connected}. */
   connected: boolean;
+  /**
+   * The display mode the host last reported; absent means inline.
+   *
+   * Optional, like the two below it, because none of them belongs to the
+   * document: they describe the frame around it, and a caller that builds a
+   * state for a document alone should not have to state them.
+   */
+  displayMode?: DisplayMode;
+  /** Whether the host offered a fullscreen mode at all. */
+  canFullscreen?: boolean;
+  /** Insets the host reported, or `null` when it reported none. */
+  safeAreaInsets?: SafeAreaInsets | null;
 }
 
 const META_LINE = /^\*\*(.+?):\*\* ?(.*)$/;
@@ -562,6 +613,8 @@ export function buildDocumentView(state: ViewerState): DocumentView {
   // whose call could not be made would be a control that silently does nothing.
   const addressable = Boolean(state.key.dokumentnummer ?? state.key.url);
 
+  const displayMode = state.displayMode ?? 'inline';
+
   return {
     title,
     dokumentnummer: state.key.dokumentnummer ?? null,
@@ -575,7 +628,38 @@ export function buildDocumentView(state: ViewerState): DocumentView {
     sentinelOffset: addressable && !stalled && !state.expired ? continuation : null,
     expired: state.expired,
     connected: state.connected,
+    showFullscreenToggle: Boolean(state.canFullscreen) && displayMode !== 'fullscreen',
+    displayMode,
+    safeAreaInsets: state.safeAreaInsets ?? null,
   };
+}
+
+// =============================================================================
+// The host context
+// =============================================================================
+
+const DISPLAY_MODES: readonly string[] = ['inline', 'fullscreen', 'pip'];
+
+/**
+ * The display mode out of a host-context field, or `null` for anything else.
+ *
+ * A host context is input like a tool result: it arrives as `unknown` and a
+ * value that is not a mode must not be stored as one, however harmless the
+ * comparison it would end up in looks today.
+ */
+export function readDisplayMode(value: unknown): DisplayMode | null {
+  return typeof value === 'string' && DISPLAY_MODES.includes(value) ? (value as DisplayMode) : null;
+}
+
+/** The safe-area insets out of a host-context field, all four sides or none. */
+export function readSafeAreaInsets(value: unknown): SafeAreaInsets | null {
+  if (!isRecord(value)) return null;
+
+  const { top, right, bottom, left } = value;
+  if (!isFiniteNumber(top) || !isFiniteNumber(right)) return null;
+  if (!isFiniteNumber(bottom) || !isFiniteNumber(left)) return null;
+
+  return { top, right, bottom, left };
 }
 
 /**
