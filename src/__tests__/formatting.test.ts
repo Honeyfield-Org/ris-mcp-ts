@@ -1815,10 +1815,13 @@ describe('scopeRisContent (issue #94)', () => {
 
     it('should keep the § markers that .onlyScreenreader carries', () => {
       // Measured: removing .onlyScreenreader from the scoped fragment removes
-      // both markers — they exist nowhere else. The class is not the .sr-only
-      // that htmlToText strips as a spoken duplicate, so it must survive.
-      expect(text).toContain('§ 0');
-      expect(text).toContain('Art. 1 § 1');
+      // every one of these markers — they exist nowhere else. The class is not
+      // the .sr-only that htmlToText strips as a spoken duplicate, so it must
+      // survive. One marker per kept block, so a scoping bug that drops the
+      // first or the last .documentContent shows up here rather than passing.
+      expect(text).toContain('§ 0'); // block 0
+      expect(text).toContain('Art. 1 § 1'); // block 1
+      expect(text).toContain('Art. 2 § 4'); // block 2, the last one kept
     });
 
     it('should keep the chrome headings out of the outline', () => {
