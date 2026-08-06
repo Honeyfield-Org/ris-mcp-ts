@@ -21,6 +21,19 @@ export type HostSimCallAnswer = { delayMs?: number } & (
 );
 
 /**
+ * One scripted answer to `ui/request-display-mode`, carrying either the mode
+ * the host granted or an error. Same union discipline as `HostSimCallAnswer`,
+ * for the same reason: `result: undefined` would not parse as a reply.
+ *
+ * A granted mode may differ from the requested one — that is the whole point of
+ * scripting it, and the widget must read the answer rather than its own wish.
+ */
+export type HostSimDisplayModeAnswer = { delayMs?: number } & (
+  | { mode: 'inline' | 'fullscreen' | 'pip'; rpcError?: never }
+  | { rpcError: string; mode?: never }
+);
+
+/**
  * One request the widget sent, as `window.__hostSim.calls` hands it back.
  *
  * `params` stays unknown: its shape is per-method and the recorder never reads
@@ -38,11 +51,14 @@ export interface HostSimConfig {
   hostContext?: Record<string, unknown>;
   /** Consumed in order, one per `tools/call`. */
   callAnswers?: HostSimCallAnswer[];
+  /** Consumed in order, one per `ui/request-display-mode`. */
+  displayModeAnswers?: HostSimDisplayModeAnswer[];
 }
 
 export function installHostSim(config: HostSimConfig): void {
   const calls: HostSimCall[] = [];
   const answers = [...(config.callAnswers ?? [])];
+  const displayModeAnswers = [...(config.displayModeAnswers ?? [])];
 
   const iframe = document.createElement('iframe');
   iframe.setAttribute('sandbox', 'allow-scripts');
@@ -53,6 +69,23 @@ export function installHostSim(config: HostSimConfig): void {
 
   const send = (message: unknown): void => {
     iframe.contentWindow?.postMessage(message, '*');
+  };
+
+  /** Answer one request after its scripted delay, as a result or as an error. */
+  const reply = (
+    id: unknown,
+    delayMs: number | undefined,
+    payload: { rpcError: string } | { result: unknown },
+  ): void => {
+    const answer = (): void => {
+      if ('rpcError' in payload) {
+        send({ jsonrpc: '2.0', id, error: { code: -32000, message: payload.rpcError } });
+      } else {
+        send({ jsonrpc: '2.0', id, result: payload.result });
+      }
+    };
+    if (delayMs) setTimeout(answer, delayMs);
+    else answer();
   };
 
   window.addEventListener('message', (event) => {
@@ -99,22 +132,30 @@ export function installHostSim(config: HostSimConfig): void {
     }
 
     if (msg.method === 'tools/call') {
-      const answer = answers.shift() ?? {
+      const answer: HostSimCallAnswer = answers.shift() ?? {
         rpcError: 'host-sim: no scripted answer left',
       };
-      const reply = (): void => {
-        if (answer.rpcError !== undefined) {
-          send({
-            jsonrpc: '2.0',
-            id: msg.id,
-            error: { code: -32000, message: answer.rpcError },
-          });
-        } else {
-          send({ jsonrpc: '2.0', id: msg.id, result: answer.result });
-        }
+      reply(
+        msg.id,
+        answer.delayMs,
+        answer.rpcError !== undefined ? { rpcError: answer.rpcError } : { result: answer.result },
+      );
+      return;
+    }
+
+    // Must come before the catch-all below: an unscripted display-mode request
+    // is a spec that forgot its answer, not a method the stub cannot speak.
+    if (msg.method === 'ui/request-display-mode') {
+      const answer: HostSimDisplayModeAnswer = displayModeAnswers.shift() ?? {
+        rpcError: 'host-sim: no scripted display-mode answer',
       };
-      if (answer.delayMs) setTimeout(reply, answer.delayMs);
-      else reply();
+      reply(
+        msg.id,
+        answer.delayMs,
+        answer.rpcError !== undefined
+          ? { rpcError: answer.rpcError }
+          : { result: { mode: answer.mode } },
+      );
       return;
     }
 
@@ -136,6 +177,26 @@ export function installHostSim(config: HostSimConfig): void {
     }
   });
 
-  (window as unknown as { __hostSim: { calls: typeof calls } }).__hostSim = { calls };
+  /**
+   * Change the host context mid-test — a real host does this when it grants
+   * fullscreen, resizes the container or switches the theme.
+   *
+   * The method string is the SDK's `HOST_CONTEXT_CHANGED_METHOD`, and `params`
+   * is the patch itself (the App merges it into its stored context), so an
+   * unwrapped patch is what the widget's `hostcontextchanged` listener sees.
+   */
+  const pushHostContext = (patch: Record<string, unknown>): void => {
+    send({
+      jsonrpc: '2.0',
+      method: 'ui/notifications/host-context-changed',
+      params: patch,
+    });
+  };
+
+  (
+    window as unknown as {
+      __hostSim: { calls: typeof calls; pushHostContext: typeof pushHostContext };
+    }
+  ).__hostSim = { calls, pushHostContext };
   document.body.append(iframe);
 }
