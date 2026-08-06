@@ -155,6 +155,26 @@ describe('ris_dokument with a site-chrome page (issue #94)', () => {
     expect(payload.text).toContain(`**Quelle:** [${GF_URL}](${GF_URL})`);
   });
 
+  it('should scope a number-addressed page without adopting its page title', async () => {
+    serve(GF_HTML);
+
+    const payload = await dokument({ dokumentnummer: 'NOR12019037' });
+
+    // The two halves of the contract pulled apart: scoping is unconditional —
+    // every path through the loader gets it — while the title adoption is not,
+    // it is the url branch's alone. Serving a scoped page on the *number* path
+    // is the only arrangement in which a gate that dropped `titelIsInputUrl`
+    // still looks correct everywhere else, so it is pinned here: the heading
+    // stays the identifier the caller passed in, and the text is scoped anyway.
+    expect(payload.text.split('\n')[0]).toBe('# NOR12019037');
+    expect(payload.text).toContain('**Dokumentnummer:** `NOR12019037`');
+    expect(payload.text).not.toContain('RIS - Datenschutzgesetz');
+
+    expect(payload.text).not.toContain('Seitenbereiche');
+    expect(payload.text).not.toContain('Bundeskanzleramt der Republik');
+    expect(payload.text.split('## Inhalt\n\n')[1].split('\n')[0]).toBe('§ 0');
+  });
+
   it('should keep the legal status of the displayed Fassung', async () => {
     serve(WXE_HTML);
 
