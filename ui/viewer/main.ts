@@ -558,6 +558,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * rebuilt, and the pixel scroll of a pane that no longer exists says nothing
  * about where the reader was, while a content offset survives any reflow.
  *
+ * A jump the reader is waiting for wins: `jumpTo` parks its target in the same
+ * slot before fetching the section that holds it, and overwriting that with the
+ * position the jump started from would consume the anchor on the section
+ * already on screen — the requested one then arrives with nothing left to
+ * scroll to, which is the button that does nothing this file rules out.
+ *
  * Two accepted consequences: `focusAfterJump` moves DOM focus along with the
  * scroll, and the anchor is scroll-debounced, so a change inside that window
  * returns to the section before the last one. An anchor of 0 is deliberately
@@ -565,7 +571,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * keeping the pane's scroll position, so moving focus is all it would do.
  */
 function keepReadingPosition(): void {
-  if (state && anchorOffset > 0) pendingAnchor = anchorOffset;
+  if (state && anchorOffset > 0) pendingAnchor ??= anchorOffset;
 }
 
 /**

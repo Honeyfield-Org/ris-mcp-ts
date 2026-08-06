@@ -1243,14 +1243,19 @@ describe('the fullscreen display mode', () => {
 // =============================================================================
 
 describe('a geometry change while reading', () => {
-  /** The big document, whose outline offsets are all line starts. */
-  async function openBigDocument(): Promise<void> {
-    answersWith({
-      structuredContent: bigChunk(0),
+  /** One section of the big document, as the chunk tool answers it. */
+  function bigSection(offset: number): ToolPayload {
+    return {
+      structuredContent: bigChunk(offset),
       source: 'toolresult',
       text: '',
       isError: false,
-    });
+    };
+  }
+
+  /** The big document, whose outline offsets are all line starts. */
+  async function openBigDocument(): Promise<void> {
+    answersWith(bigSection(0));
 
     await mount();
     deliverInput?.({ dokumentnummer: BIG_DOKUMENTNUMMER });
@@ -1290,5 +1295,29 @@ describe('a geometry change while reading', () => {
     deliverContext?.({ displayMode: 'fullscreen' });
 
     expect(currentJumpLabel()).toBe(BIG_OUTLINE[2].label);
+  });
+
+  it('lets a jump in flight win over the position it started from', async () => {
+    await openBigDocument();
+
+    // A reading position well inside the loaded text, so restoring it is a real
+    // alternative to the jump and not a no-op.
+    const jumps = view().querySelectorAll<HTMLButtonElement>('.ris-outline-jump');
+    jumps[2].click();
+    await settle();
+
+    const finish = answersWhenTold();
+    jumps[5].click();
+    await settle();
+
+    // The host re-lays the widget out while the section the reader asked for is
+    // still being fetched. Restoring the old position here would consume the
+    // anchor, and the section would arrive with nothing left to scroll to — a
+    // reader who pressed an outline entry and watched the view stay put.
+    deliverContext?.({ containerDimensions: { height: 900, width: 1200 } });
+    await finish(bigSection(BIG_OUTLINE[5].offset));
+
+    expect(currentJumpLabel()).toBe(BIG_OUTLINE[5].label);
+    expect(document.activeElement?.id).toBe(`ris-sec-${BIG_OUTLINE[5].offset}`);
   });
 });
