@@ -221,6 +221,10 @@ function sentinelOffset(): string | undefined {
   return view().querySelector<HTMLElement>('.ris-doc-sentinel')?.dataset.offset;
 }
 
+function loadingLabel(): HTMLElement | null {
+  return view().querySelector<HTMLElement>('.ris-doc-loading');
+}
+
 function railLabels(): string[] {
   return [...view().querySelectorAll('.ris-outline-jump')].map(
     (jump) => jump.firstChild?.textContent ?? '',
@@ -667,6 +671,46 @@ describe('loading further sections', () => {
 
     await finish(section({ text: 'Zweiter Abschnitt.', next_offset: null, outline: undefined }));
     expect(text()).toContain('Zweiter Abschnitt.');
+  });
+
+  it('says at the foot of the text that a section is on its way', async () => {
+    await openDocument();
+    const finish = answersWhenTold();
+
+    await scrollToEnd();
+
+    // #93: the prefetch fires 2 000 pixels before the end of the text, so the
+    // reader is still several screens away when the call starts and nothing on
+    // screen would otherwise say that more is coming.
+    expect(loadingLabel()?.textContent).toBe(COPY.loadingMore);
+    // Announced rather than hidden — it sits beside the sentinel, which is
+    // `aria-hidden` and would swallow it.
+    expect(loadingLabel()?.getAttribute('role')).toBe('status');
+    // A targeted insert, not a re-render: re-rendering here would re-arm the
+    // observer this very call disarmed, and one section at a time would go.
+    expect(liveObservers()).toHaveLength(0);
+
+    await finish(section({ text: 'Zweiter Abschnitt.', next_offset: null, outline: undefined }));
+
+    expect(loadingLabel()).toBeNull();
+    expect(text()).toContain('Zweiter Abschnitt.');
+  });
+
+  it('takes the label away again when the section fails', async () => {
+    await openDocument();
+    const finish = answersWhenTold();
+
+    await scrollToEnd();
+    expect(loadingLabel()?.textContent).toBe(COPY.loadingMore);
+
+    await finish(nonsense());
+
+    // The failure semantics are the existing ones — a notice under the text and
+    // the gap marker as the way back. What must not survive is a label that
+    // promises a section which is no longer coming.
+    expect(loadingLabel()).toBeNull();
+    expect(noticeTitle()).toBe(COPY.invalidPayloadTitle);
+    expect(view().querySelector('.ris-doc-gap button')).not.toBeNull();
   });
 
   it('asks for one section at a time, however often the reader presses', async () => {

@@ -43,8 +43,11 @@ import {
 /** The tool the viewer loads every further section with. */
 const CHUNK_TOOL = 'ris_dokument_abschnitt';
 
-/** How far ahead of the viewport a section is fetched — roughly one screen. */
-const PREFETCH_MARGIN = '600px 0px';
+/**
+ * How far ahead of the viewport a section is fetched — several screens, sized to
+ * hide 10-15 seconds of host-call latency at reading pace (#93).
+ */
+const PREFETCH_MARGIN = '2000px 0px';
 
 /** How long scrolling settles before the reading position is stored. */
 const ANCHOR_DEBOUNCE_MS = 500;
@@ -274,6 +277,19 @@ async function loadSection(offset: number, mode: 'append' | 'replace'): Promise<
     rendered.textPane.replaceChildren(createSkeleton(3, COPY.loadingSection));
   }
 
+  // A targeted insert rather than a state flag: rendering it would mean a
+  // `render()` mid-flight, which re-arms the sentinel the call just disarmed.
+  // It goes beside the sentinel and not inside it, because that one is
+  // `aria-hidden` and would take the announcement down with it.
+  let loadingNode: HTMLElement | null = null;
+  if (mode === 'append' && rendered) {
+    loadingNode = document.createElement('div');
+    loadingNode.className = 'ris-doc-loading';
+    loadingNode.setAttribute('role', 'status');
+    loadingNode.textContent = COPY.loadingMore;
+    rendered.textPane.append(loadingNode);
+  }
+
   try {
     const payload = await bridge.callTool({ name: CHUNK_TOOL, arguments: { ...key, offset } });
     const outcome = interpretPayload(payload, 'section');
@@ -332,6 +348,10 @@ async function loadSection(offset: number, mode: 'append' | 'replace'): Promise<
     else showStatus('error', COPY.sessionExpired);
   } finally {
     pending = false;
+    // Every outcome that puts text on screen re-renders the pane without it;
+    // this covers the ones that leave the pane standing — a failure, an evicted
+    // session — where a label promising a section would outlive the section.
+    loadingNode?.remove();
 
     // A jump the reader pressed while this call ran, now that the section it
     // waited for is on screen — which may even be the one it wanted.

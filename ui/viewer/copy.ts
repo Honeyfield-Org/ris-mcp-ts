@@ -14,6 +14,12 @@ import { COPY as SHARED } from '../shared/states.js';
 export const COPY = {
   loading: 'Dokument wird geladen …',
   loadingSection: 'Abschnitt wird geladen …',
+  /**
+   * Shown at the foot of the text while the *next* section is being fetched.
+   * Shorter than {@link loadingSection}, which replaces the whole pane and has
+   * the room: this one sits under text that stays readable throughout.
+   */
+  loadingMore: 'Abschnitt lädt …',
 
   documentErrorTitle: 'Das Dokument konnte nicht geladen werden.',
   degradedTitle: 'Keine Dokumentdaten erhalten.',
