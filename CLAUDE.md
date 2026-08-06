@@ -30,7 +30,7 @@ generated sources are never stale; you rarely call it by hand.
 
 ```bash
 pnpm test                # Server unit tests (1060 tests, 21 files) — node env
-pnpm run test:ui         # Widget tests under ui/ (406 tests, 10 files) — jsdom env
+pnpm run test:ui         # Widget tests under ui/ (411 tests, 10 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
@@ -42,7 +42,7 @@ not have one: `vitest.config.ts` (node, excludes `ui/**`) and
 `vitest.ui.config.ts` (jsdom, only `ui/**/*.test.ts`). `pnpm run check` runs
 both.
 
-The host-sim suite (`tests/host-sim/`, 18 specs in 3 files) is the third suite
+The host-sim suite (`tests/host-sim/`, 19 specs in 3 files) is the third suite
 and the only one outside vitest: Playwright mounts the *built* bundles in real
 iframes and drives them with real clicks, against a hand-rolled stub of the
 host side of the ext-apps postMessage protocol (`host-stub.ts`, injected via
@@ -58,23 +58,30 @@ harness (#95).
 Three harness facts a new spec needs. Every scenario that triggers a widget call
 needs a `callAnswers` entry — the stub's default answer is an rpcError, which
 renders the same „Verbindung abgelaufen“ notice as a real transport failure, so
-a forgotten entry lets a sloppy spec pass. And the viewer's offset-0
-`ris_dokument_abschnitt` call is sentinel-driven, not unconditional: for a short
-mount text the lazy-load sentinel is already inside the 600px prefetch margin,
-so the call fires at mount and a viewer scenario needs a scripted section answer
-even when it only means to measure the mount; for a >25k mount text the sentinel
-sits thousands of pixels below the fold, so no section call has fired by the
-time the mount finishes rendering and it takes real scrolling to bring the
-sentinel near — which is exactly what the big-doc scenario class
+a forgotten entry lets a sloppy spec pass. And since #92 the viewer's offset-0
+`ris_dokument_abschnitt` call is *eager* rather than sentinel-driven: it fires
+at mount for every document the viewer can name (`dokumentnummer` or `url`),
+whatever the mount text's length, so a viewer scenario scripts that answer first
+even when it only means to measure the mount — a mount that names no document
+fires nothing, and the chat keeps its text. Everything past that opening section
+stays scroll-driven, which is what the big-doc scenario class
 (`viewer-big-doc.spec.ts`, `bigChunk`/`BIG_MOUNT_TEXT` in
-`ui/__fixtures__/document-chunks.ts`) pins (#95): the blind mount without a
-rail, the scroll that earns one, and a rail click into a section nobody loaded.
-`callAnswers` is a FIFO consumed call-by-call, so a scenario scripts one answer
-per call it provokes, in order — and how many that is can hang on the fixture
-rather than on the widget: the scroll spec's exactly-two-call cascade rests on
-`BIG_MOUNT_TEXT` being about one chunk long, which is what makes the follow-up
-sentinel intersect exactly once, so changing the fixture's mount-text length can
-change the recorded call sequence with no viewer change behind it.
+`ui/__fixtures__/document-chunks.ts`) pins (#92, #93, #95): the eager mount that
+puts the outline rail on screen with nothing scrolled, the next section the
+scroll earns, and a rail click into a section nobody loaded. `callAnswers` is a
+FIFO consumed call-by-call, so a scenario scripts one answer per call it
+provokes, in order, and an assertion on the recorded calls describes the moment
+it runs rather than promising that nothing follows.
+
+Two of those measurements rest on the fixture rather than on the widget. The
+mount run and the canonical first section are told apart by their progress
+labels alone — `BIG_MOUNT_PROGRESS` (25,1 %) against the first section's 25,0 %
+— and that tenth of a percent is nothing but the 126 characters of truncation
+notice the fixture appends to its round 25 000-character slice; a shorter notice
+makes the two indistinguishable and the eager adoption unobservable. And where
+the scroll spec earns its second call depends on how tall the adopted section
+renders against the prefetch margin, so changing `BIG_MOUNT_TEXT` or the section
+text can change the recorded call sequence with no viewer change behind it.
 
 ### Manual Testing with MCP Inspector
 
@@ -176,9 +183,10 @@ tests/host-sim/        # Playwright host simulation: mounts the built bundles in
 ├── helpers.ts         # Shared spec-side call recorder
 ├── trefferliste.spec.ts # Mount, pagination, Rechtslage am, Judikatur-Facetten,
 │                      # failures, latency
-├── viewer.spec.ts     # Mount + section adoption, slow section call
-└── viewer-big-doc.spec.ts # Big-doc scenario class: mount without rail, scroll
-                       # lazy-load, rail click with latency
+├── viewer.spec.ts     # Eager mount section + adoption, slow section call
+└── viewer-big-doc.spec.ts # Big-doc scenario class: eager mount with rail,
+                       # scroll lazy-load, prefetch margin + loading label,
+                       # rail click with latency
 
 vite.ui.config.ts      # Widget build: one widget per pass, named by RIS_UI_WIDGET
 playwright.host.config.ts # Host-sim suite: testDir tests/host-sim, chromium
@@ -311,7 +319,10 @@ The viewer takes the first of four rungs that yields content: **(1)** the
 mounting result, from *either* channel — the text block, or
 `structuredContent.text`, which is the same string plus the document's real
 length, its `dokumentnummer`/`source_url` and (within budget) its outline. This
-is the normal path and it costs no tool call. **(2)** the `dokumentnummer`/`url`
+is the normal path, and since #92 it costs one `ris_dokument_abschnitt` call:
+the canonical opening section, fetched at mount for every document the viewer
+can name — and none for one it cannot, where the provisional mount text is then
+everything the widget will ever hold. **(2)** the `dokumentnummer`/`url`
 from the `toolinput` notification or `window.openai.toolInput`, followed by one
 `ris_dokument_abschnitt` call at offset 0; **(3)** this widget's own snapshot,
 which stores structure and a reading position but never text; **(4)** a German
@@ -336,12 +347,30 @@ one of the two is blind in one of the two hosts.
 
 The mount run stays *provisional* however much the payload said about it: that
 text is the truncated rendering with a German notice appended, so where it ends
-is not where the document continues. Further sections load through
-`ris_dokument_abschnitt` as the reader scrolls: one call in flight at a time, an
-`IntersectionObserver` rooted on the text pane with a 600px prefetch margin,
-paused while the tab is hidden. The viewer is the one widget that sets a height
-and scrolls internally — without a real scroll container every sentinel
-intersects at once and lazy loading fetches the whole document.
+is not where the document continues. The canonical opening section is therefore
+fetched **eagerly at mount** (`eagerFirstSection()`), for every document the
+viewer can name: a large document's outline travels in that offset-0 answer and
+nowhere else, and leaving the call to the sentinel kept the rail invisible until
+the reader had scrolled through all 25 000 characters of the mount run (#92). It
+is deliberately the one call that is *not* visibility-gated — the sentinel path
+stops observing while the tab is hidden, this one fires anyway, because a viewer
+mounted in a background tab would otherwise sit outline-less until someone
+looked at it.
+
+Further sections load through `ris_dokument_abschnitt` as the reader scrolls:
+one call in flight at a time, an `IntersectionObserver` rooted on the text pane
+prefetching several screens ahead (`PREFETCH_MARGIN`, 2000px since #93 — the
+harness proves the effective margin reaches a sentinel roughly 1 200px below the
+fold, and no test pins the literal value), paused while the tab is hidden. While
+an appended section is in flight, a `.ris-doc-loading` label („Abschnitt lädt
+…“, `COPY.loadingMore`) sits at the foot of the text and is removed when the
+call settles: a targeted DOM insert rather than a rendered state, because a
+`render()` mid-flight would re-arm the sentinel the call just disarmed. The
+price of that is cosmetic and known — a host resize mid-flight rebuilds the pane
+and silently drops the label until the answer arrives. The viewer is the one
+widget that sets a height and scrolls internally — without a real scroll
+container every sentinel intersects at once and lazy loading fetches the whole
+document.
 
 **`containerDimensions` carries two different statements** and `viewportHeight()`
 must not read them the same way: `height` is a container the host has already
