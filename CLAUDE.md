@@ -55,7 +55,7 @@ latency and iframe click policies remain live-only findings; everything else —
 scrolling, lazy loading, rail timing, latency feedback — belongs in this
 harness (#95).
 
-Two harness facts a new spec needs. Every scenario that triggers a widget call
+Three harness facts a new spec needs. Every scenario that triggers a widget call
 needs a `callAnswers` entry — the stub's default answer is an rpcError, which
 renders the same „Verbindung abgelaufen“ notice as a real transport failure, so
 a forgotten entry lets a sloppy spec pass. And the viewer's offset-0
