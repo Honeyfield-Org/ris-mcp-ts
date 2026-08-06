@@ -119,6 +119,71 @@ test('scrolling to the end fetches the next section: progress grows past the eag
   await expect(widget.locator('.ris-notice-title')).toHaveCount(0);
 });
 
+test('the prefetch fires while the sentinel is still below the fold, with visible loading feedback', async ({
+  page,
+}) => {
+  await page.goto('about:blank');
+  await page.evaluate(installHostSim, {
+    widgetHtml: VIEWER_HTML,
+    mountResult: BIG_MOUNT_RESULT,
+    // The eager mount call answers at once; the delay sits on the section the
+    // scroll earns, because that call's in-flight window is the one this spec
+    // measures.
+    callAnswers: [
+      { result: sectionResult(bigChunk(0)) },
+      { delayMs: 1_200, result: sectionResult(bigChunk(25_000)) },
+    ],
+  });
+
+  const widget = page.frameLocator('iframe');
+  const textPane = widget.locator('.ris-doc-text');
+  // Scoped to the text pane: the label belongs beside the text it is about, and
+  // a bare class match would not say whether it ended up there.
+  const loading = widget.locator('.ris-doc-text .ris-doc-loading');
+
+  // The starting position — the eager section adopted, and its own label gone
+  // again, so the one below can only belong to the scroll.
+  await expect(widget.locator('.ris-outline-jump')).toHaveCount(10);
+  await expect(widget.locator('.ris-doc-progress')).toHaveText('25,0 % geladen');
+  await expect(loading).toHaveCount(0);
+
+  // Stop 1200px short of the end of the loaded text, and measure where that
+  // leaves the sentinel — layout is synchronous, so both numbers are read in
+  // the same pass that scrolls.
+  const geometry = await textPane.evaluate((pane) => {
+    pane.scrollTop = pane.scrollHeight - pane.clientHeight - 1200;
+    const sentinel = pane.querySelector('.ris-doc-sentinel');
+    return {
+      remaining: pane.scrollHeight - pane.clientHeight - pane.scrollTop,
+      belowFold: sentinel
+        ? Math.round(sentinel.getBoundingClientRect().top - pane.getBoundingClientRect().bottom)
+        : null,
+    };
+  });
+  // Measured rather than assumed. A pane too short to hold that gap would have
+  // clamped the scroll to the end, and the call below would have fired for the
+  // ordinary reason instead of for the margin — passing, and proving nothing.
+  expect(geometry.remaining).toBe(1200);
+  // And this is the claim itself: the sentinel is off screen, yet inside the
+  // 2000px margin. Both bounds matter — above zero it would merely be visible,
+  // past 2000 no margin would be needed to reach it.
+  expect(geometry.belowFold).toBeGreaterThan(0);
+  expect(geometry.belowFold).toBeLessThan(2000);
+
+  // In flight: the reader is told a section is coming, and everything already
+  // read is still on screen, because an append never blanks the pane.
+  await expect(loading).toHaveText('Abschnitt lädt …');
+  await expect(textPane).toContainText('Abschnitt 1 — Geltungsbereich');
+  await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(1);
+
+  // Arrival takes the label away with it.
+  await expect(widget.locator('.ris-doc-progress')).toHaveText('50,0 % geladen');
+  await expect(loading).toHaveCount(0);
+
+  expect(await callOffsets(page)).toEqual([0, 25_000]);
+  await expect(widget.locator('.ris-notice-title')).toHaveCount(0);
+});
+
 test('a rail click jumps, fetching an unloaded target with visible loading feedback', async ({
   page,
 }) => {

@@ -97,12 +97,16 @@ test('a slow section call keeps the mount text on screen until it arrives', asyn
   });
 
   const widget = page.frameLocator('iframe');
-  // While the eager section is in flight: the sentinel is on screen, and —
-  // unlike the Trefferliste's paging — nothing is replaced by a skeleton. A
-  // section is appended, so the mount text must survive the wait.
+  const loading = widget.locator('.ris-doc-text .ris-doc-loading');
+  // While the eager section is in flight the wait is *both* signposted and
+  // harmless: the reader sees a label beside the text saying a section is
+  // coming, and — unlike the Trefferliste's paging — the text it is about stays
+  // where it is. A section is appended, so the mount run must survive the wait.
   await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(1);
+  await expect(loading).toHaveText('Abschnitt lädt …');
   await expect(widget.locator('.ris-doc-text')).toContainText('Jedermann ist berechtigt');
 
   await expect(widget.locator('.ris-doc-text')).toContainText(SECTION_ONLY_LINE);
+  await expect(loading).toHaveCount(0);
   await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(0);
 });
