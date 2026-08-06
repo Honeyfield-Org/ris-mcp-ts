@@ -30,7 +30,7 @@ generated sources are never stale; you rarely call it by hand.
 
 ```bash
 pnpm test                # Server unit tests (1060 tests, 21 files) — node env
-pnpm run test:ui         # Widget tests under ui/ (411 tests, 10 files) — jsdom env
+pnpm run test:ui         # Widget tests under ui/ (435 tests, 10 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
@@ -42,7 +42,7 @@ not have one: `vitest.config.ts` (node, excludes `ui/**`) and
 `vitest.ui.config.ts` (jsdom, only `ui/**/*.test.ts`). `pnpm run check` runs
 both.
 
-The host-sim suite (`tests/host-sim/`, 19 specs in 3 files) is the third suite
+The host-sim suite (`tests/host-sim/`, 25 specs in 4 files) is the third suite
 and the only one outside vitest: Playwright mounts the *built* bundles in real
 iframes and drives them with real clicks, against a hand-rolled stub of the
 host side of the ext-apps postMessage protocol (`host-stub.ts`, injected via
@@ -82,6 +82,28 @@ makes the two indistinguishable and the eager adoption unobservable. And where
 the scroll spec earns its second call depends on how tall the adopted section
 renders against the prefetch margin, so changing `BIG_MOUNT_TEXT` or the section
 text can change the recorded call sequence with no viewer change behind it.
+
+The fullscreen class (#80) added one stub config field, one stub method and one
+spec helper. `displayModeAnswers` is a second FIFO, one entry per
+`ui/request-display-mode`,
+and it has the same trap as `callAnswers` in a sharper form: the exhausted-FIFO
+default is an rpcError, which the bridge degrades to the mode currently in
+effect — so a forgotten entry renders *exactly* what a host that silently
+refused renders, down to the same German notice. That is by design in the widget
+(a refusal and a dead transport are the same non-event to the reader) and a trap
+in a spec, so a scenario that means to measure the refusal scripts
+`{ mode: 'inline' }` instead of letting the default stand.
+`window.__hostSim.pushHostContext(patch)` sends the patch as the params of
+`ui/notifications/host-context-changed`, which is how a real host announces that
+it granted a mode or resized the container — and it may only be called *after*
+the mount assertions have passed: a push that arrives before the handshake is
+delivered to nobody and vanishes without a trace. `recordedMessages(page,
+method)` generalises the old recorder (`recordedToolCalls` remains as the
+`tools/call` shorthand), which is what lets a spec read the handshake
+(`ui/initialize`) and the mode requests. Notices are asserted on their literal
+German wording inside `#ris-status`, never against the `COPY` constant: the
+wording is the whole user-visible contract of a branch, and an assertion that
+reads the same constant the widget renders passes whatever that constant says.
 
 ### Manual Testing with MCP Inspector
 
@@ -179,14 +201,18 @@ ui/                    # Widget sources — browser code, own tsconfig (DOM lib)
 tests/host-sim/        # Playwright host simulation: mounts the built bundles in
                        # real iframes, stubs the ext-apps postMessage host side
 ├── host-stub.ts       # installHostSim(): handshake, tool-result delivery,
-│                      # scriptable answers (delays, rpcErrors), call recorder
-├── helpers.ts         # Shared spec-side call recorder
+│                      # scriptable tool + display-mode answers (delays,
+│                      # rpcErrors), pushHostContext(), call recorder
+├── helpers.ts         # recordedMessages(page, method) + tools/call shorthand
 ├── trefferliste.spec.ts # Mount, pagination, Rechtslage am, Judikatur-Facetten,
 │                      # failures, latency
 ├── viewer.spec.ts     # Eager mount section + adoption, slow section call
-└── viewer-big-doc.spec.ts # Big-doc scenario class: eager mount with rail,
-                       # scroll lazy-load, prefetch margin + loading label,
-                       # rail click with latency
+├── viewer-big-doc.spec.ts # Big-doc scenario class: eager mount with rail,
+│                      # scroll lazy-load, prefetch margin + loading label,
+│                      # rail click with latency
+└── viewer-fullscreen.spec.ts # Handshake declaration, toggle offered/withheld,
+                       # grant, silent refusal, mode delta without dimensions,
+                       # re-anchor across a geometry change
 
 vite.ui.config.ts      # Widget build: one widget per pass, named by RIS_UI_WIDGET
 playwright.host.config.ts # Host-sim suite: testDir tests/host-sim, chromium
@@ -381,6 +407,51 @@ preference instead, and both numbers are clamped to 320…1200px so a host that
 reports a collapsed container (ChatGPT, ~90px) cannot shrink the reading pane to
 two lines.
 
+**Fullscreen is declared per widget and offered only where the host offers it**
+(#80). The declaration travels in the handshake — `BridgeOptions.displayModes`,
+`['inline', 'fullscreen']` for the viewer and unset for the trefferliste, whose
+silence a harness assert pins — because the declaration is what makes a host
+render its fullscreen affordance at all, so declaring a mode a widget has no
+layout for advertises a control that leads nowhere. Neither widget declares
+`pip`. The viewer's own „Vollbild“ button sits in the header meta row, rendered
+only while
+`hostContext.availableDisplayModes` lists `fullscreen` *and* the widget is not
+already in it: a host in fullscreen draws its own way back out, and a control of
+ours beside it would be a second answer to the same question — which is also why
+the viewer has no close chrome of its own. Like „Im RIS öffnen“ the button is a
+host request rather than a server call, so an evicted session leaves it working
+and only a handshake that never completed disables it.
+
+**A refusal is an answer, not an error.** `requestDisplayMode()` resolves with
+the mode the host actually *granted* — which may be the one already in effect —
+and never rejects; a throw degrades to the current mode. The viewer therefore
+checks the granted mode against what it asked for and turns anything else into
+the notice „Vollbild ist hier nicht verfügbar.“ A transport failure renders
+identically to a silent refusal, deliberately: both are "the mode did not
+happen", nothing was lost either way, and the reader can press again. The
+request carries no deadline of its own (the SDK's 60s applies), so the handler is
+fire-and-forget behind a `modeRequestPending` guard against a second request
+while one is open — the button stays enabled, because a control dead for a minute
+is worse than one that ignores a click.
+
+**Host-driven layout changes arrive as `hostcontextchanged` deltas** — the host
+sends the fields that changed and nothing else. The pane height is recomputed
+only when the delta really carries `containerDimensions`: doing it on every delta
+let a `{ displayMode }` or `{ theme }` change answer "no dimensions" with the
+640px fallback and collapse a pane the host had sized (latent until #80, now
+fixed and pinned). Every render the host forces this way — and every granted mode
+switch — returns the reader to their section by *content offset* rather than by
+pixel `scrollTop`, which means nothing once the pane has been rebuilt; a jump
+still loading wins the shared `pendingAnchor` slot (`pendingAnchor ??=`), because
+overwriting it with the position the jump started from would consume the anchor
+on the section already on screen. `safeAreaInsets` becomes padding on
+`.ris-doc-root`, in fullscreen only — inline the widget sits inside host chrome
+that already clears the notch — and only with all four sides present, since a
+partial object says nothing about the ones it omits. The display mode is
+deliberately not part of the viewer snapshot: it describes the frame rather than
+the document, and how a reopened conversation displays its widget is the host's
+decision.
+
 Document text is rendered by a line classifier, never a markdown parser, and
 always through `textContent`. Section anchors come from the server's
 `outline[].offset`; the widget carries no §-regex, because in court decisions
@@ -433,8 +504,12 @@ The viewer's live pass (2026-08-02, #52) answered two of the open questions in
 | ChatGPT | widget collapsed to ~2 lines with text rendering behind it | mitigated — host heights are clamped to 320…1200px; **not re-measured in ChatGPT** |
 | mcp-app-debug | reported `946×4024`; sends `containerDimensions: { maxHeight: 4000 }` | fixed — `946×664`, 6/6 checks |
 
-The remaining §9 questions are open: the eviction branch (Q6), the rate limit
-under real scrolling (Q7), and fullscreen (Q5, not implemented).
+The remaining §9 questions are open: the eviction branch (Q6) and the rate limit
+under real scrolling (Q7). Fullscreen (Q5) is implemented and covered by the
+host-sim harness (#80), but nothing about it has been measured in a real host:
+whether claude.ai or ChatGPT list `fullscreen` in `availableDisplayModes` at all,
+what `containerDimensions` they report once the mode is granted, and whether a
+mobile host sends `safeAreaInsets` are all live-only questions.
 
 Known issues and follow-ups: `claude-ai-mcp#165` (custom-connector rendering
 flaky — never reproduced here), `ext-apps#696`, and issue **#60** for
