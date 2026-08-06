@@ -341,6 +341,23 @@ async function loadSection(offset: number, mode: 'append' | 'replace'): Promise<
   }
 }
 
+/**
+ * Fetch the opening section as soon as there is a host to ask.
+ *
+ * The offset-0 section carries the outline, and a document whose outline blew
+ * the mount budget carries none — leaving it to the sentinel kept the rail
+ * invisible until the reader had scrolled the whole 25 000-character mount run
+ * (#92). Every further section stays scroll-driven.
+ *
+ * The guards mirror `loadSection`'s own; `provisional` is the additional one, so
+ * a document that is already canonical — restored, or loaded section by section
+ * — never refetches what it holds.
+ */
+function eagerFirstSection(): void {
+  if (!state?.provisional || pending || expired) return;
+  void loadSection(0, 'append');
+}
+
 // =============================================================================
 // Lazy loading
 // =============================================================================
@@ -495,6 +512,9 @@ function adoptMountDocument(mount: MountDocument): void {
   restored = false;
   clearStatus();
   render();
+  // Synchronously after the render that armed the sentinel, so the call's own
+  // `stopObserving()` disarms it before an intersection can fire a second one.
+  eagerFirstSection();
 }
 
 /**
@@ -641,6 +661,12 @@ connectBridge({
     // path. Its links were rendered against a host that was not there yet.
     if (state) render();
     advanceLadder();
+    // On the normal path the mount result arrived while `bridge` was still
+    // null, so its own eager attempt was dropped and this is the one that runs.
+    // It sits after `advanceLadder()` because every rung that fetches something
+    // itself leaves `pending` set or the document canonical, and neither can
+    // then become a second call.
+    eagerFirstSection();
   })
   .catch(() => {
     // Without a handshake no section can ever be loaded, so the controls that
