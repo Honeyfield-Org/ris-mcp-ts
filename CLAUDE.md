@@ -30,7 +30,7 @@ generated sources are never stale; you rarely call it by hand.
 
 ```bash
 pnpm test                # Server unit tests (1060 tests, 21 files) — node env
-pnpm run test:ui         # Widget tests under ui/ (397 tests, 9 files) — jsdom env
+pnpm run test:ui         # Widget tests under ui/ (406 tests, 10 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
@@ -42,7 +42,7 @@ not have one: `vitest.config.ts` (node, excludes `ui/**`) and
 `vitest.ui.config.ts` (jsdom, only `ui/**/*.test.ts`). `pnpm run check` runs
 both.
 
-The host-sim suite (`tests/host-sim/`, 15 specs in 2 files) is the third suite
+The host-sim suite (`tests/host-sim/`, 18 specs in 3 files) is the third suite
 and the only one outside vitest: Playwright mounts the *built* bundles in real
 iframes and drives them with real clicks, against a hand-rolled stub of the
 host side of the ext-apps postMessage protocol (`host-stub.ts`, injected via
@@ -50,17 +50,31 @@ host side of the ext-apps postMessage protocol (`host-stub.ts`, injected via
 other means — `tests/tsconfig.json` is a third `tsc` pass in `typecheck`, and
 eslint/prettier target `tests/` and the Playwright config. Playwright flags go
 through `pnpm exec playwright test --config playwright.host.config.ts <flags>`;
-`pnpm run test:host -- <flags>` swallows them silently.
+`pnpm run test:host -- <flags>` swallows them silently. Host heights, host-call
+latency and iframe click policies remain live-only findings; everything else —
+scrolling, lazy loading, rail timing, latency feedback — belongs in this
+harness (#95).
 
 Two harness facts a new spec needs. Every scenario that triggers a widget call
 needs a `callAnswers` entry — the stub's default answer is an rpcError, which
 renders the same „Verbindung abgelaufen“ notice as a real transport failure, so
-a forgotten entry lets a sloppy spec pass. And the viewer always issues one
-`ris_dokument_abschnitt` call at offset 0 on mount for a document it can name
-(`dokumentnummer` or `url`), because its mount run is provisional by design
-(see [The viewer's first render](#the-viewers-first-render)); a viewer scenario
-therefore needs at least one scripted section answer even when it only means to
-measure the mount.
+a forgotten entry lets a sloppy spec pass. And the viewer's offset-0
+`ris_dokument_abschnitt` call is sentinel-driven, not unconditional: for a short
+mount text the lazy-load sentinel is already inside the 600px prefetch margin,
+so the call fires at mount and a viewer scenario needs a scripted section answer
+even when it only means to measure the mount; for a >25k mount text the sentinel
+sits thousands of pixels below the fold, so no section call has fired by the
+time the mount finishes rendering and it takes real scrolling to bring the
+sentinel near — which is exactly what the big-doc scenario class
+(`viewer-big-doc.spec.ts`, `bigChunk`/`BIG_MOUNT_TEXT` in
+`ui/__fixtures__/document-chunks.ts`) pins (#95): the blind mount without a
+rail, the scroll that earns one, and a rail click into a section nobody loaded.
+`callAnswers` is a FIFO consumed call-by-call, so a scenario scripts one answer
+per call it provokes, in order — and how many that is can hang on the fixture
+rather than on the widget: the scroll spec's exactly-two-call cascade rests on
+`BIG_MOUNT_TEXT` being about one chunk long, which is what makes the follow-up
+sentinel intersect exactly once, so changing the fixture's mount-text length can
+change the recorded call sequence with no viewer change behind it.
 
 ### Manual Testing with MCP Inspector
 
@@ -159,9 +173,12 @@ tests/host-sim/        # Playwright host simulation: mounts the built bundles in
                        # real iframes, stubs the ext-apps postMessage host side
 ├── host-stub.ts       # installHostSim(): handshake, tool-result delivery,
 │                      # scriptable answers (delays, rpcErrors), call recorder
+├── helpers.ts         # Shared spec-side call recorder
 ├── trefferliste.spec.ts # Mount, pagination, Rechtslage am, Judikatur-Facetten,
 │                      # failures, latency
-└── viewer.spec.ts     # Mount + section adoption, slow section call
+├── viewer.spec.ts     # Mount + section adoption, slow section call
+└── viewer-big-doc.spec.ts # Big-doc scenario class: mount without rail, scroll
+                       # lazy-load, rail click with latency
 
 vite.ui.config.ts      # Widget build: one widget per pass, named by RIS_UI_WIDGET
 playwright.host.config.ts # Host-sim suite: testDir tests/host-sim, chromium
