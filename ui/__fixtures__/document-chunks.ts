@@ -139,3 +139,100 @@ export function chunk(overrides: Partial<DocumentChunk> = {}): DocumentChunk {
     ...overrides,
   };
 }
+
+/**
+ * The big document of the #95 scenario class: far over the 25k text budget,
+ * and an outline the mount deliberately does not carry, so it arrives — as it
+ * does for a real statute whose outline blows the 6 250-character mount budget
+ * — only with the offset-0 section.
+ *
+ * The text is generated, not sampled, because the specs need offsets to be
+ * exact: ten sections of exactly 10 000 characters, each opening with a
+ * heading line at a known offset, so every outline offset is a line start and
+ * earns an anchor once its section is loaded.
+ */
+export const BIG_TOTAL = 100_000;
+
+const BIG_SECTION_LENGTH = 10_000;
+
+const BIG_SECTION_LABELS = [
+  'Geltungsbereich',
+  'Begriffsbestimmungen',
+  'Grundsätze der Verarbeitung',
+  'Rechtmäßigkeit',
+  'Einwilligung',
+  'Betroffenenrechte',
+  'Auskunftsrecht',
+  'Datensicherheit',
+  'Rechtsbehelfe',
+  'Schlussbestimmungen',
+] as const;
+
+function bigHeading(index: number): string {
+  return `Abschnitt ${index + 1} — ${BIG_SECTION_LABELS[index]}`;
+}
+
+function buildBigSection(index: number): string {
+  const heading = `${bigHeading(index)}\n`;
+  const lines: string[] = [heading];
+  let length = heading.length;
+  let lineNumber = 0;
+  while (length < BIG_SECTION_LENGTH) {
+    const remaining = BIG_SECTION_LENGTH - length;
+    const filler = `Zeile ${String(lineNumber).padStart(4, '0')} der laufenden Bestimmungen im ${bigHeading(index)}.`;
+    const line = remaining >= filler.length + 1 ? `${filler}\n` : `${'x'.repeat(remaining - 1)}\n`;
+    lines.push(line);
+    length += line.length;
+    lineNumber += 1;
+  }
+  return lines.join('');
+}
+
+export const BIG_TEXT = BIG_SECTION_LABELS.map((_, index) => buildBigSection(index)).join('');
+
+export const BIG_OUTLINE: OutlineEntry[] = BIG_SECTION_LABELS.map((_, index) => ({
+  level: 1,
+  label: bigHeading(index),
+  offset: index * BIG_SECTION_LENGTH,
+  span: BIG_SECTION_LENGTH,
+}));
+
+export const BIG_DOKUMENTNUMMER = 'NOR40295095';
+
+export const BIG_SOURCE_URL =
+  'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40295095/NOR40295095.html';
+
+/**
+ * The mount text: a truncated prefix with the notice appended, simplified to a
+ * flat 25 000-slice. The server's `truncateResponse` cuts lower — it reserves
+ * 200 characters for the notice and then falls back to the last paragraph or
+ * sentence boundary below that budget — so a live cut never lands on a round
+ * number. Nothing here depends on where it lands, only on there being a prefix
+ * and a notice.
+ */
+export const BIG_MOUNT_TEXT = `${BIG_TEXT.slice(0, 25_000)}\n\n---\nAntwort gekuerzt (${BIG_TOTAL} -> 25000 Zeichen). Verwende spezifischere Suchparameter oder ris_dokument fuer Einzeldokumente.`;
+
+/** The progress label the viewer derives from the mount run, same rounding. */
+export const BIG_MOUNT_PROGRESS = `${((BIG_MOUNT_TEXT.length / BIG_TOTAL) * 100)
+  .toFixed(1)
+  .replace('.', ',')} % geladen`;
+
+/**
+ * One section of the big document, in flat 25 000-slices so the specs can name
+ * their offsets. What matches the server is the structure — sections addressed
+ * by offset, concatenating back to the whole, outline only at offset 0 — not the
+ * cut points: `chunkResponse` boundary-cuts too, so its `next_offset` is a
+ * multiple of nothing. The viewer must therefore take every offset from the
+ * response and never compute one.
+ */
+export function bigChunk(offset: number): DocumentChunk {
+  const end = Math.min(offset + 25_000, BIG_TOTAL);
+  return {
+    dokumentnummer: BIG_DOKUMENTNUMMER,
+    text: BIG_TEXT.slice(offset, end),
+    total_length: BIG_TOTAL,
+    next_offset: end < BIG_TOTAL ? end : null,
+    ...(offset === 0 ? { outline: BIG_OUTLINE } : {}),
+    source_url: BIG_SOURCE_URL,
+  };
+}

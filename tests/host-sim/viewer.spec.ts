@@ -3,7 +3,8 @@ import { expect, test } from '@playwright/test';
 import { VIEWER_HTML } from '../../src/generated/viewer-html.js';
 import { NORM_MARKDOWN, SHORT_CHUNK } from '../../ui/__fixtures__/document-chunks.js';
 
-import { installHostSim, type HostSimCall } from './host-stub.js';
+import { recordedToolCalls } from './helpers.js';
+import { installHostSim } from './host-stub.js';
 
 /**
  * The § 1295 Abs 2 line the mount text stops short of.
@@ -71,12 +72,9 @@ test('mounts the viewer and renders the document text', async ({ page }) => {
   // And the series ended — `next_offset: null` takes the sentinel away.
   await expect(widget.locator('.ris-doc-sentinel')).toHaveCount(0);
 
-  const calls = await page.evaluate(
-    () => (window as unknown as { __hostSim: { calls: HostSimCall[] } }).__hostSim.calls,
-  );
   // Exactly one: the observer is disconnected while a call runs, and a document
   // that ends with its first section must not keep asking for more.
-  const sectionCalls = calls.filter((call) => call.method === 'tools/call');
+  const sectionCalls = await recordedToolCalls(page);
   expect(sectionCalls).toHaveLength(1);
 
   const params = sectionCalls[0]?.params as { name: string; arguments: Record<string, unknown> };

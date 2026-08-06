@@ -1,24 +1,16 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { TREFFERLISTE_HTML } from '../../src/generated/trefferliste-html.js';
 import { COURT_RESULT, LAW_RESULT, VWGH_DOCUMENT } from '../../ui/__fixtures__/search-results.js';
 import { COPY } from '../../ui/shared/states.js';
 import type { SearchResultPayload } from '../../ui/trefferliste/viewmodel.js';
 
-import { installHostSim, type HostSimCall } from './host-stub.js';
+import { recordedToolCalls } from './helpers.js';
+import { installHostSim } from './host-stub.js';
 
 /** A CallToolResult as the host would deliver it to the widget. */
 function toolResult(structuredContent: unknown): unknown {
   return { content: [{ type: 'text', text: 'Gefunden' }], structuredContent };
-}
-
-/** The `tools/call` requests the stub recorded, in the order they arrived. */
-async function recordedToolCalls(page: Page): Promise<HostSimCall[]> {
-  const calls = await page.evaluate(
-    () => (window as unknown as { __hostSim: { calls: HostSimCall[] } }).__hostSim.calls,
-  );
-
-  return calls.filter((call) => call.method === 'tools/call');
 }
 
 test('mounts the bundle and renders the fixture rows', async ({ page }) => {
