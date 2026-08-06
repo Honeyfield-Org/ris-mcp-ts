@@ -44,4 +44,12 @@ export const COPY = {
   gapMarker: 'Abschnitt nachladen',
   outlineLabel: 'Gliederung',
   openInRis: 'Im RIS öffnen',
+
+  openFullscreen: 'Vollbild',
+  /**
+   * Shown when a host answers the request with the mode that was already in
+   * effect. That is how a refusal arrives — there is no error to report — so
+   * the wording says what happened here rather than blaming anything.
+   */
+  fullscreenRefused: 'Vollbild ist hier nicht verfügbar.',
 } as const;

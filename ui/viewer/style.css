@@ -17,6 +17,15 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /*
+   * Safe-area insets, written by view.ts and non-zero only in fullscreen, where
+   * the widget owns the whole surface and a notch or a home indicator would
+   * otherwise sit on the text. Inside the height rather than on top of it — the
+   * height is the container the host sized, and padding must not push past it.
+   */
+  box-sizing: border-box;
+  padding: var(--ris-inset-top, 0) var(--ris-inset-right, 0) var(--ris-inset-bottom, 0)
+    var(--ris-inset-left, 0);
 }
 
 /* Header: citation, Dokumentnummer, progress, „Im RIS öffnen". */
@@ -54,7 +63,12 @@
   white-space: nowrap;
 }
 
-.ris-doc-meta .ris-action {
+/*
+ * The actions sit as one right-aligned group: only the first of them takes the
+ * free space. Giving every button `margin-left: auto` would split that space
+ * between them and strand „Im RIS öffnen“ in the middle of the header.
+ */
+.ris-doc-meta .ris-action:first-of-type {
   margin-left: auto;
 }
 

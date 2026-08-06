@@ -22,7 +22,12 @@ import {
 import { buildDocumentView, sectionId, type ViewerState } from './viewmodel.js';
 
 function handlers(): ViewerHandlers {
-  return { onJump: vi.fn(), onLoadGap: vi.fn(), onOpenLink: vi.fn() };
+  return {
+    onJump: vi.fn(),
+    onLoadGap: vi.fn(),
+    onOpenLink: vi.fn(),
+    onToggleFullscreen: vi.fn(),
+  };
 }
 
 function state(overrides: Partial<ViewerState> = {}): ViewerState {
@@ -60,10 +65,14 @@ function payload(overrides: Partial<ToolPayload> = {}): ToolPayload {
   };
 }
 
-function buttonLabelled(container: HTMLElement, label: string): HTMLButtonElement {
-  const match = [...container.querySelectorAll('button')].find((node) =>
+function maybeButtonLabelled(container: HTMLElement, label: string): HTMLButtonElement | undefined {
+  return [...container.querySelectorAll('button')].find((node) =>
     node.textContent?.startsWith(label),
   );
+}
+
+function buttonLabelled(container: HTMLElement, label: string): HTMLButtonElement {
+  const match = maybeButtonLabelled(container, label);
   if (!match) throw new Error(`no button labelled "${label}"`);
   return match;
 }
@@ -503,6 +512,72 @@ describe('links when there is no host on the other end', () => {
     expect(buttonLabelled(container, COPY.openInRis).disabled).toBe(true);
     // The links inside the metadata block route through the same host.
     expect(container.querySelector<HTMLButtonElement>('.ris-link')?.disabled).toBe(true);
+  });
+});
+
+// =============================================================================
+// The fullscreen toggle
+// =============================================================================
+
+describe('the fullscreen toggle', () => {
+  it('offers it once the host has a fullscreen mode to give', () => {
+    const [container, actions] = render({ canFullscreen: true });
+
+    buttonLabelled(container, COPY.openFullscreen).click();
+
+    expect(actions.onToggleFullscreen).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders nothing while the host never offered the mode', () => {
+    const [container] = render();
+
+    expect(maybeButtonLabelled(container, COPY.openFullscreen)).toBeUndefined();
+  });
+
+  it('takes it away once the widget is already in fullscreen', () => {
+    // The host renders the way back out itself, so a control of our own would
+    // be a second, competing answer to the same question.
+    const [container] = render({ canFullscreen: true, displayMode: 'fullscreen' });
+
+    expect(maybeButtonLabelled(container, COPY.openFullscreen)).toBeUndefined();
+  });
+
+  it('disables it while there is no host to ask', () => {
+    const [container] = render({ canFullscreen: true, connected: false });
+
+    expect(buttonLabelled(container, COPY.openFullscreen).disabled).toBe(true);
+    // The RIS action beside it keeps its own gate — two buttons, one header.
+    expect(buttonLabelled(container, COPY.openInRis).disabled).toBe(true);
+  });
+
+  it('stays usable after the session expired, unlike the tool calls', () => {
+    // Switching display mode goes through the host, not through the server.
+    const [container] = render({ canFullscreen: true, expired: true });
+
+    expect(buttonLabelled(container, COPY.openFullscreen).disabled).toBe(false);
+  });
+});
+
+describe('safe-area insets', () => {
+  const safeAreaInsets = { top: 44, right: 8, bottom: 34, left: 8 };
+
+  it('pads the reading surface by them in fullscreen', () => {
+    const [container] = render({ displayMode: 'fullscreen', safeAreaInsets });
+
+    expect(container.style.getPropertyValue('--ris-inset-top')).toBe('44px');
+    expect(container.style.getPropertyValue('--ris-inset-left')).toBe('8px');
+  });
+
+  it('ignores them inline, where the host owns everything around the widget', () => {
+    const [container] = render({ safeAreaInsets });
+
+    expect(container.style.getPropertyValue('--ris-inset-top')).toBe('0px');
+  });
+
+  it('is zero when the host reports no insets at all', () => {
+    const [container] = render({ displayMode: 'fullscreen' });
+
+    expect(container.style.getPropertyValue('--ris-inset-bottom')).toBe('0px');
   });
 });
 

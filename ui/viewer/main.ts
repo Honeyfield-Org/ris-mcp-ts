@@ -32,10 +32,14 @@ import {
   anchorLabelFor,
   buildDocumentView,
   parseSnapshot,
+  readDisplayMode,
+  readSafeAreaInsets,
   relocateAnchor,
+  type DisplayMode,
   type DocumentChunk,
   type DocumentKey,
   type MountDocument,
+  type SafeAreaInsets,
   type ViewerSnapshot,
   type ViewerState,
 } from './viewmodel.js';
@@ -79,6 +83,14 @@ let restored = false;
 /** Identity from the `toolinput` channel, before any document exists. */
 let mountKey: DocumentKey | null = null;
 let height = viewportHeight(undefined);
+/** How the host is displaying the widget right now. */
+let displayMode: DisplayMode = 'inline';
+/** Whether the host listed a fullscreen mode — the only feature detection there is. */
+let canFullscreen = false;
+/** Insets the host reported, or `null` while it reported none. */
+let safeInsets: SafeAreaInsets | null = null;
+/** Guards against a second display-mode request while one is still open. */
+let modeRequestPending = false;
 let rendered: RenderedDocument | null = null;
 let observer: IntersectionObserver | null = null;
 /** Section to scroll to once the text holding it has arrived. */
@@ -128,6 +140,7 @@ const handlers: ViewerHandlers = {
   onJump: (offset) => jumpTo(offset),
   onLoadGap: (offset) => void loadSection(offset, 'append'),
   onOpenLink: (url) => void openExternal(url),
+  onToggleFullscreen: () => void toggleFullscreen(),
 };
 
 function render(): void {
@@ -142,6 +155,9 @@ function render(): void {
   // it is rendered rather than reached back into afterwards.
   state.expired = expired;
   state.connected = connected;
+  state.displayMode = displayMode;
+  state.canFullscreen = canFullscreen;
+  state.safeAreaInsets = safeInsets;
   const model = buildDocumentView(state);
   state.title = model.title;
   rendered = renderDocument(view, model, handlers, height);
@@ -168,6 +184,40 @@ async function openExternal(url: string): Promise<void> {
 
   if (await bridge.openLink(url)) clearStatus();
   else showStatus('error', COPY.linkRefused);
+}
+
+/**
+ * Ask the host for the fullscreen display mode.
+ *
+ * Fire-and-forget on purpose: the request carries no deadline of its own, so a
+ * host that never answers holds it for the SDK's full minute, and nothing on
+ * screen may wait that out. What a second click during that minute must not do
+ * is send a second request — the button stays enabled, because a control dead
+ * for a minute is worse than one that ignores a click.
+ *
+ * A refusal arrives as an answer rather than as an error: the host replies with
+ * the mode still in effect, which is why the granted mode is always checked.
+ */
+async function toggleFullscreen(): Promise<void> {
+  if (!bridge || !connected || modeRequestPending) return;
+
+  modeRequestPending = true;
+
+  try {
+    const granted = await bridge.requestDisplayMode('fullscreen');
+
+    if (granted !== 'fullscreen') {
+      showStatus('error', COPY.fullscreenRefused);
+      return;
+    }
+
+    clearStatus();
+    displayMode = granted;
+    keepReadingPosition();
+    render();
+  } finally {
+    modeRequestPending = false;
+  }
 }
 
 /**
@@ -494,6 +544,81 @@ function persist(): void {
 }
 
 // =============================================================================
+// The frame around the widget
+// =============================================================================
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Ask the next render to return to the section the reader was on.
+ *
+ * For every render the host forces by re-laying the widget out: the pane is
+ * rebuilt, and the pixel scroll of a pane that no longer exists says nothing
+ * about where the reader was, while a content offset survives any reflow.
+ *
+ * Two accepted consequences: `focusAfterJump` moves DOM focus along with the
+ * scroll, and the anchor is scroll-debounced, so a change inside that window
+ * returns to the section before the last one. An anchor of 0 is deliberately
+ * left alone — that is the top of the document, which the re-render restores by
+ * keeping the pane's scroll position, so moving focus is all it would do.
+ */
+function keepReadingPosition(): void {
+  if (state && anchorOffset > 0) pendingAnchor = anchorOffset;
+}
+
+/**
+ * Take what the host says about the frame the widget is rendered in.
+ *
+ * The context arrives as a *delta*: a host sends the fields that changed and
+ * nothing else, so each one is read only where it is present. Recomputing the
+ * height regardless is what let a `{ theme }` or `{ displayMode }` change answer
+ * "no dimensions" with the fallback and collapse a pane the host had sized.
+ */
+function onHostContext(context: unknown): void {
+  if (!isRecord(context)) return;
+
+  let changed = false;
+
+  if (context.containerDimensions !== undefined) {
+    const next = viewportHeight(context);
+    if (next !== height) {
+      height = next;
+      changed = true;
+    }
+  }
+
+  if (context.displayMode !== undefined) {
+    const mode = readDisplayMode(context.displayMode);
+    if (mode && mode !== displayMode) {
+      displayMode = mode;
+      changed = true;
+    }
+  }
+
+  if (context.availableDisplayModes !== undefined) {
+    const offered =
+      Array.isArray(context.availableDisplayModes) &&
+      context.availableDisplayModes.includes('fullscreen');
+    if (offered !== canFullscreen) {
+      canFullscreen = offered;
+      changed = true;
+    }
+  }
+
+  if (context.safeAreaInsets !== undefined) {
+    safeInsets = readSafeAreaInsets(context.safeAreaInsets);
+    changed = true;
+  }
+
+  if (!changed || !state) return;
+
+  keepReadingPosition();
+  render();
+}
+
+// =============================================================================
 // The first-render ladder
 // =============================================================================
 
@@ -663,15 +788,13 @@ view.replaceChildren(createSkeleton(3, COPY.loading));
 
 connectBridge({
   appName: 'ris-mcp-viewer',
+  // Declared per widget: the host renders its fullscreen affordance from this
+  // list, so a widget with no fullscreen layout stays out of it. `pip` is not
+  // declared — claude.ai does not offer it and this pane has no layout for it.
+  displayModes: ['inline', 'fullscreen'],
   onToolResult: presentMount,
   onToolInput: takeMountInput,
-  onHostContext: (context) => {
-    const next = viewportHeight(context);
-    if (next === height) return;
-
-    height = next;
-    if (state) render();
-  },
+  onHostContext,
 })
   .then((host) => {
     bridge = host;
