@@ -142,8 +142,9 @@ export function chunk(overrides: Partial<DocumentChunk> = {}): DocumentChunk {
 
 /**
  * The big document of the #95 scenario class: far over the 25k text budget,
- * with an outline whose JSON is over the mount budget — so it arrives, as in
- * production, only with the offset-0 section.
+ * and an outline the mount deliberately does not carry, so it arrives — as it
+ * does for a real statute whose outline blows the 6 250-character mount budget
+ * — only with the offset-0 section.
  *
  * The text is generated, not sampled, because the specs need offsets to be
  * exact: ten sections of exactly 10 000 characters, each opening with a
