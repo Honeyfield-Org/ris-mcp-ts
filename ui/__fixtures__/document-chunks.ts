@@ -202,7 +202,14 @@ export const BIG_DOKUMENTNUMMER = 'NOR40295095';
 export const BIG_SOURCE_URL =
   'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40295095/NOR40295095.html';
 
-/** The mount text: a truncated prefix, notice appended — as `ris_dokument` cuts it. */
+/**
+ * The mount text: a truncated prefix with the notice appended, simplified to a
+ * flat 25 000-slice. The server's `truncateResponse` cuts lower — it reserves
+ * 200 characters for the notice and then falls back to the last paragraph or
+ * sentence boundary below that budget — so a live cut never lands on a round
+ * number. Nothing here depends on where it lands, only on there being a prefix
+ * and a notice.
+ */
 export const BIG_MOUNT_TEXT = `${BIG_TEXT.slice(0, 25_000)}\n\n---\nAntwort gekuerzt (${BIG_TOTAL} -> 25000 Zeichen). Verwende spezifischere Suchparameter oder ris_dokument fuer Einzeldokumente.`;
 
 /** The progress label the viewer derives from the mount run, same rounding. */
@@ -210,7 +217,14 @@ export const BIG_MOUNT_PROGRESS = `${((BIG_MOUNT_TEXT.length / BIG_TOTAL) * 100)
   .toFixed(1)
   .replace('.', ',')} % geladen`;
 
-/** One section of the big document, chunked at 25 000 like the server. */
+/**
+ * One section of the big document, in flat 25 000-slices so the specs can name
+ * their offsets. What matches the server is the structure — sections addressed
+ * by offset, concatenating back to the whole, outline only at offset 0 — not the
+ * cut points: `chunkResponse` boundary-cuts too, so its `next_offset` is a
+ * multiple of nothing. The viewer must therefore take every offset from the
+ * response and never compute one.
+ */
 export function bigChunk(offset: number): DocumentChunk {
   const end = Math.min(offset + 25_000, BIG_TOTAL);
   return {
