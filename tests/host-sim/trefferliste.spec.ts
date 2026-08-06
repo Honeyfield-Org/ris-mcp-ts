@@ -5,7 +5,7 @@ import { COURT_RESULT, LAW_RESULT, VWGH_DOCUMENT } from '../../ui/__fixtures__/s
 import { COPY } from '../../ui/shared/states.js';
 import type { SearchResultPayload } from '../../ui/trefferliste/viewmodel.js';
 
-import { recordedToolCalls } from './helpers.js';
+import { recordedMessages, recordedToolCalls } from './helpers.js';
 import { installHostSim } from './host-stub.js';
 
 /** A CallToolResult as the host would deliver it to the widget. */
@@ -24,6 +24,14 @@ test('mounts the bundle and renders the fixture rows', async ({ page }) => {
   await expect(widget.locator('.ris-row-title')).toHaveCount(2);
   // The nojs marker answers "did the bundle run at all" — it must be gone.
   await expect(widget.locator('#nojs-marker')).toBeHidden();
+
+  // Display modes are declared per widget, and this one declares none: a host
+  // renders its fullscreen affordance from the list, and a result list has no
+  // fullscreen layout to render into. Only the viewer (#80) declares one.
+  const handshakes = await recordedMessages(page, 'ui/initialize');
+  expect(handshakes).toHaveLength(1);
+  const params = handshakes[0]?.params as { appCapabilities?: Record<string, unknown> } | undefined;
+  expect(params?.appCapabilities ?? {}).not.toHaveProperty('availableDisplayModes');
 });
 
 test('a pagination click issues tools/call with seite+1 and renders the answer', async ({
