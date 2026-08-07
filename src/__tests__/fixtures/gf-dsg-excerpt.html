@@ -1,0 +1,431 @@
+<!--
+  Fixture: trimmed excerpt of the live RIS page "Gesamte Rechtsvorschrift"
+  (GeltendeFassung.wxe) for the Datenschutzgesetz, Gesetzesnummer 10001597,
+  fetched 2026-08-06 from
+  https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001597
+
+  This is the site-chrome page shape of issue #94: the law text sits in 77
+  sibling <div class="documentContent"> blocks inside
+  body > form#Form > #pagebase > #page > #main > #content > .document, wrapped
+  in RIS navigation chrome — skip links ("Seitenbereiche:"), header menu, and a
+  footer ("Zum Seitenanfang", "© 2026 Bundeskanzleramt der Republik Österreich").
+
+  Trimming — deletions only, every kept region is a verbatim byte slice of the
+  source, so this file is a strict subsequence of it (source 492.808 chars):
+    - <head>: the ~3,5 KB of RIS scripts and stylesheets are dropped; the real
+      <title> line is kept verbatim between the kept <head id="Head1"> and </head>.
+    - <body>: the chrome head (11.885 chars, up to and including the opening of
+      .document with its chrome <h1>) is kept whole.
+    - .documentContent blocks 0..2 are kept whole (50.369 + 6.012 + 8.989 chars,
+      with their real separators); blocks 3..76 are cut. A kept block is never cut
+      into — block 0 is large because it carries Langtitel, the Änderungen list
+      and the Präambel/Inhaltsverzeichnis as two .embeddedContent divs.
+    - everything from the end of block 76 to EOF is kept whole (5.006 chars):
+      the trailing div.p, the .document close and the whole footer chrome.
+
+  Load-bearing details: the § markers ("§ 0", "Art. 1 § 1") are carried by
+  <h2 class="onlyScreenreader"> INSIDE .documentContent — that class is not the
+  .sr-only that htmlToText strips, and dropping it would lose the section
+  markers. The chrome headings (h1 "Bundesrecht konsolidiert: …", h2 "Über diese
+  Seite") sit outside .documentContent and must not reach the outline.
+
+  Do NOT reformat — see the note in nor12019037-excerpt.html; the markup is
+  byte-exact on purpose. Excluded from Prettier via .prettierignore.
+-->
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="Html" xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+
+<head id="Head1"><title>
+	RIS - Datenschutzgesetz - Bundesrecht konsolidiert, Fassung vom 06.08.2026
+</title></head><body>
+<form onreset="return false;" action="/GeltendeFassung.wxe?Abfrage=Bundesnormen&amp;Gesetzesnummer=10001597" name="Form" method="post" id="Form">
+<div class="aspNetHidden">
+<input type="hidden" name="wxePageTokenField" id="wxePageTokenField" value="a4a13c25-a20f-438c-9209-f3ce91f7454a" />
+<input type="hidden" name="ServerTime" id="ServerTime" value="639216452567370714" />
+<input type="hidden" name="ServerID" id="ServerID" value="-414478582" />
+<input type="hidden" name="WxeFunctionToken" id="WxeFunctionToken" value="61095e32-8035-4ad0-998e-b1f9fd67f3ce" />
+<input type="hidden" name="wxeReturningTokenField" id="wxeReturningTokenField" value="" />
+<input type="hidden" name="wxePostBackSequenceNumberField" id="wxePostBackSequenceNumberField" value="2" />
+<input type="hidden" name="SmartPage_CacheDetectionField" id="SmartPage_CacheDetectionField" value="" />
+<input type="hidden" name="smartScrolling" id="smartScrolling" value="" />
+<input type="hidden" name="smartFocus" id="smartFocus" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="" />
+</div>
+
+
+<script type="text/javascript">
+//<![CDATA[
+StyleUtility.AddBrowserSwitch();
+function wxeDoSubmit (button, pageToken) { 
+  var theForm = document.Form; 
+  theForm.wxeReturningTokenField.value = pageToken; 
+  document.getElementById(button).click(); 
+}
+function wxeDoPostBack (control, argument, returningToken) { 
+  var theForm = document.Form; 
+  theForm.wxeReturningTokenField.value = returningToken; 
+  __doPostBack (control, argument); 
+}
+WxePage_Context.SetInstance (new WxePage_Context (
+    
+false,
+    
+600000,
+    
+'/GeltendeFassung.wxe?WxeFunctionToken=61095e32-8035-4ad0-998e-b1f9fd67f3ce&WxeAction=Refresh',
+    
+null,
+    
+'<p>Sie sind dabei, die Seite zu verlassen.</p><p>Sie können keine weiteren Eingaben an den Server senden.</p>',
+    
+'Die Navigation mit den Schaltflächen Vorwärts und Zurück wird nicht unterstützt.'));
+
+function SmartPage_Initialize ()
+{
+  var eventHandlers = new Array();
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'BasePage_OnPostBack';
+  eventHandlers['onpostback'] = eventHandlersByEvent;
+
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'BasePage_OnUnload';
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'WxePage_OnUnload';
+  eventHandlers['onunload'] = eventHandlersByEvent;
+
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'RegisterLocationHashChangedHandler';
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'AdjustLayout';
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'WxePage_OnLoad';
+  eventHandlers['onload'] = eventHandlersByEvent;
+
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'AdjustLayout';
+  eventHandlers['onresize'] = eventHandlersByEvent;
+
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'WxePage_OnAbort';
+  eventHandlers['onabort'] = eventHandlersByEvent;
+
+
+  var trackedControls = new Array();
+
+  var synchronousPostBackCommands = new Array();
+
+  if (SmartPage_Context.Instance == null)
+  {
+
+    SmartPage_Context.Instance = new SmartPage_Context (
+        'Form',
+        false,
+        null,
+        '<p>Die Seite wird gerade neu geladen.</p><p>Warten Sie mit weiteren Eingaben, bis die Übertragung abgeschlossen ist.</p>',
+        'smartScrolling',
+        'smartFocus',
+        'WxePage_CheckFormState');
+  }
+
+  SmartPage_Context.Instance.set_AbortQueuedSubmit (false);
+  SmartPage_Context.Instance.set_EventHandlers (eventHandlers);
+  SmartPage_Context.Instance.set_TrackedIDs (trackedControls);
+  SmartPage_Context.Instance.set_SynchronousPostBackCommands (synchronousPostBackCommands);
+}
+
+SmartPage_Initialize ();
+
+
+//]]>
+</script>
+
+<script src="/ScriptResource.axd?d=NJmAwtEo3Ipnlaxl6CMhvu2YaWI2GvMOfyf_RuzpJP3TRfcANC6JnfF-35bVCaeA4GcEmnHeulQza4ZCVOvgW9IjDfEPSHTw4c14SSB7FKyf1HwgC4v5zQ1OXoTfN5SmAXaVCB_M_RI3KwDnMEB3m1P6mXDPq23ILh7f3n-idI81&amp;t=ffffffff9763f56e" type="text/javascript"></script>
+  
+  <div id="pagebase">
+    <div id="page">
+      
+
+<div id="header" class="clearfix">
+  
+
+<span class="onlyScreenreader">Seitenbereiche:</span>
+<ul id="servicenav">
+  <li>
+    <a href="#main" accesskey="0" class="onlyScreenreader">Zum Inhalt (<span lang="en" xml:lang="en">Accesskey</span> 0)</a>
+  </li>
+  <li>
+    <a href="#navigation" accesskey="1" class="onlyScreenreader">Zur Navigationsleiste (<span lang="en" xml:lang="en">Accesskey</span> 1)</a>
+  </li>
+  
+  
+  
+  <li>
+    <a id="Header_ServiceNavigation_ContactLink" accesskey="4" lang="de" xml:lang="de" href="/UI/Kontakt.aspx">Kontakt<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 4)</span>
+    </a>
+  </li>
+  <li>
+    <a id="Header_ServiceNavigation_ImpressumLink" accesskey="5" lang="de" xml:lang="de" href="/UI/Impressum.aspx">Impressum<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 5)</span>
+    </a>
+  </li>
+  <li>
+    <a id="Header_ServiceNavigation_PrivacyPolicyLink" accesskey="6" lang="de" xml:lang="de" href="/UI/Datenschutz.aspx">Datenschutzerkl&#228;rung<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 6)</span>
+    </a>
+  </li>
+  <li>
+    <a id="Header_ServiceNavigation_AccessibilityStatementLink" accesskey="7" lang="de" xml:lang="de" href="/UI/Barrierefreiheit.aspx">Barrierefreiheitserkl&#228;rung<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 7)</span>
+    </a>
+  </li>
+  <li>
+    <a id="Header_ServiceNavigation_SiteMapLink" accesskey="8" lang="de" xml:lang="de" href="/UI/SiteMap.aspx"><span lang="en" xml:lang="en">Sitemap</span><span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 8)</span>
+    </a>
+  </li>
+  <li id="Header_ServiceNavigation_LanguageItem">
+    <a id="Header_ServiceNavigation_LanguageLink" accesskey="9" class="last-item" lang="de" xml:lang="de" href="/defaultEn.aspx">English</a><span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 9)</span>
+  </li>
+
+</ul>
+
+  <a id="Header_HomePageLink" href="/default.aspx"><img id="Header_BkaLogo" title="Zur Startseite" src="/Images/RisHeader.jpg" alt="Rechtsinformationssystem des Bundes" /></a>
+
+  <div>
+    <a id="navigation">
+      <span class="onlyScreenreader">Navigationsleiste:</span>
+    </a>
+    <div id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip" class="tabbedMainMenu">
+	<div class="tabStripTabsPane" role="tablist">
+		<ul role="none">
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_StartseiteTab" role="none" class="tabStripTab"><a href="default.aspx" id="Header_MainNavigation_RisTabbedMenu_StartseiteTab_Command"><span class="anchorBody"><span>Startseite</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_BundesrechtTab" role="none" class="tabStripTabSelected"><a href="Bund/" id="Header_MainNavigation_RisTabbedMenu_BundesrechtTab_Command"><span class="anchorBody"><span>Bund</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_LandesrechtTab" role="none" class="tabStripTab"><a href="Land/" id="Header_MainNavigation_RisTabbedMenu_LandesrechtTab_Command"><span class="anchorBody"><span>Länder</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_BezirkeTab" role="none" class="tabStripTab"><a href="Bezirke/" id="Header_MainNavigation_RisTabbedMenu_BezirkeTab_Command"><span class="anchorBody"><span>Bezirke</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_GemeinderechtTab" role="none" class="tabStripTab"><a href="Gemeinde/" id="Header_MainNavigation_RisTabbedMenu_GemeinderechtTab_Command"><span class="anchorBody"><span>Gemeinden</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_JudikaturTab" role="none" class="tabStripTab"><a href="Judikatur/" id="Header_MainNavigation_RisTabbedMenu_JudikaturTab_Command"><span class="anchorBody"><span>Judikatur</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_SonstigeTab" role="none" class="tabStripTab"><a href="Sonstige/" id="Header_MainNavigation_RisTabbedMenu_SonstigeTab_Command"><span class="anchorBody"><span>Kundmachungen, Erlässe</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_GesamtabfrageTab" role="none" class="tabStripTab"><a href="Gesamtabfrage/" id="Header_MainNavigation_RisTabbedMenu_GesamtabfrageTab_Command"><span class="anchorBody"><span>Gesamtabfrage</span></span></a></span></span><span class="last"></span></li>
+
+		</ul>
+	</div><div class="clearingPane">
+
+	</div>
+</div>
+  </div>
+
+</div>
+
+      <div id="main">
+        
+          <div id="TopPageNavigation">
+            <div class="FloatLeft">
+              <h1 id="Title">
+                Bundesrecht konsolidiert: Gesamte Rechtsvorschrift f&#252;r Datenschutzgesetz, Fassung vom 06.08.2026
+              </h1>
+            </div>
+            <ul>
+              <li>
+                <div id="FirstRow">
+                  <div class="FloatRight">
+                    <span class="PrintPreview">
+                      <a id="PrintPreviewLink" accesskey="D" href="http://www.ris.bka.gv.at:80/GeltendeFassung.wxe?Abfrage=Bundesnormen&amp;Gesetzesnummer=10001597&amp;ShowPrintPreview=True" target="_blank">Druckansicht<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> D)</span></a>
+                    </span>
+                    <span class="Print">
+                      
+                    </span>
+                  </div>
+                  <div class="ClearingPane"></div>
+                </div>
+              </li>
+              
+  <li>
+    <div id="ThirdRow">
+      <div class="FloatRight">
+        Andere Formate:
+        <ul>
+          <li>
+            <a href="/GeltendeFassung/Bundesnormen/10001597/DSG%2c%20Fassung%20vom%2006.08.2026.pdf" target="_blank" rel="nofollow" title="PDF-Dokument: DSG, Fassung vom 06.08.2026"><img src="Images/pdf.gif" class="Icon" alt="PDF-Dokument" style="width:16px;height:16px;" /></a>
+          </li>
+          <li>
+            <a href="/GeltendeFassung/Bundesnormen/10001597/DSG%2c%20Fassung%20vom%2006.08.2026.rtf" target="_blank" rel="nofollow" title="RTF-Dokument: DSG, Fassung vom 06.08.2026"><img src="Images/doc.gif" class="Icon" alt="RTF-Dokument" style="width:16px;height:16px;" /></a>
+          </li>
+        </ul>
+      </div>
+      <div class="ClearingPane"></div>
+    </div>
+  </li>
+
+            </ul>
+          </div>
+        
+
+        <div id="content">
+          
+
+  
+      <div class="document">
+    
+      
+<div class="documentContent">
+  <h2 class="onlyScreenreader">
+    &#167; 0
+  </h2>
+  
+
+  
+  
+  
+  
+  <div id="MainContent_DocumentRepeater_BundesnormenCompleteNormDocumentData_0_LangtitelContainer_0" class="p">
+    <h3>Langtitel</h3>
+    Bundesgesetz zum Schutz natürlicher Personen bei der Verarbeitung personenbezogener Daten (Datenschutzgesetz – DSG)<br>StF: <a href="/Dokumente/BgblPdf/1999_165_1/1999_165_1.pdf" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblPdf', '1999_165_1', 'BGBl. I Nr. 165/1999', '2026-08-06')">BGBl. I Nr. 165/1999</a> (NR: GP XX <a href="https://www.parlament.gv.at/gegenstand/XX/I/1613" target="_blank">RV 1613</a> <a href="https://www.parlament.gv.at/gegenstand/XX/I/2028" target="_blank">AB 2028</a> <a href="https://www.parlament.gv.at/gegenstand/XX/NRSITZ/179" target="_blank">S. 179.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/5992" target="_blank">5992</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/6034" target="_blank">AB 6034</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/657" target="_blank">S. 657.</a>)<br>[CELEX-Nr.: <a href="https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=CELEX:31995L0046:DE:HTML" target="_blank">395L0046</a>]
+  </div>
+  <div id="MainContent_DocumentRepeater_BundesnormenCompleteNormDocumentData_0_AenderungContainer_0" class="p embeddedContent">
+    <h3>Änderung</h3>
+    <div><div class="contentBlock"><p class="ErlText AlignJustify"><a href="/Dokumente/BgblPdf/2001_136_1/2001_136_1.pdf" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblPdf', '2001_136_1', 'BGBl. I Nr. 136/2001', '2026-08-06')">BGBl. I Nr. 136/2001</a> (NR: GP XXI <a href="https://www.parlament.gv.at/gegenstand/XXI/I/742" target="_blank">RV 742</a> <a href="https://www.parlament.gv.at/gegenstand/XXI/I/824" target="_blank">AB 824</a> <a href="https://www.parlament.gv.at/gegenstand/XXI/NRSITZ/81" target="_blank">S. 81.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/6458" target="_blank">6458</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/6459" target="_blank">AB 6459</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/681" target="_blank">S. 681.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2005/13" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2005_I_13', 'BGBl. I Nr. 13/2005', '2026-08-06')">BGBl. I Nr. 13/2005</a> (NR: GP XXII <a href="https://www.parlament.gv.at/gegenstand/XXII/A/515" target="_blank">IA 515/A</a> <a href="https://www.parlament.gv.at/gegenstand/XXII/I/821" target="_blank">AB 821</a> <a href="https://www.parlament.gv.at/gegenstand/XXII/NRSITZ/96" target="_blank">S. 96.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/7228" target="_blank">AB 7228</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/719" target="_blank">S. 719.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2008/2" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2008_I_2', 'BGBl. I Nr. 2/2008', '2026-08-06')">BGBl. I Nr. 2/2008</a> (1. BVRBG) (NR: GP XXIII <a href="https://www.parlament.gv.at/gegenstand/XXIII/I/314" target="_blank">RV 314</a> <a href="https://www.parlament.gv.at/gegenstand/XXIII/I/370" target="_blank">AB 370</a> <a href="https://www.parlament.gv.at/gegenstand/XXIII/NRSITZ/41" target="_blank">S. 41.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/7799" target="_blank">7799</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/7830" target="_blank">AB 7830</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/751" target="_blank">S. 751.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2009/133" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2009_I_133', 'BGBl. I Nr. 133/2009', '2026-08-06')">BGBl. I Nr. 133/2009</a> (NR: GP XXIV <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/472" target="_blank">RV 472</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/531" target="_blank">AB 531</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/NRSITZ/49" target="_blank">S. 49.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8220" target="_blank">8220</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8225" target="_blank">AB 8225</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/780" target="_blank">S. 780.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2009/135" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2009_I_135', 'BGBl. I Nr. 135/2009', '2026-08-06')">BGBl. I Nr. 135/2009</a> (NR: GP XXIV <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/485" target="_blank">RV 485</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/558" target="_blank">AB 558</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/NRSITZ/49" target="_blank">S. 49.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8217" target="_blank">8217</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8228" target="_blank">AB 8228</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/780" target="_blank">S. 780.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2011/112" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2011_I_112', 'BGBl. I Nr. 112/2011', '2026-08-06')">BGBl. I Nr. 112/2011</a> (NR: GP XXIV <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/1494" target="_blank">RV 1494</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/1500" target="_blank">AB 1500</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/NRSITZ/130" target="_blank">S. 130.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8602" target="_blank">8602</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8603" target="_blank">AB 8603</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/802" target="_blank">S. 802.</a>)</p><p class="ErlText AlignJustify">[CELEX-Nr.: <a href="https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=CELEX:32009L0133:DE:HTML" target="_blank">32009L0133</a>, <a href="https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=CELEX:32010L0024:DE:HTML" target="_blank">32010L0024</a>]</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2012/51" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2012_I_51', 'BGBl. I Nr. 51/2012', '2026-08-06')">BGBl. I Nr. 51/2012</a> (NR: GP XXIV <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/1618" target="_blank">RV 1618</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/1771" target="_blank">AB 1771</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/NRSITZ/155" target="_blank">S. 155.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8730" target="_blank">8730</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8731" target="_blank">AB 8731</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/809" target="_blank">S. 809.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2013/57" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2013_I_57', 'BGBl. I Nr. 57/2013', '2026-08-06')">BGBl. I Nr. 57/2013</a> (NR: GP XXIV <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/2131" target="_blank">RV 2131</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/2245" target="_blank">AB 2245</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/NRSITZ/194" target="_blank">S. 194.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8940" target="_blank">AB 8940</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/819" target="_blank">S. 819.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2013/83" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2013_I_83', 'BGBl. I Nr. 83/2013', '2026-08-06')">BGBl. I Nr. 83/2013</a> (NR: GP XXIV <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/2168" target="_blank">RV 2168</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/I/2268" target="_blank">AB 2268</a> <a href="https://www.parlament.gv.at/gegenstand/XXIV/NRSITZ/200" target="_blank">S. 200.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/8968" target="_blank">AB 8968</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/820" target="_blank">S. 820.</a>)</p><p class="ErlText AlignJustify">[CELEX-Nr.: <a href="https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=CELEX:31995L0046:DE:HTML" target="_blank">31995L0046</a>]</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2015/132" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2015_I_132', 'BGBl. I Nr. 132/2015', '2026-08-06')">BGBl. I Nr. 132/2015</a> (VfGH)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2017/120" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2017_I_120', 'BGBl. I Nr. 120/2017', '2026-08-06')">BGBl. I Nr. 120/2017</a> (NR: GP XXV <a href="https://www.parlament.gv.at/gegenstand/XXV/I/1664" target="_blank">RV 1664</a> <a href="https://www.parlament.gv.at/gegenstand/XXV/I/1761" target="_blank">AB 1761</a> <a href="https://www.parlament.gv.at/gegenstand/XXV/NRSITZ/190" target="_blank">S. 190.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/9824" target="_blank">9824</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/9856" target="_blank">AB 9856</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/871" target="_blank">S. 871.</a>)</p><p class="ErlText AlignJustify">[CELEX-Nr.: <a href="https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=CELEX:32016L0680:DE:HTML" target="_blank">32016L0680</a>]</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2018/23" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2018_I_23', 'BGBl. I Nr. 23/2018', '2026-08-06')">BGBl. I Nr. 23/2018</a> (NR: GP XXVI <a href="https://www.parlament.gv.at/gegenstand/XXVI/A/188" target="_blank">IA 188/A</a> <a href="https://www.parlament.gv.at/gegenstand/XXVI/I/99" target="_blank">AB 99</a> <a href="https://www.parlament.gv.at/gegenstand/XXVI/NRSITZ/21" target="_blank">S. 21.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/9958" target="_blank">AB 9958</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/879" target="_blank">S. 879.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2018/24" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2018_I_24', 'BGBl. I Nr. 24/2018', '2026-08-06')">BGBl. I Nr. 24/2018</a> (NR: GP XXVI <a href="https://www.parlament.gv.at/gegenstand/XXVI/A/189" target="_blank">IA 189/A</a> <a href="https://www.parlament.gv.at/gegenstand/XXVI/I/98" target="_blank">AB 98</a> <a href="https://www.parlament.gv.at/gegenstand/XXVI/NRSITZ/21" target="_blank">S. 21.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/9948" target="_blank">AB 9948</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/879" target="_blank">S. 879.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2019/14" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2019_I_14', 'BGBl. I Nr. 14/2019', '2026-08-06')">BGBl. I Nr. 14/2019</a> (NR: GP XXVI <a href="https://www.parlament.gv.at/gegenstand/XXVI/I/301" target="_blank">RV 301</a> <a href="https://www.parlament.gv.at/gegenstand/XXVI/I/463" target="_blank">AB 463</a> <a href="https://www.parlament.gv.at/gegenstand/XXVI/NRSITZ/57" target="_blank">S. 57.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/10104" target="_blank">AB 10104</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/888" target="_blank">S. 888.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2021/148" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2021_I_148', 'BGBl. I Nr. 148/2021', '2026-08-06')">BGBl. I Nr. 148/2021</a> (NR: GP XXVII <a href="https://www.parlament.gv.at/gegenstand/XXVII/I/937" target="_blank">RV 937</a> <a href="https://www.parlament.gv.at/gegenstand/XXVII/I/963" target="_blank">AB 963</a> <a href="https://www.parlament.gv.at/gegenstand/XXVII/NRSITZ/117" target="_blank">S. 117.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/10729" target="_blank">AB 10729</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/929" target="_blank">S. 929.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2023/2" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2023_I_2', 'BGBl. I Nr. 2/2023', '2026-08-06')">BGBl. I Nr. 2/2023</a> (VfGH)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2024/62" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2024_I_62', 'BGBl. I Nr. 62/2024', '2026-08-06')">BGBl. I Nr. 62/2024</a> (NR: GP XXVII <a href="https://www.parlament.gv.at/gegenstand/XXVII/A/4031" target="_blank">IA 4031/A</a> <a href="https://www.parlament.gv.at/gegenstand/XXVII/I/2566" target="_blank">AB 2566</a> <a href="https://www.parlament.gv.at/gegenstand/XXVII/NRSITZ/266" target="_blank">S. 266.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/11496" target="_blank">11496</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/11507" target="_blank">AB 11507</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/968" target="_blank">S. 968.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2024/70" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2024_I_70', 'BGBl. I Nr. 70/2024', '2026-08-06')">BGBl. I Nr. 70/2024</a> (NR: GP XXVII <a href="https://www.parlament.gv.at/gegenstand/XXVII/I/2594" target="_blank">AB 2594</a> <a href="https://www.parlament.gv.at/gegenstand/XXVII/NRSITZ/268" target="_blank">S. 268.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/11514" target="_blank">AB 11514</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/968" target="_blank">S. 968.</a>)</p><p class="ErlText AlignJustify"><a href="/eli/bgbl/I/2025/50" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2025_I_50', 'BGBl. I Nr. 50/2025', '2026-08-06')">BGBl. I Nr. 50/2025</a> (NR: GP XXVIII <a href="https://www.parlament.gv.at/gegenstand/XXVIII/I/129" target="_blank">RV 129</a> <a href="https://www.parlament.gv.at/gegenstand/XXVIII/I/151" target="_blank">AB 151</a> <a href="https://www.parlament.gv.at/gegenstand/XXVIII/NRSITZ/35" target="_blank">S. 35.</a> BR: <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/11651" target="_blank">11651</a> <a href="https://www.parlament.gv.at/gegenstand/BR/I-BR/11654" target="_blank">AB 11654</a> <a href="https://www.parlament.gv.at/gegenstand/BR/BRSITZ/980" target="_blank">S. 980.</a>)</p></div></div>
+  </div>
+  
+  <div id="MainContent_DocumentRepeater_BundesnormenCompleteNormDocumentData_0_UmsetzungsHinweisContainerFuerParagraph0_0" class="p">
+    <h3>Umsetzungshinweis für folgende Bestimmung</h3>
+    CELEX-Nr.: <a href="https://eur-lex.europa.eu/LexUriServ/LexUriServ.do?uri=CELEX:32023L0977:DE:HTML" target="_blank">32023L0977</a>
+  </div>
+  
+  <div id="MainContent_DocumentRepeater_BundesnormenCompleteNormDocumentData_0_PraeambelContainer_0" class="p embeddedContent">
+    <h3>Präambel/Promulgationsklausel</h3>
+    <div><div class="contentBlock"><p class="PromKlEinlSatz AlignJustify">Der Nationalrat hat beschlossen:</p><p class="Abstand AlignLeft"></p><table id="Tabelle1" cellspacing="0" style="border-collapse:collapse;margin-left:-6pt;margin-right:-6pt;"><tbody><tr style="height:23pt;"><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltUeberschriftWithinTable AlignCenter">Inhaltsverzeichnis</p><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">Artikel&nbsp;1<br>(Verfassungsbestimmung)</span><span class="sr-only">Artikel&nbsp;1, (Verfassungsbestimmung)</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;1</span><span class="sr-only">Paragraph eins</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Grundrecht auf Datenschutz</p></td></tr><tr style="height:3.5pt;"><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true"><span class="Kursiv">(Anm.: §§&nbsp;2 und 3 aufgehoben durch <a href="/eli/bgbl/I/2019/14" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2019_I_14', 'BGBl. I Nr. 14/2019', '2026-08-06')">BGBl.&nbsp;I Nr.&nbsp;14/2019</a>)</span></span><span class="sr-only">Anmerkung,  Paragraphen 2 und 3 aufgehoben durch Bundesgesetzblatt Teil eins, Nr.&nbsp;14 aus 2019,)</span></p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter">Artikel&nbsp;2</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">1.&nbsp;Hauptstück<br>Durchführung der Datenschutz-Grundverordnung und ergänzende Regelungen</span><span class="sr-only">1.&nbsp;Hauptstück, Durchführung der Datenschutz-Grundverordnung und ergänzende Regelungen</span></p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">1.&nbsp;Abschnitt<br>Allgemeine Bestimmungen</span><span class="sr-only">1.&nbsp;Abschnitt, Allgemeine Bestimmungen</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;4.</span><span class="sr-only">Paragraph 4,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Anwendungsbereich und Durchführungsbestimmung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;5.</span><span class="sr-only">Paragraph 5,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Datenschutzbeauftragter</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;6.</span><span class="sr-only">Paragraph 6,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Datengeheimnis</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">2.&nbsp;Abschnitt<br>Datenverarbeitungen zu spezifischen Zwecken</span><span class="sr-only">2.&nbsp;Abschnitt, Datenverarbeitungen zu spezifischen Zwecken</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;7.</span><span class="sr-only">Paragraph 7,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Verarbeitung für im öffentlichen Interesse liegende Archivzwecke, wissenschaftliche oder historische Forschungszwecke oder statistische Zwecke</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;8.</span><span class="sr-only">Paragraph 8,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Zurverfügungstellung von Adressen zur Benachrichtigung und Befragung von betroffenen Personen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;9.</span><span class="sr-only">Paragraph 9,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Freiheit der Meinungsäußerung und Informationsfreiheit</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;10.</span><span class="sr-only">Paragraph 10,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Verarbeitung personenbezogener Daten im Katastrophenfall</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;11.</span><span class="sr-only">Paragraph 11,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Verwarnung durch die Datenschutzbehörde</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">3.&nbsp;Abschnitt<br>Bildverarbeitung</span><span class="sr-only">3.&nbsp;Abschnitt, Bildverarbeitung</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;12.</span><span class="sr-only">Paragraph 12,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Zulässigkeit der Bildaufnahme</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;13.</span><span class="sr-only">Paragraph 13,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Besondere Datensicherheitsmaßnahmen und Kennzeichnung</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">2.&nbsp;Hauptstück<br>Organe</span><span class="sr-only">2.&nbsp;Hauptstück, Organe</span></p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">1.&nbsp;Abschnitt<br>Datenschutzrat</span><span class="sr-only">1.&nbsp;Abschnitt, Datenschutzrat</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;14.</span><span class="sr-only">Paragraph 14,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Einrichtung und Aufgaben</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;15.</span><span class="sr-only">Paragraph 15,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Zusammensetzung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;16.</span><span class="sr-only">Paragraph 16,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Vorsitz und Geschäftsführung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;17.</span><span class="sr-only">Paragraph 17,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Sitzungen und Beschlussfassung</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">2.&nbsp;Abschnitt<br>Datenschutzbehörde</span><span class="sr-only">2.&nbsp;Abschnitt, Datenschutzbehörde</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;18.</span><span class="sr-only">Paragraph 18,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Einrichtung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;19.</span><span class="sr-only">Paragraph 19,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Unabhängigkeit</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;20.</span><span class="sr-only">Paragraph 20,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Leiter der Datenschutzbehörde</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;21.</span><span class="sr-only">Paragraph 21,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Aufgaben</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;22.</span><span class="sr-only">Paragraph 22,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Befugnisse</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;23.</span><span class="sr-only">Paragraph 23,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Tätigkeitsbericht und Veröffentlichung von Entscheidungen</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">3.&nbsp;Abschnitt<br>Rechtsbehelfe, Haftung und Sanktionen</span><span class="sr-only">3.&nbsp;Abschnitt, Rechtsbehelfe, Haftung und Sanktionen</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;24.</span><span class="sr-only">Paragraph 24,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Beschwerde an die Datenschutzbehörde</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;25.</span><span class="sr-only">Paragraph 25,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Begleitende Maßnahmen im Beschwerdeverfahren</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;26.</span><span class="sr-only">Paragraph 26,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Verantwortliche des öffentlichen und des privaten Bereichs</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;27.</span><span class="sr-only">Paragraph 27,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Beschwerde an das Bundesverwaltungsgericht</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;28.</span><span class="sr-only">Paragraph 28,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Vertretung von betroffenen Personen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;29.</span><span class="sr-only">Paragraph 29,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Haftung und Recht auf Schadenersatz</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;30.</span><span class="sr-only">Paragraph 30,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Allgemeine Bedingungen für die Verhängung von Geldbußen</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">4.&nbsp;Abschnitt<br>Aufsichtsbehörde nach der Richtlinie (EU)&nbsp;2016/680</span><span class="sr-only">4.&nbsp;Abschnitt, Aufsichtsbehörde nach der Richtlinie (EU)&nbsp;2016/680</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;31.</span><span class="sr-only">Paragraph 31,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Datenschutzbehörde</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;32.</span><span class="sr-only">Paragraph 32,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Aufgaben der Datenschutzbehörde</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;33.</span><span class="sr-only">Paragraph 33,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Befugnisse der Datenschutzbehörde</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;34.</span><span class="sr-only">Paragraph 34,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Allgemeine Bestimmungen</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">5.&nbsp;Abschnitt<br>Besondere Befugnisse der Datenschutzbehörde</span><span class="sr-only">5.&nbsp;Abschnitt, Besondere Befugnisse der Datenschutzbehörde</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35.</span><span class="sr-only">Paragraph 35,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText ">&nbsp;</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">6. Abschnitt<br>Parlamentarisches Datenschutzkomitee</span><span class="sr-only">6. Abschnitt, Parlamentarisches Datenschutzkomitee</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35a.</span><span class="sr-only">Paragraph 35 a,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Einrichtung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35b.</span><span class="sr-only">Paragraph 35 b,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Mitglieder</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35c.</span><span class="sr-only">Paragraph 35 c,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Unabhängigkeit</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35d.</span><span class="sr-only">Paragraph 35 d,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Vorsitz und Beschlussfassung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35e.</span><span class="sr-only">Paragraph 35 e,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Aufgaben, Befugnisse, Tätigkeitsbericht und Veröffentlichung von Entscheidungen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35f.</span><span class="sr-only">Paragraph 35 f,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Beschwerde an das Parlamentarische Datenschutzkomitee</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35g.</span><span class="sr-only">Paragraph 35 g,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Parteistellung, Rechtsmittellegitimation und Geheimhaltungsverpflichtung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35h.</span><span class="sr-only">Paragraph 35 h,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Beschwerde an das Bundesverwaltungsgericht</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">7. Abschnitt<br>Vertretung im Europäischen Datenschutzausschuss, zentrale Anlaufstelle und Zusammenarbeit der Aufsichtsbehörden in Angelegenheiten der Europäischen Union</span><span class="sr-only">7. Abschnitt, Vertretung im Europäischen Datenschutzausschuss, zentrale Anlaufstelle und Zusammenarbeit der Aufsichtsbehörden in Angelegenheiten der Europäischen Union</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35i.</span><span class="sr-only">Paragraph 35 i,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Vertretung im Europäischen Datenschutzausschuss, zentrale Anlaufstelle</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;35j.</span><span class="sr-only">Paragraph 35 j,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="TabText AlignLeft">Zusammenarbeit und Kohärenz</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">3.&nbsp;Hauptstück<br>Verarbeitung personenbezogener Daten für Zwecke der Sicherheitspolizei einschließlich des Verfassungsschutzes, des militärischen Eigenschutzes, der Aufklärung und Verfolgung von Straftaten, der Strafvollstreckung und des Maßnahmenvollzugs</span><span class="sr-only">3.&nbsp;Hauptstück, Verarbeitung personenbezogener Daten für Zwecke der Sicherheitspolizei einschließlich des Verfassungsschutzes, des militärischen Eigenschutzes, der Aufklärung und Verfolgung von Straftaten, der Strafvollstreckung und des Maßnahmenvollzugs</span></p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">1.&nbsp;Abschnitt<br>Allgemeine Bestimmungen</span><span class="sr-only">1.&nbsp;Abschnitt, Allgemeine Bestimmungen</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;36.</span><span class="sr-only">Paragraph 36,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Anwendungsbereich und Begriffsbestimmungen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;37.</span><span class="sr-only">Paragraph 37,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Grundsätze für die Datenverarbeitung, Kategorisierung und Datenqualität</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;38.</span><span class="sr-only">Paragraph 38,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Rechtmäßigkeit der Verarbeitung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;39.</span><span class="sr-only">Paragraph 39,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Verarbeitung besonderer Kategorien personenbezogener Daten</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;40.</span><span class="sr-only">Paragraph 40,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Verarbeitung für andere Zwecke und Übermittlung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;41.</span><span class="sr-only">Paragraph 41,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Automatisierte Entscheidungsfindung im Einzelfall</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">2.&nbsp;Abschnitt<br>Rechte der betroffenen Person</span><span class="sr-only">2.&nbsp;Abschnitt, Rechte der betroffenen Person</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;42.</span><span class="sr-only">Paragraph 42,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Grundsätze</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;43.</span><span class="sr-only">Paragraph 43,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Information der betroffenen Person</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;44.</span><span class="sr-only">Paragraph 44,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Auskunftsrecht der betroffenen Person</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;45.</span><span class="sr-only">Paragraph 45,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Recht auf Berichtigung oder Löschung personenbezogener Daten und auf Einschränkung der Verarbeitung</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">3.&nbsp;Abschnitt<br>Verantwortlicher und Auftragsverarbeiter</span><span class="sr-only">3.&nbsp;Abschnitt, Verantwortlicher und Auftragsverarbeiter</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;46.</span><span class="sr-only">Paragraph 46,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Pflichten des Verantwortlichen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;47.</span><span class="sr-only">Paragraph 47,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Gemeinsam Verantwortliche</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;48.</span><span class="sr-only">Paragraph 48,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Auftragsverarbeiter und Aufsicht über die Verarbeitung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;49.</span><span class="sr-only">Paragraph 49,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Verzeichnis von Verarbeitungstätigkeiten</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;50.</span><span class="sr-only">Paragraph 50,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Protokollierung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;51.</span><span class="sr-only">Paragraph 51,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Zusammenarbeit mit der Datenschutzbehörde</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;52.</span><span class="sr-only">Paragraph 52,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Datenschutz-Folgenabschätzung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;53.</span><span class="sr-only">Paragraph 53,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Vorherige Konsultation der Datenschutzbehörde</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;54.</span><span class="sr-only">Paragraph 54,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Datensicherheitsmaßnahmen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;55.</span><span class="sr-only">Paragraph 55,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Meldung von Verletzungen an die Datenschutzbehörde</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;56.</span><span class="sr-only">Paragraph 56,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Benachrichtigung der betroffenen Person von Verletzungen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;57.</span><span class="sr-only">Paragraph 57,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Benennung, Stellung und Aufgaben des Datenschutzbeauftragten</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">4.&nbsp;Abschnitt<br>Übermittlung personenbezogener Daten an Drittländer oder internationale Organisationen</span><span class="sr-only">4.&nbsp;Abschnitt, Übermittlung personenbezogener Daten an Drittländer oder internationale Organisationen</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;58.</span><span class="sr-only">Paragraph 58,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Allgemeine Grundsätze für die Übermittlung personenbezogener Daten</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;59.</span><span class="sr-only">Paragraph 59,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Datenübermittlung an Drittländer oder internationale Organisationen</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true"><span class="Kursiv">(Anm.: §&nbsp;60. mit Ablauf des 15.1.2019 außer Kraft getreten, vgl. <a href="/eli/bgbl/I/2019/14" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2019_I_14', 'BGBl. I Nr. 14/2019', '2026-08-06')">BGBl.&nbsp;I Nr.&nbsp;14/2019</a></span></span><span class="sr-only">Anmerkung,  Paragraph 60, mit Ablauf des 15.1.2019 außer Kraft getreten, vergleiche Bundesgesetzblatt Teil eins, Nr.&nbsp;14 aus 2019,</span></p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true"><span class="Kursiv">§&nbsp;61. aufgehoben durch <a href="/eli/bgbl/I/2019/14" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2019_I_14', 'BGBl. I Nr. 14/2019', '2026-08-06')">BGBl.&nbsp;I Nr.&nbsp;14/2019</a>)</span></span><span class="sr-only">Paragraph 61, aufgehoben durch Bundesgesetzblatt Teil eins, Nr.&nbsp;14 aus 2019,)</span></p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">4.&nbsp;Hauptstück<br>Besondere Strafbestimmungen</span><span class="sr-only">4.&nbsp;Hauptstück, Besondere Strafbestimmungen</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;62.</span><span class="sr-only">Paragraph 62,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Verwaltungsstrafbestimmung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;63.</span><span class="sr-only">Paragraph 63,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Datenverarbeitung in Gewinn- oder Schädigungsabsicht</p></td></tr><tr><td colspan="2" style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltSpalte AlignCenter"><span aria-hidden="true">5.&nbsp;Hauptstück<br>Schlussbestimmungen</span><span class="sr-only">5.&nbsp;Hauptstück, Schlussbestimmungen</span></p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;64.</span><span class="sr-only">Paragraph 64,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Durchführung und Umsetzung von Rechtsakten der EU</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;65.</span><span class="sr-only">Paragraph 65,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Sprachliche Gleichbehandlung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;66.</span><span class="sr-only">Paragraph 66,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Erlassung von Verordnungen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;67.</span><span class="sr-only">Paragraph 67,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Verweisungen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;68.</span><span class="sr-only">Paragraph 68,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Vollziehung</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;69.</span><span class="sr-only">Paragraph 69,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Übergangsbestimmungen</p></td></tr><tr><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft"><span aria-hidden="true">§&nbsp;70.</span><span class="sr-only">Paragraph 70,</span></p></td><td style="vertical-align:top;padding:0pt 5.4pt 0pt 5.4pt;"><p class="InhaltEintrag AlignLeft">Inkrafttreten</p></td></tr><tr height="0"><td width="76" style="border:none;width:57.27pt;"></td><td width="505" style="border:none;width:378.72pt;"></td></tr></tbody></table><p class="Abstand AlignLeft"></p></div></div>
+  </div>
+  
+  
+  
+  
+  
+
+  
+
+</div>
+
+    
+      
+<div class="documentContent">
+  <h2 class="onlyScreenreader">
+    Art. 1 &#167; 1
+  </h2>
+  
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <div id="MainContent_DocumentRepeater_BundesnormenCompleteNormDocumentData_1_TextContainer_1" class="p embeddedContent">
+    <h3 id="MainContent_DocumentRepeater_BundesnormenCompleteNormDocumentData_1_HeaderTextField_1">Text</h3>
+    <div><div class="contentBlock"><h4 class="UeberschrG1 AlignCenter">Artikel&nbsp;1<br><span class="UeberschrG2 AlignCenter" style="display:block">(Verfassungsbestimmung)</span></h4><h4 class="UeberschrPara AlignCenter">Grundrecht auf Datenschutz</h4><div class="ParagraphMitAbsatzzahl"><div class="GldSymbolFloatLeft AlignJustify"><h5 class="GldSymbol AlignJustify"><span aria-hidden="true">§&nbsp;1.</span><span class="sr-only">Paragraph eins,</span></h5></div><ol class="wai-absatz-list"><li><div class="content"><div class="Abs_small_indent AlignJustify"><span aria-hidden="true" class="Absatzzahl">(1)</span><span class="sr-only">Absatz eins,</span><span>Jedermann hat, insbesondere auch im Hinblick auf die Achtung seines Privat- und Familienlebens, Anspruch auf Geheimhaltung der ihn betreffenden personenbezogenen Daten, soweit ein schutzwürdiges Interesse daran besteht. Das Bestehen eines solchen Interesses ist ausgeschlossen, wenn Daten infolge ihrer allgemeinen Verfügbarkeit oder wegen ihrer mangelnden Rückführbarkeit auf den Betroffenen einem Geheimhaltungsanspruch nicht zugänglich sind.</span></div></div></li><li><div class="content"><div class="Abs AlignJustify"><span aria-hidden="true" class="Absatzzahl">(2)</span><span class="sr-only">Absatz 2,</span><span><span aria-hidden="true">Soweit die Verwendung von personenbezogenen Daten nicht im lebenswichtigen Interesse des Betroffenen oder mit seiner Zustimmung erfolgt, sind Beschränkungen des Anspruchs auf Geheimhaltung nur zur Wahrung überwiegender berechtigter Interessen eines anderen zulässig, und zwar bei Eingriffen einer staatlichen Behörde nur auf Grund von Gesetzen, die aus den in Art.&nbsp;8 Abs.&nbsp;2 der Europäischen Konvention zum Schutze der Menschenrechte und Grundfreiheiten (EMRK), <a href="/Dokumente/BgblPdf/1958_210_0/1958_210_0.pdf" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblPdf', '1958_210_0', 'BGBl. Nr. 210/1958', '2026-08-06')">BGBl. Nr.&nbsp;210/1958</a>, genannten Gründen notwendig sind. Derartige Gesetze dürfen die Verwendung von Daten, die ihrer Art nach besonders schutzwürdig sind, nur zur Wahrung wichtiger öffentlicher Interessen vorsehen und müssen gleichzeitig angemessene Garantien für den Schutz der Geheimhaltungsinteressen der Betroffenen festlegen. Auch im Falle zulässiger Beschränkungen darf der Eingriff in das Grundrecht jeweils nur in der gelindesten, zum Ziel führenden Art vorgenommen werden.</span><span class="sr-only">Soweit die Verwendung von personenbezogenen Daten nicht im lebenswichtigen Interesse des Betroffenen oder mit seiner Zustimmung erfolgt, sind Beschränkungen des Anspruchs auf Geheimhaltung nur zur Wahrung überwiegender berechtigter Interessen eines anderen zulässig, und zwar bei Eingriffen einer staatlichen Behörde nur auf Grund von Gesetzen, die aus den in Artikel 8, Absatz 2, der Europäischen Konvention zum Schutze der Menschenrechte und Grundfreiheiten (EMRK), Bundesgesetzblatt Nr.&nbsp;210 aus 1958,, genannten Gründen notwendig sind. Derartige Gesetze dürfen die Verwendung von Daten, die ihrer Art nach besonders schutzwürdig sind, nur zur Wahrung wichtiger öffentlicher Interessen vorsehen und müssen gleichzeitig angemessene Garantien für den Schutz der Geheimhaltungsinteressen der Betroffenen festlegen. Auch im Falle zulässiger Beschränkungen darf der Eingriff in das Grundrecht jeweils nur in der gelindesten, zum Ziel führenden Art vorgenommen werden.</span></span></div></div></li><li><div class="content"><div class="Abs AlignJustify"><span aria-hidden="true" class="Absatzzahl">(3)</span><span class="sr-only">Absatz 3,</span><span>Jedermann hat, soweit ihn betreffende personenbezogene Daten zur automationsunterstützten Verarbeitung oder zur Verarbeitung in manuell, dh. ohne Automationsunterstützung geführten Dateien bestimmt sind, nach Maßgabe gesetzlicher Bestimmungen</span></div><ol class="wai-list" style="margin-left: 27pt;"><li aria-level="1"><div class="SymE1"><div class="AufzaehlungE1"><span aria-hidden="true">1.</span><span class="sr-only">Ziffer eins</span></div></div><div class="content"><div class="AufzaehlungE1 AlignJustify">das Recht auf Auskunft darüber, wer welche Daten über ihn verarbeitet, woher die Daten stammen, und wozu sie verwendet werden, insbesondere auch, an wen sie übermittelt werden;</div></div></li><li aria-level="1"><div class="SymE1"><div class="AufzaehlungE1"><span aria-hidden="true">2.</span><span class="sr-only">Ziffer 2</span></div></div><div class="content"><div class="AufzaehlungE1 AlignJustify">das Recht auf Richtigstellung unrichtiger Daten und das Recht auf Löschung unzulässigerweise verarbeiteter Daten.</div></div></li></ol></div></li><li><div class="content"><div class="Abs AlignJustify"><span aria-hidden="true" class="Absatzzahl">(4)</span><span class="sr-only">Absatz 4,</span><span><span aria-hidden="true">Beschränkungen der Rechte nach Abs.&nbsp;3 sind nur unter den in Abs.&nbsp;2 genannten Voraussetzungen zulässig.</span><span class="sr-only">Beschränkungen der Rechte nach Absatz 3, sind nur unter den in Absatz 2, genannten Voraussetzungen zulässig.</span></span></div><p class="Abs AlignJustify"><span aria-hidden="true"><span class="Kursiv">(Anm.: Abs.&nbsp;5 aufgehoben durch <a href="/eli/bgbl/I/2012/51" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2012_I_51', 'BGBl. I Nr. 51/2012', '2026-08-06')">BGBl.&nbsp;I Nr.&nbsp;51/2012</a>)</span></span><span class="sr-only">Anmerkung,  Absatz 5, aufgehoben durch Bundesgesetzblatt Teil eins, Nr.&nbsp;51 aus 2012,)</span></p></div></li></ol></div></div></div>
+  </div>
+
+  
+
+</div>
+
+    
+      
+<div class="documentContent">
+  <h2 class="onlyScreenreader">
+    Art. 2 &#167; 4
+  </h2>
+  
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <div id="MainContent_DocumentRepeater_BundesnormenCompleteNormDocumentData_2_TextContainer_2" class="p embeddedContent">
+    <h3 id="MainContent_DocumentRepeater_BundesnormenCompleteNormDocumentData_2_HeaderTextField_2" class="onlyScreenreader">Text</h3>
+    <div><div class="contentBlock"><h4 class="UeberschrG1 AlignCenter">Artikel&nbsp;2</h4><h4 class="UeberschrG1- AlignCenter">1.&nbsp;Hauptstück<br><span class="UeberschrG2 AlignCenter" style="display:block">Durchführung der Datenschutz-Grundverordnung und ergänzende Regelungen</span></h4><h4 class="UeberschrG1-AfterG2 AlignCenter">1.&nbsp;Abschnitt<br><span class="UeberschrG2 AlignCenter" style="display:block">Allgemeine Bestimmungen</span></h4><h4 class="UeberschrPara AlignCenter">Anwendungsbereich und Durchführungsbestimmung</h4><div class="ParagraphMitAbsatzzahl"><div class="GldSymbolFloatLeft AlignJustify"><h5 class="GldSymbol AlignJustify"><span aria-hidden="true">§&nbsp;4.</span><span class="sr-only">Paragraph 4,</span></h5></div><ol class="wai-absatz-list"><li><div class="content"><div class="Abs_small_indent AlignJustify"><span aria-hidden="true" class="Absatzzahl">(1)</span><span class="sr-only">Absatz eins,</span><span><span aria-hidden="true">Die Bestimmungen der Verordnung (EU) 2016/679 zum Schutz natürlicher Personen bei der Verarbeitung personenbezogener Daten, zum freien Datenverkehr und zur Aufhebung der Richtlinie&nbsp;95/46/EG (Datenschutz-Grundverordnung), ABl. Nr.&nbsp;L&nbsp;119 vom 4.5.2016 S.&nbsp;1, (im Folgenden: DSGVO) und dieses Bundesgesetzes gelten für die ganz oder teilweise automatisierte Verarbeitung personenbezogener Daten natürlicher Personen sowie für die nichtautomatisierte Verarbeitung personenbezogener Daten natürlicher Personen, die in einem Dateisystem gespeichert sind oder gespeichert werden sollen, soweit nicht die spezifischeren Bestimmungen des 3.&nbsp;Hauptstücks dieses Bundesgesetzes vorgehen.</span><span class="sr-only">Die Bestimmungen der Verordnung (EU) 2016/679 zum Schutz natürlicher Personen bei der Verarbeitung personenbezogener Daten, zum freien Datenverkehr und zur Aufhebung der Richtlinie&nbsp;95/46/EG (Datenschutz-Grundverordnung), Amtsblatt Nummer L 119 vom 4.5.2016 Seite 1, (im Folgenden: DSGVO) und dieses Bundesgesetzes gelten für die ganz oder teilweise automatisierte Verarbeitung personenbezogener Daten natürlicher Personen sowie für die nichtautomatisierte Verarbeitung personenbezogener Daten natürlicher Personen, die in einem Dateisystem gespeichert sind oder gespeichert werden sollen, soweit nicht die spezifischeren Bestimmungen des 3.&nbsp;Hauptstücks dieses Bundesgesetzes vorgehen.</span></span></div></div></li><li><div class="content"><div class="Abs AlignJustify"><span aria-hidden="true" class="Absatzzahl">(2)</span><span class="sr-only">Absatz 2,</span><span><span aria-hidden="true">Kann die Berichtigung oder Löschung von automationsunterstützt verarbeiteten personenbezogenen Daten nicht unverzüglich erfolgen, weil diese aus wirtschaftlichen oder technischen Gründen nur zu bestimmten Zeitpunkten vorgenommen werden kann, so ist die Verarbeitung der betreffenden personenbezogenen Daten mit der Wirkung nach Art.&nbsp;18 Abs.&nbsp;2 DSGVO bis zu diesem Zeitpunkt einzuschränken.</span><span class="sr-only">Kann die Berichtigung oder Löschung von automationsunterstützt verarbeiteten personenbezogenen Daten nicht unverzüglich erfolgen, weil diese aus wirtschaftlichen oder technischen Gründen nur zu bestimmten Zeitpunkten vorgenommen werden kann, so ist die Verarbeitung der betreffenden personenbezogenen Daten mit der Wirkung nach Artikel 18, Absatz 2, DSGVO bis zu diesem Zeitpunkt einzuschränken.</span></span></div></div></li><li><div class="content"><div class="Abs AlignJustify"><span aria-hidden="true" class="Absatzzahl">(3)</span><span class="sr-only">Absatz 3,</span><span>Die Verarbeitung von personenbezogenen Daten über gerichtlich oder verwaltungsbehördlich strafbare Handlungen oder Unterlassungen, insbesondere auch über den Verdacht der Begehung von Straftaten, sowie über strafrechtliche Verurteilungen oder vorbeugende Maßnahmen ist unter Einhaltung der Vorgaben der DSGVO zulässig, wenn</span></div><ol class="wai-list" style="margin-left: 27pt;"><li aria-level="1"><div class="SymE1"><div class="AufzaehlungE1"><span aria-hidden="true">1.</span><span class="sr-only">Ziffer eins</span></div></div><div class="content"><div class="AufzaehlungE1 AlignJustify">eine ausdrückliche gesetzliche Ermächtigung oder Verpflichtung zur Verarbeitung solcher Daten besteht oder</div></div></li><li aria-level="1"><div class="SymE1"><div class="AufzaehlungE1"><span aria-hidden="true">2.</span><span class="sr-only">Ziffer 2</span></div></div><div class="content"><div class="AufzaehlungE1 AlignJustify"><span aria-hidden="true">sich sonst die Zulässigkeit der Verarbeitung dieser Daten aus gesetzlichen Sorgfaltspflichten ergibt oder die Verarbeitung zur Wahrung der berechtigten Interessen des Verantwortlichen oder eines Dritten gemäß Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;f DSGVO erforderlich ist, und die Art und Weise, in der die Datenverarbeitung vorgenommen wird, die Wahrung der Interessen der betroffenen Person nach der DSGVO und diesem Bundesgesetz gewährleistet.</span><span class="sr-only">sich sonst die Zulässigkeit der Verarbeitung dieser Daten aus gesetzlichen Sorgfaltspflichten ergibt oder die Verarbeitung zur Wahrung der berechtigten Interessen des Verantwortlichen oder eines Dritten gemäß Artikel 6, Absatz eins, Litera f, DSGVO erforderlich ist, und die Art und Weise, in der die Datenverarbeitung vorgenommen wird, die Wahrung der Interessen der betroffenen Person nach der DSGVO und diesem Bundesgesetz gewährleistet.</span></div></div></li></ol></div></li><li><div class="content"><div class="Abs AlignJustify"><span aria-hidden="true" class="Absatzzahl">(4)</span><span class="sr-only">Absatz 4,</span><span><span aria-hidden="true">Bei einem Angebot von Diensten der Informationsgesellschaft, das einem Kind direkt gemacht wird, ist die Einwilligung gemäß Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;a DSGVO zur Verarbeitung der personenbezogenen Daten des Kindes rechtmäßig, wenn das Kind das vierzehnte Lebensjahr vollendet hat.</span><span class="sr-only">Bei einem Angebot von Diensten der Informationsgesellschaft, das einem Kind direkt gemacht wird, ist die Einwilligung gemäß Artikel 6, Absatz eins, Litera a, DSGVO zur Verarbeitung der personenbezogenen Daten des Kindes rechtmäßig, wenn das Kind das vierzehnte Lebensjahr vollendet hat.</span></span></div></div></li><li><div class="content"><div class="Abs AlignJustify"><span aria-hidden="true" class="Absatzzahl">(5)</span><span class="sr-only">Absatz 5,</span><span><span aria-hidden="true">Das Recht auf Auskunft der betroffenen Person gemäß Art.&nbsp;15 DSGVO besteht gegenüber einem hoheitlich tätigen Verantwortlichen unbeschadet anderer gesetzlicher Beschränkungen dann nicht, wenn durch die Erteilung dieser Auskunft die Erfüllung einer dem Verantwortlichen gesetzlich übertragenen Aufgabe gefährdet wird.</span><span class="sr-only">Das Recht auf Auskunft der betroffenen Person gemäß Artikel 15, DSGVO besteht gegenüber einem hoheitlich tätigen Verantwortlichen unbeschadet anderer gesetzlicher Beschränkungen dann nicht, wenn durch die Erteilung dieser Auskunft die Erfüllung einer dem Verantwortlichen gesetzlich übertragenen Aufgabe gefährdet wird.</span></span></div></div></li><li><div class="content"><div class="Abs AlignJustify"><span aria-hidden="true" class="Absatzzahl">(6)</span><span class="sr-only">Absatz 6,</span><span><span aria-hidden="true">Das Recht auf Auskunft der betroffenen Person gemäß Art.&nbsp;15 DSGVO besteht gegenüber einem Verantwortlichen unbeschadet anderer gesetzlicher Beschränkungen in der Regel dann nicht, wenn durch die Erteilung dieser Auskunft ein Geschäfts- oder Betriebsgeheimnis des Verantwortlichen bzw. Dritter gefährdet würde.</span><span class="sr-only">Das Recht auf Auskunft der betroffenen Person gemäß Artikel 15, DSGVO besteht gegenüber einem Verantwortlichen unbeschadet anderer gesetzlicher Beschränkungen in der Regel dann nicht, wenn durch die Erteilung dieser Auskunft ein Geschäfts- oder Betriebsgeheimnis des Verantwortlichen bzw. Dritter gefährdet würde.</span></span></div><p class="Abs AlignJustify"><span aria-hidden="true"><span class="Kursiv">(Anm.: Abs.&nbsp;7 aufgehoben durch Art.&nbsp;5 Z&nbsp;3, <a href="/eli/bgbl/I/2019/14" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2019_I_14', 'BGBl. I Nr. 14/2019', '2026-08-06')">BGBl.&nbsp;I Nr.&nbsp;14/2019</a>)</span></span><span class="sr-only">Anmerkung,  Absatz 7, aufgehoben durch Artikel 5, Ziffer 3,, Bundesgesetzblatt Teil eins, Nr.&nbsp;14 aus 2019,)</span></p></div></li></ol></div></div></div>
+  </div>
+
+  
+
+</div>
+
+    
+      <div class="p">
+        
+      </div>
+      </div>
+    
+
+
+        </div>
+
+        
+
+        <div class="ClearingPane"></div>
+
+      </div>
+
+      
+<div id="footer">
+    <div id="Topline">
+        <a href="#header">
+            Zum Seitenanfang
+        </a><span class="onlyScreenreader">.</span>
+    </div>
+    <h2 class="onlyScreenreader">
+        &#220;ber diese Seite
+    </h2>
+    <ul id="Bottomline">
+        <li id="Copyright">
+            
+                © 2026 Bundeskanzleramt der Republik Österreich
+            
+        </li>
+        
+    </ul>
+</div>
+    </div>
+  </div>
+
+
+
+<script type="text/javascript">
+//<![CDATA[
+ris.popup.completeNormIcon = '/Images/CompleteNorm.gif'
+ris.popup.completeNormForReferenceDateIcon = '/Images/CompleteNormForReferenceDate.gif'
+ris.popup.linkIcon = '/Images/forward.gif'
+ris.popup.bgblLinkServiceUrl = '/UI/Bund/BgblLinkService.asmx'
+ris.popup.lgblLinkServiceUrl = '/UI/Land/Landesnormen/LgblLinkService.asmx'
+ris.popup.selectedDocumentVersionClass = 'selectedDocumentVersion'
+ris.popup.currentDocumentVersionClass = 'currentDocumentVersion'
+ris.popup.iconOnlyLinkClass = 'iconOnlyLink'
+
+SmartPage_OnStartUp (false, false);
+WebTabStrip.Initialize ($('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip'));
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_StartseiteTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_BundesrechtTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_LandesrechtTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_BezirkeTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_GemeinderechtTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_JudikaturTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_SonstigeTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_GesamtabfrageTab > *:first');
+//]]>
+</script>
+</form>
+</body>
+</html>

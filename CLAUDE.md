@@ -29,7 +29,7 @@ generated sources are never stale; you rarely call it by hand.
 ## Testing
 
 ```bash
-pnpm test                # Server unit tests (1060 tests, 21 files) — node env
+pnpm test                # Server unit tests (1082 tests, 22 files) — node env
 pnpm run test:ui         # Widget tests under ui/ (435 tests, 10 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
@@ -134,8 +134,8 @@ src/
 ├── types.ts           # Zod schemas + TypeScript types
 ├── facets.ts          # Zod-free vocabulary shared with the widget (see Key Patterns)
 ├── parser.ts          # JSON parsing and response normalization
-├── formatting.ts      # Output formatting (markdown/json), truncation, chunking, outline
-├── document-loader.ts # Shared resolve+fetch+format path for the two document tools
+├── formatting.ts      # Output formatting (markdown/json), truncation, chunking, outline, page scoping
+├── document-loader.ts # Shared resolve+fetch+scope+format path for the two document tools
 ├── document-cache.ts  # Bounded LRU cache backing the viewer's chunk tool
 ├── helpers.ts         # Shared helper functions for tool handlers
 ├── constants.ts       # Static mappings, enum values, configuration
@@ -163,6 +163,8 @@ src/
     ├── document-cache.test.ts
     ├── document-matching.test.ts
     ├── dokument-abschnitt.e2e.test.ts  # chunk tool: _meta, paging, cache hit counting
+    ├── dokument-site-chrome.e2e.test.ts # rendered-page scoping end to end, plus
+    │                                    # the inertness cases for bare documents
     ├── dokument-snapshot.e2e.test.ts   # ris_dokument response frozen byte-for-byte
     ├── edge-cases.test.ts
     ├── formatting.test.ts
@@ -177,6 +179,8 @@ src/
     ├── types.test.ts
     ├── ui-resource.e2e.test.ts   # widget resource + tool _meta over a real Client
     ├── ui-template.test.ts       # the generated bundle is self-contained
+    ├── fixtures/                 # RIS website excerpts: one GeltendeFassung.wxe
+    │                             # page, one Dokument.wxe page, both with chrome
     └── integration/
         └── smoke.test.ts
 
@@ -297,6 +301,65 @@ without extending `RawJudikaturMetadata` (types.ts) is a **compile error** in
 `parser.ts` — verified, `TS7053` on the typed head-note lookup. German labels
 stay in the widget and fall back to the raw code, so a value the widget has no
 label for still renders, as itself.
+
+### Rendered RIS pages (`scopeRisContent`)
+
+`ris_dokument` mostly fetches bare document HTML, but two RIS routes serve a
+rendered *website* page instead — `GeltendeFassung.wxe` (a whole consolidated
+law) and `Dokument.wxe` (a single norm) — and those are exactly what a caller
+pastes out of a browser. They carry the site around the law: skip links
+(„Seitenbereiche:“), the header menu, a version navigation, the footer („Zum
+Seitenanfang“, the Bundeskanzleramt copyright line). Unscoped, the reader gets
+the navigation first and the law somewhere below it, and the outline offers the
+chrome headings — „Über diese Seite“ — as jump targets (#94).
+
+`scopeRisContent()` (formatting.ts) keeps `.documentContent` plus
+`.document > .Warning` as one union selector, so the matches stay in document
+order, and reads `head > title` as the page title. It is applied **once**, in
+`document-loader.ts` after both fetch strategies have converged, so the text,
+the HTML the outline is extracted from and the chunk cache all describe the same
+document — a second pass anywhere else would scope an already scoped fragment.
+A page without `.documentContent`, which is every bare-document route, comes
+back as the identical string rather than re-serialised. The page title replaces
+`metadata.titel` only in the url branch (`titelIsInputUrl`), where the URL was
+the only name available: the search branch takes its title from the API and the
+number branch uses the Dokumentnummer, an identifier the caller can use again.
+
+Measured over 12 live pages on 2026-08-06, recomputed here against the shipped
+rule:
+
+| Page class | carries `.documentContent` | chrome in the extracted text |
+|---|---|---|
+| `GeltendeFassung.wxe` (6, incl. 1 Landesrecht Wien) | 6/6 | 508–529 chars ahead of the law, 87 behind it — ~600 total, all inside the 25,000-character excerpt |
+| `Dokument.wxe` (2) | 2/2 | NOR: 4,034 → 2,742 chars, i.e. 32% of everything extracted was chrome; JJT: 9% |
+| bare document (4: 2 Justiz, 2 NOR) | 0/4 | none — pass-through, identical string |
+
+Three traps the rule is shaped around. **The site is dropped by keeping what is
+wanted, not by removing the chrome**, because the chrome is not addressable: on
+`Dokument.wxe` the version navigation is an attribute-less `<div>` sitting
+inside `#content > .document` as a sibling of `.documentContent`, which no
+selector can name — so `#content`/`#main` were rejected as the scope, they carry
+it along. **`.Warning` is chrome by position and content by meaning** („Diese
+Fassung ist nicht aktuell“ says whether the Fassung below is still in force), so
+it is kept from its place in the document rather than appended, and stays above
+the text it qualifies. **`.onlyScreenreader` is not `.sr-only`** — no element
+carries both, and while `htmlToText()` drops `.sr-only` as the spoken duplicate
+of a visible marker (#64), nothing drops `.onlyScreenreader`: inside the kept
+fragments it is the only carrier of the `§ n` section markers of a consolidated
+law (152 elements worth 1,446 characters on the DSG page, whose scoped text
+starts at `§ 0` and yields 329 outline entries).
+
+What the corpus does not cover: Landesrecht was measured in 1 of 9 states, and
+Judikatur only as a single `Dokument.wxe` Entscheidungstext — the other decision
+types are assumed to share that shell rather than measured in it. A `.Warning`
+nested deeper than `.document > .Warning` would be dropped — not observed in the
+corpus (the one that exists is a direct child), and the rule is deliberately not
+loosened for a case nobody has seen. Both test layers therefore pin the **container** before they
+assert anything about the chrome: the unit case asserts the fixture really
+contains `class="documentContent"`, and the integration case asserts the same on
+the *raw* live page before the loader touches it. Without those two, a rename at
+RIS would silently reinstate the whole site while every „no chrome“ assertion
+stayed green — the inverse of #64.
 
 ### Conventions
 
@@ -612,7 +675,7 @@ in every client.
 | `ris_bundesgesetzblatt` | Federal Law Gazettes | /Bundesrecht |
 | `ris_landesgesetzblatt` | State Law Gazettes | /Landesrecht |
 | `ris_regierungsvorlagen` | Government Bills | /Sonstige |
-| `ris_dokument` | Full document text | Direct URL + fallback |
+| `ris_dokument` | Full document text; a rendered RIS website page is scoped to the document it displays (see [Rendered RIS pages](#rendered-ris-pages-scoperiscontent)) | Direct URL + fallback |
 | `ris_dokument_abschnitt` | One section of an open document, by character offset; app-only (`_meta.ui.visibility: ["app"]`), feeds the document viewer widget | cache, else same path as `ris_dokument` |
 | `ris_bezirke` | District authority decisions | /Bezirke |
 | `ris_gemeinden` | Municipal law | /Gemeinden |

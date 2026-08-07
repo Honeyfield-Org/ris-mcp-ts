@@ -1,0 +1,570 @@
+<!--
+  Fixture: trimmed excerpt of the live RIS single-norm page (Dokument.wxe) for
+  NOR40217553 (§ 1 Bundesfinanzgerichtsgesetz), fetched 2026-08-06 from
+  https://www.ris.bka.gv.at/Dokument.wxe?Abfrage=Bundesnormen&Dokumentnummer=NOR40217553
+
+  The second site-chrome shape of issue #94, and the one that carries the three
+  traps inside .document (issue #94):
+    - an unnamed, attribute-less <div> holding the version navigation
+      ("Gesamte Rechtsvorschrift heute / anderes Datum", "Alle Fassungen", …) —
+      it has no class to select against and must be dropped by scoping;
+    - <div class="Warning">Diese Fassung ist nicht aktuell</div>, the legal
+      status of the displayed Fassung, which must SURVIVE scoping;
+    - <h2 class="onlyScreenreader">Bundesfinanzgerichtsgesetz § 1</h2>, a chrome
+      heading outside .documentContent, which must not reach the outline.
+  Document order inside .document is: chrome h2, version nav, .Warning,
+  .documentContent — so a scoping pass that appends the Warning instead of
+  keeping document order is visible in the output.
+
+  Trimming — deletions only, every kept region is a verbatim byte slice of the
+  source, so this file is a strict subsequence of it (source 34.866 chars):
+    - <head>: the RIS scripts and stylesheets are dropped, the real <title> line
+      is kept verbatim between the kept <head …> open and </head>.
+    - <body>: kept whole and uncut, chrome head ("Seitenbereiche:") through
+      footer ("Zum Seitenanfang", "© 2026 Bundeskanzleramt der Republik Österreich").
+
+  Do NOT reformat — see the note in nor12019037-excerpt.html; the markup is
+  byte-exact on purpose. Excluded from Prettier via .prettierignore.
+-->
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="Html" xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+
+<head id="Head1"><title>
+	RIS - Bundesfinanzgerichtsgesetz &#167; 1 - Bundesrecht konsolidiert
+</title></head><body>
+<form onreset="return false;" action="/Dokument.wxe?Abfrage=Bundesnormen&amp;Dokumentnummer=NOR40217553" name="Form" method="post" id="Form">
+<div class="aspNetHidden">
+<input type="hidden" name="wxePageTokenField" id="wxePageTokenField" value="3937c01a-0ce5-4eac-87b8-aae5d814124a" />
+<input type="hidden" name="ServerTime" id="ServerTime" value="639216456619664364" />
+<input type="hidden" name="ServerID" id="ServerID" value="-414478582" />
+<input type="hidden" name="WxeFunctionToken" id="WxeFunctionToken" value="a03900dc-42d3-461e-a6f1-1b334e1526b4" />
+<input type="hidden" name="wxeReturningTokenField" id="wxeReturningTokenField" value="" />
+<input type="hidden" name="wxePostBackSequenceNumberField" id="wxePostBackSequenceNumberField" value="2" />
+<input type="hidden" name="SmartPage_CacheDetectionField" id="SmartPage_CacheDetectionField" value="" />
+<input type="hidden" name="smartScrolling" id="smartScrolling" value="" />
+<input type="hidden" name="smartFocus" id="smartFocus" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="" />
+</div>
+
+
+<script type="text/javascript">
+//<![CDATA[
+StyleUtility.AddBrowserSwitch();
+function wxeDoSubmit (button, pageToken) { 
+  var theForm = document.Form; 
+  theForm.wxeReturningTokenField.value = pageToken; 
+  document.getElementById(button).click(); 
+}
+function wxeDoPostBack (control, argument, returningToken) { 
+  var theForm = document.Form; 
+  theForm.wxeReturningTokenField.value = returningToken; 
+  __doPostBack (control, argument); 
+}
+WxePage_Context.SetInstance (new WxePage_Context (
+    
+false,
+    
+600000,
+    
+'/Dokument.wxe?WxeFunctionToken=a03900dc-42d3-461e-a6f1-1b334e1526b4&WxeAction=Refresh',
+    
+null,
+    
+'<p>Sie sind dabei, die Seite zu verlassen.</p><p>Sie können keine weiteren Eingaben an den Server senden.</p>',
+    
+'Die Navigation mit den Schaltflächen Vorwärts und Zurück wird nicht unterstützt.'));
+
+function SmartPage_Initialize ()
+{
+  var eventHandlers = new Array();
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'BasePage_OnPostBack';
+  eventHandlers['onpostback'] = eventHandlersByEvent;
+
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'BasePage_OnUnload';
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'WxePage_OnUnload';
+  eventHandlers['onunload'] = eventHandlersByEvent;
+
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'RegisterLocationHashChangedHandler';
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'AdjustLayout';
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'WxePage_OnLoad';
+  eventHandlers['onload'] = eventHandlersByEvent;
+
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'AdjustLayout';
+  eventHandlers['onresize'] = eventHandlersByEvent;
+
+  eventHandlersByEvent = new Array();
+  eventHandlersByEvent[eventHandlersByEvent.length] = 'WxePage_OnAbort';
+  eventHandlers['onabort'] = eventHandlersByEvent;
+
+
+  var trackedControls = new Array();
+
+  var synchronousPostBackCommands = new Array();
+
+  if (SmartPage_Context.Instance == null)
+  {
+
+    SmartPage_Context.Instance = new SmartPage_Context (
+        'Form',
+        false,
+        null,
+        '<p>Die Seite wird gerade neu geladen.</p><p>Warten Sie mit weiteren Eingaben, bis die Übertragung abgeschlossen ist.</p>',
+        'smartScrolling',
+        'smartFocus',
+        'WxePage_CheckFormState');
+  }
+
+  SmartPage_Context.Instance.set_AbortQueuedSubmit (false);
+  SmartPage_Context.Instance.set_EventHandlers (eventHandlers);
+  SmartPage_Context.Instance.set_TrackedIDs (trackedControls);
+  SmartPage_Context.Instance.set_SynchronousPostBackCommands (synchronousPostBackCommands);
+}
+
+SmartPage_Initialize ();
+
+
+//]]>
+</script>
+
+<script src="/ScriptResource.axd?d=NJmAwtEo3Ipnlaxl6CMhvu2YaWI2GvMOfyf_RuzpJP3TRfcANC6JnfF-35bVCaeA4GcEmnHeulQza4ZCVOvgW9IjDfEPSHTw4c14SSB7FKyf1HwgC4v5zQ1OXoTfN5SmAXaVCB_M_RI3KwDnMEB3m1P6mXDPq23ILh7f3n-idI81&amp;t=ffffffff9763f56e" type="text/javascript"></script>
+  
+  <div id="pagebase">
+    <div id="page">
+      
+
+<div id="header" class="clearfix">
+  
+
+<span class="onlyScreenreader">Seitenbereiche:</span>
+<ul id="servicenav">
+  <li>
+    <a href="#main" accesskey="0" class="onlyScreenreader">Zum Inhalt (<span lang="en" xml:lang="en">Accesskey</span> 0)</a>
+  </li>
+  <li>
+    <a href="#navigation" accesskey="1" class="onlyScreenreader">Zur Navigationsleiste (<span lang="en" xml:lang="en">Accesskey</span> 1)</a>
+  </li>
+  
+  
+  
+  <li>
+    <a id="Header_ServiceNavigation_ContactLink" accesskey="4" lang="de" xml:lang="de" href="/UI/Kontakt.aspx">Kontakt<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 4)</span>
+    </a>
+  </li>
+  <li>
+    <a id="Header_ServiceNavigation_ImpressumLink" accesskey="5" lang="de" xml:lang="de" href="/UI/Impressum.aspx">Impressum<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 5)</span>
+    </a>
+  </li>
+  <li>
+    <a id="Header_ServiceNavigation_PrivacyPolicyLink" accesskey="6" lang="de" xml:lang="de" href="/UI/Datenschutz.aspx">Datenschutzerkl&#228;rung<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 6)</span>
+    </a>
+  </li>
+  <li>
+    <a id="Header_ServiceNavigation_AccessibilityStatementLink" accesskey="7" lang="de" xml:lang="de" href="/UI/Barrierefreiheit.aspx">Barrierefreiheitserkl&#228;rung<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 7)</span>
+    </a>
+  </li>
+  <li>
+    <a id="Header_ServiceNavigation_SiteMapLink" accesskey="8" lang="de" xml:lang="de" href="/UI/SiteMap.aspx"><span lang="en" xml:lang="en">Sitemap</span><span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 8)</span>
+    </a>
+  </li>
+  <li id="Header_ServiceNavigation_LanguageItem">
+    <a id="Header_ServiceNavigation_LanguageLink" accesskey="9" class="last-item" lang="de" xml:lang="de" href="/defaultEn.aspx">English</a><span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> 9)</span>
+  </li>
+
+</ul>
+
+  <a id="Header_HomePageLink" href="/default.aspx"><img id="Header_BkaLogo" title="Zur Startseite" src="/Images/RisHeader.jpg" alt="Rechtsinformationssystem des Bundes" /></a>
+
+  <div>
+    <a id="navigation">
+      <span class="onlyScreenreader">Navigationsleiste:</span>
+    </a>
+    <div id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip" class="tabbedMainMenu">
+	<div class="tabStripTabsPane" role="tablist">
+		<ul role="none">
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_StartseiteTab" role="none" class="tabStripTab"><a href="default.aspx" id="Header_MainNavigation_RisTabbedMenu_StartseiteTab_Command"><span class="anchorBody"><span>Startseite</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_BundesrechtTab" role="none" class="tabStripTabSelected"><a href="Bund/" id="Header_MainNavigation_RisTabbedMenu_BundesrechtTab_Command"><span class="anchorBody"><span>Bund</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_LandesrechtTab" role="none" class="tabStripTab"><a href="Land/" id="Header_MainNavigation_RisTabbedMenu_LandesrechtTab_Command"><span class="anchorBody"><span>Länder</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_BezirkeTab" role="none" class="tabStripTab"><a href="Bezirke/" id="Header_MainNavigation_RisTabbedMenu_BezirkeTab_Command"><span class="anchorBody"><span>Bezirke</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_GemeinderechtTab" role="none" class="tabStripTab"><a href="Gemeinde/" id="Header_MainNavigation_RisTabbedMenu_GemeinderechtTab_Command"><span class="anchorBody"><span>Gemeinden</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_JudikaturTab" role="none" class="tabStripTab"><a href="Judikatur/" id="Header_MainNavigation_RisTabbedMenu_JudikaturTab_Command"><span class="anchorBody"><span>Judikatur</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_SonstigeTab" role="none" class="tabStripTab"><a href="Sonstige/" id="Header_MainNavigation_RisTabbedMenu_SonstigeTab_Command"><span class="anchorBody"><span>Kundmachungen, Erlässe</span></span></a></span></span></li>
+			<li role="none"><span class="tabStripTabWrapper"><span class="tabStripTabSeparator"><span></span></span><span id="Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_GesamtabfrageTab" role="none" class="tabStripTab"><a href="Gesamtabfrage/" id="Header_MainNavigation_RisTabbedMenu_GesamtabfrageTab_Command"><span class="anchorBody"><span>Gesamtabfrage</span></span></a></span></span><span class="last"></span></li>
+
+		</ul>
+	</div><div class="clearingPane">
+
+	</div>
+</div>
+  </div>
+
+</div>
+
+      <div id="main">
+        <div id="TopPageNavigation">
+          
+            <div id="FirstRow">
+              <div class="FloatLeft">
+                <h1 id="Title">
+                  Bundesrecht konsolidiert
+                </h1>
+              </div>
+              <div class="FloatRight">
+                <span class="PrintPreview">
+                  <a id="PrintPreviewLink" accesskey="D" href="/Dokument.wxe?Abfrage=Bundesnormen&amp;Dokumentnummer=NOR40217553&amp;ShowPrintPreview=True" target="_blank">Druckansicht<span class="onlyScreenreader"> (<span lang="en" xml:lang="en">Accesskey</span> D)</span></a><span class="onlyScreenreader">.</span>
+                </span>
+                <span class="Print">
+                  
+                </span>
+              </div>
+              <div class="ClearingPane"></div>
+            </div>
+          
+
+          <div id="TopDocumentNavigation_ContainerPanel" class="TopDocumentNavigation">
+	
+  <h2 class="onlyScreenreader">
+    Navigation im Suchergebnis
+  </h2>
+  <ul>
+    
+    
+    
+    
+    <li id="TopDocumentNavigation_PreviousDocumentLinkContainer" class="FloatRight Next">
+      <span id="TopDocumentNavigation_PositionTrackingFromText"></span>
+      <span id="TopDocumentNavigation_PositionTrackingOutOfText"></span>
+      <span id="TopDocumentNavigation_PositionTrackingToText"></span>
+    </li>
+    
+  </ul>
+  <div class="ClearingPane"></div>
+
+</div>
+        </div>
+
+        <div id="content">
+          
+  
+      
+
+<div class="document">
+  <h2 class="onlyScreenreader">
+    Bundesfinanzgerichtsgesetz &#167; 1
+  </h2>
+  <div>
+    <ul class="documentTasks">
+      <li>Gesamte Rechtsvorschrift <a id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_CompleteNormForTodayLink_0" title="Gesamte Rechtsvorschrift in der heutigen Fassung anzeigen" href="/GeltendeFassung.wxe?Abfrage=Bundesnormen&amp;Gesetzesnummer=20008209" target="_blank">heute</a> / <a id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_CompleteNormForReferenceDateLink_0" title=" Gesamte Rechtsvorschrift in einer anderen Fassung anzeigen" href="/GeltendeFassungDatumsauswahl.wxe?Abfrage=Bundesnormen&amp;Gesetzesnummer=20008209&amp;FassungVom=2026-08-06" target="_blank">anderes Datum</a>
+        <div class="ClearingPane"></div>
+      </li>
+      <li class="Previous">
+        <a id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_PreviousNormPartLink_0" title="§ 0 in der Fassung vom 06.08.2026 anzeigen" href="/NormDokument.wxe?Abfrage=Bundesnormen&amp;Gesetzesnummer=20008209&amp;FassungVom=2026-08-06&amp;Artikel=&amp;Paragraf=0&amp;Anlage=&amp;Uebergangsrecht=">§ 0 am 06.08.2026</a>
+      </li>
+      <li class="Next">
+        <a id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_NextNormPartLink_0" title="§ 2 in der Fassung vom 06.08.2026 anzeigen" href="/NormDokument.wxe?Abfrage=Bundesnormen&amp;Gesetzesnummer=20008209&amp;FassungVom=2026-08-06&amp;Artikel=&amp;Paragraf=2&amp;Anlage=&amp;Uebergangsrecht=">§ 2 am 06.08.2026</a>
+      </li>
+      <li class="DocumentVersions">
+        <a id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_DocumentVersionsLink_0" onclick="return ris.popup.showDocumentVersionInformation (this, &#39;20008209&#39;);" href="/Dokument.wxe?Abfrage=Bundesnormen&amp;Dokumentnummer=NOR40217553#alleFassungen">Alle Fassungen</a>
+        
+
+<div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_DocumentVersionList_0_DialogBody_0" class="ui-helper-hidden documentVersionsDialogBody" data-norm-popup="20008209">
+	
+  <ol>
+    
+        <li class="currentDocumentVersion">
+          <span>
+            <a href="/NormDokument.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20008209&Artikel=&Paragraf=1&Anlage=&Uebergangsrecht=" target="" title="§ 1 in der heutigen Fassung anzeigen">§ 1 heute</a>
+            <span></span>
+          </span>
+        </li>
+      
+        <li class="">
+          <span>
+            <a href="/eli/bgbl/i/2013/14/P1/NOR40271065" target="" title="§ 1 in der Fassung vom 06.08.2026 anzeigen">§ 1 gültig ab 01.09.2025</a>
+            <span>zuletzt geändert durch BGBl. I Nr. 50/2025</span>
+          </span>
+        </li>
+      
+        <li class="">
+          <span>
+            <a href="/eli/bgbl/i/2013/14/P1/NOR40246271" target="" title="§ 1 in der Fassung vom 31.08.2025 anzeigen">§ 1 gültig von 20.07.2022 bis 31.08.2025</a>
+            <span>zuletzt geändert durch BGBl. I Nr. 108/2022</span>
+          </span>
+        </li>
+      
+        <li class="selectedDocumentVersion">
+          <span>
+            <a href="/eli/bgbl/i/2013/14/P1/NOR40217553" target="" title="§ 1 in der Fassung vom 19.07.2022 anzeigen">§ 1 gültig von 01.07.2020 bis 19.07.2022</a>
+            <span>zuletzt geändert durch BGBl. I Nr. 104/2019</span>
+          </span>
+        </li>
+      
+        <li class="">
+          <span>
+            <a href="/eli/bgbl/i/2013/14/P1/NOR40216035" target="" title="§ 1 in der Fassung vom 30.06.2020 anzeigen">§ 1 gültig von 01.09.2019 bis 30.06.2020</a>
+            <span>zuletzt geändert durch BGBl. I Nr. 62/2019</span>
+          </span>
+        </li>
+      
+        <li class="">
+          <span>
+            <a href="/eli/bgbl/i/2013/14/P1/NOR40205412" target="" title="§ 1 in der Fassung vom 31.08.2019 anzeigen">§ 1 gültig von 15.08.2018 bis 31.08.2019</a>
+            <span>zuletzt geändert durch BGBl. I Nr. 62/2018</span>
+          </span>
+        </li>
+      
+        <li class="">
+          <span>
+            <a href="/eli/bgbl/i/2013/14/P1/NOR40166761" target="" title="§ 1 in der Fassung vom 14.08.2018 anzeigen">§ 1 gültig von 30.12.2014 bis 14.08.2018</a>
+            <span>zuletzt geändert durch BGBl. I Nr. 105/2014</span>
+          </span>
+        </li>
+      
+        <li class="">
+          <span>
+            <a href="/eli/bgbl/i/2013/14/P1/NOR40146297" target="" title="§ 1 in der Fassung vom 29.12.2014 anzeigen">§ 1 gültig von 01.01.2014 bis 29.12.2014</a>
+            <span></span>
+          </span>
+        </li>
+      
+        <li class="">
+          <span>
+            <a href="/eli/bgbl/i/2013/14/P1/NOR40146296" target="" title="§ 1 in der Fassung vom 31.12.2013 anzeigen">§ 1 gültig von 12.01.2013 bis 31.12.2013</a>
+            <span></span>
+          </span>
+        </li>
+      
+  </ol>
+
+</div>
+
+      </li>
+    </ul>
+  </div>
+  <div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_CurrentNormPartNotInKraftWarning_0" class="Warning">Diese Fassung ist nicht aktuell</div>
+  <div class="documentContent">
+    
+    
+
+<div class="documentLinks">
+  <h3 class="onlyScreenreader">
+    Begleitende Dokumente
+  </h3>
+  <dl>
+    
+      <dt class="documentNativeTitle">
+        Hauptdokument
+      </dt>
+      
+
+<div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_ctl03_0_HauptdokumentDataList_0_DocumentContentLinks_0_ContentLinksContainer_0">
+	
+  
+  
+      
+      <dd class="documentDataItem">
+          <a href="/Dokumente/Bundesnormen/NOR40217553/NOR40217553.html" target="_blank" title="Web-Seite: § 1 Bundesfinanzgerichtsgesetz" class="iconOnlyLink"><img src="Images/htm.gif" class="Icon" alt="Web-Seite" style="width:16px;height:16px;" /></a>
+      </dd>
+    
+      
+      <dd class="documentDataItem">
+          <a href="/Dokumente/Bundesnormen/NOR40217553/NOR40217553.rtf" target="_blank" title="RTF-Dokument: § 1 Bundesfinanzgerichtsgesetz" class="iconOnlyLink"><img src="Images/doc.gif" class="Icon" alt="RTF-Dokument" style="width:16px;height:16px;" /></a>
+      </dd>
+    
+      
+      <dd class="documentDataItem">
+          <a href="/Dokumente/Bundesnormen/NOR40217553/NOR40217553.pdf" target="_blank" title="PDF-Dokument: § 1 Bundesfinanzgerichtsgesetz" class="iconOnlyLink"><img src="Images/pdf.gif" class="Icon" alt="PDF-Dokument" style="width:16px;height:16px;" /></a>
+      </dd>
+    
+
+</div>
+
+    
+    
+    
+    
+  </dl>
+</div>
+    <div class="p">
+      <h3>Kurztitel</h3>
+      Bundesfinanzgerichtsgesetz
+    </div>
+    <div class="p">
+      <h3>Kundmachungsorgan</h3>
+      <a href="/eli/bgbl/I/2013/14" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2013_I_14', 'BGBl. I Nr. 14/2013', '2026-08-06')">BGBl. I Nr. 14/2013</a> zuletzt geändert durch <a href="/eli/bgbl/I/2019/104" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2019_I_104', 'BGBl. I Nr. 104/2019', '2026-08-06')">BGBl. I Nr. 104/2019</a> 
+    </div>
+    <div class="p">
+      <h3>Typ</h3>
+      BG
+    </div>
+    <div class="p">
+      <h3>§/Artikel/Anlage</h3>
+      § 1
+    </div>
+    <div class="p">
+      <div class="FloatLeft">
+        <h3>Inkrafttretensdatum</h3>
+        01.07.2020
+      </div>
+      <div class="FloatLeft">
+        <h3>Außerkrafttretensdatum</h3>
+        19.07.2022
+      </div>
+      <div class="ClearingPane">
+      </div>
+    </div>
+    <div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_AbkuerzungContainer_0" class="p">
+      <h3>Abkürzung</h3>
+      BFGG
+    </div>
+    
+    <div class="p">
+      <h3>Index</h3>
+      10/07 Verfassungs- und Verwaltungsgerichtsbarkeit
+    </div>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_TextContainer_0" class="p embeddedContent">
+      <h3>Text</h3>
+      <div><div class="contentBlock"><h4 class="UeberschrG1 AlignCenter">1.&nbsp;Teil<br><span class="UeberschrG2 AlignCenter" style="display:block">Organisation des Bundesfinanzgerichtes</span></h4><h4 class="UeberschrG1-AfterG2 AlignCenter">1.&nbsp;Abschnitt<br><span class="UeberschrG2 AlignCenter" style="display:block">Zuständigkeit, Sitz und Zusammensetzung des Bundesfinanzgerichtes</span></h4><h4 class="UeberschrPara AlignCenter">Zuständigkeit des Bundesfinanzgerichtes</h4><div class="ParagraphMitAbsatzzahl"><div class="GldSymbolFloatLeft AlignJustify"><h5 class="GldSymbol AlignJustify"><span aria-hidden="true">§&nbsp;1.</span><span class="sr-only">Paragraph eins,</span></h5></div><ol class="wai-absatz-list"><li><div class="content"><div class="Abs_small_indent AlignJustify"><span aria-hidden="true" class="Absatzzahl">(1)</span><span class="sr-only">Absatz eins,</span><span><span aria-hidden="true">Dem Verwaltungsgericht des Bundes für Finanzen (Bundesfinanzgericht – BFG) obliegen Entscheidungen über Beschwerden gemäß Art.&nbsp;130 Abs.&nbsp;1 Z&nbsp;1 bis 3 B-VG in Rechtssachen in Angelegenheiten der öffentlichen Abgaben (mit Ausnahme der Verwaltungsabgaben des Bundes, der Länder und Gemeinden) und des Finanzstrafrechts sowie in sonstigen gesetzlich festgelegten Angelegenheiten, soweit die genannten Angelegenheiten unmittelbar von den Abgaben- oder Finanzstrafbehörden des Bundes besorgt werden.</span><span class="sr-only">Dem Verwaltungsgericht des Bundes für Finanzen (Bundesfinanzgericht – BFG) obliegen Entscheidungen über Beschwerden gemäß Artikel 130, Absatz eins, Ziffer eins bis 3 B-VG in Rechtssachen in Angelegenheiten der öffentlichen Abgaben (mit Ausnahme der Verwaltungsabgaben des Bundes, der Länder und Gemeinden) und des Finanzstrafrechts sowie in sonstigen gesetzlich festgelegten Angelegenheiten, soweit die genannten Angelegenheiten unmittelbar von den Abgaben- oder Finanzstrafbehörden des Bundes besorgt werden.</span></span></div><p class="Abs AlignJustify"><span aria-hidden="true"><span class="Kursiv">(Anm.: Abs.&nbsp;2 aufgehoben durch Art.&nbsp;25 Z&nbsp;1 lit.&nbsp;a, <a href="/eli/bgbl/I/2019/104" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2019_I_104', 'BGBl. I Nr. 104/2019', '2026-08-06')">BGBl.&nbsp;I Nr.&nbsp;104/2019</a>)</span></span><span class="sr-only">Anmerkung,  Absatz 2, aufgehoben durch Artikel 25, Ziffer eins, Litera a,, Bundesgesetzblatt Teil eins, Nr.&nbsp;104 aus 2019,)</span></p></div></li><li><div class="content"><div class="Abs AlignJustify"><span aria-hidden="true" class="Absatzzahl">(3)</span><span class="sr-only">Absatz 3,</span><span><span aria-hidden="true">Zu den sonstigen Angelegenheiten (Abs.&nbsp;1) gehören</span><span class="sr-only">Zu den sonstigen Angelegenheiten (Absatz eins,) gehören</span></span></div><ol class="wai-list" style="margin-left: 27pt;"><li aria-level="1"><div class="SymE1"><div class="AufzaehlungE1"><span aria-hidden="true">1.</span><span class="sr-only">Ziffer eins</span></div></div><div class="content"><div class="AufzaehlungE1 AlignJustify"><span aria-hidden="true">Angelegenheiten der Beiträge an öffentliche Fonds oder an Körperschaften des öffentlichen Rechts, die nicht Gebietskörperschaften sind, soweit diese Beiträge durch Abgabenbehörden des Bundes (Abs.&nbsp;2) zu erheben sind,</span><span class="sr-only">Angelegenheiten der Beiträge an öffentliche Fonds oder an Körperschaften des öffentlichen Rechts, die nicht Gebietskörperschaften sind, soweit diese Beiträge durch Abgabenbehörden des Bundes (Absatz 2,) zu erheben sind,</span></div></div></li><li aria-level="1"><div class="SymE1"><div class="AufzaehlungE1"><span aria-hidden="true">2.</span><span class="sr-only">Ziffer 2</span></div></div><div class="content"><div class="AufzaehlungE1 AlignJustify"><span aria-hidden="true">Entscheidungen über Beschwerden gemäß Art.&nbsp;130 Abs.&nbsp;1 Z&nbsp;2 B-VG gegen Abgabenbehörden des Bundes oder das Amt für Betrugsbekämpfung, soweit nicht Angelegenheiten der öffentlichen Abgaben (Abs.&nbsp;1) oder der Beiträge (Z&nbsp;1) betroffen sind,</span><span class="sr-only">Entscheidungen über Beschwerden gemäß Artikel 130, Absatz eins, Ziffer 2, B-VG gegen Abgabenbehörden des Bundes oder das Amt für Betrugsbekämpfung, soweit nicht Angelegenheiten der öffentlichen Abgaben (Absatz eins,) oder der Beiträge (Ziffer eins,) betroffen sind,</span></div></div></li><li aria-level="1"><div class="SymE1"><div class="AufzaehlungE1"><span aria-hidden="true">3.</span><span class="sr-only">Ziffer 3</span></div></div><div class="content"><div class="AufzaehlungE1 AlignJustify"><span aria-hidden="true">Entscheidungen über Beschwerden gemäß Art.&nbsp;130 Abs.&nbsp;2a B-VG von Personen, die durch das Bundesfinanzgericht in Ausübung seiner gerichtlichen Zuständigkeiten in ihren Rechten gemäß der Verordnung (EU) 2016/679 zum Schutz natürlicher Personen bei der Verarbeitung personenbezogener Daten, zum freien Datenverkehr und zur Aufhebung der Richtlinie 95/46/EG (Datenschutz-Grundverordnung), ABl. Nr.&nbsp;L&nbsp;119 vom 04.05.2016 S.&nbsp;1 (im Folgenden: DSGVO), verletzt zu sein behaupten,</span><span class="sr-only">Entscheidungen über Beschwerden gemäß Artikel 130, Absatz 2 a, B-VG von Personen, die durch das Bundesfinanzgericht in Ausübung seiner gerichtlichen Zuständigkeiten in ihren Rechten gemäß der Verordnung (EU) 2016/679 zum Schutz natürlicher Personen bei der Verarbeitung personenbezogener Daten, zum freien Datenverkehr und zur Aufhebung der Richtlinie 95/46/EG (Datenschutz-Grundverordnung), Amtsblatt Nummer L 119 vom 04.05.2016 Seite 1 (im Folgenden: DSGVO), verletzt zu sein behaupten,</span></div></div></li><li aria-level="1"><div class="SymE1"><div class="AufzaehlungE1"><span aria-hidden="true">4.</span><span class="sr-only">Ziffer 4</span></div></div><div class="content"><div class="AufzaehlungE1 AlignJustify"><span aria-hidden="true">Entscheidungen über Beschwerden gemäß Art.&nbsp;130 Abs.&nbsp;2 Z&nbsp;1 B-VG wegen Rechtswidrigkeit eines Verhaltens des Bundesministers für Finanzen oder dessen bevollmächtigten Vertreters in Vollziehung des EU-Besteuerungsstreitbeilegungsgesetzes – EU-BStbG, <a href="/eli/bgbl/I/2019/62" target="_blank" onclick="return LinkMarkup_ShowBgblInformation(this, 'BgblAuth', 'BGBLA_2019_I_62', 'BGBl. I Nr. 62/2019', '2026-08-06')">BGBl.&nbsp;I Nr.&nbsp;62/2019</a>,</span><span class="sr-only">Entscheidungen über Beschwerden gemäß Artikel 130, Absatz 2, Ziffer eins, B-VG wegen Rechtswidrigkeit eines Verhaltens des Bundesministers für Finanzen oder dessen bevollmächtigten Vertreters in Vollziehung des EU-Besteuerungsstreitbeilegungsgesetzes – EU-BStbG, Bundesgesetzblatt Teil eins, Nr.&nbsp;62 aus 2019,,</span></div></div></li><li aria-level="1"><div class="SymE1"><div class="AufzaehlungE1"><span aria-hidden="true">5.</span><span class="sr-only">Ziffer 5</span></div></div><div class="content"><div class="AufzaehlungE1 AlignJustify"><span aria-hidden="true">Benennungen einer unabhängigen Person und deren Stellvertreterin bzw. Stellvertreter gemäß §&nbsp;42 EU-BStbG.</span><span class="sr-only">Benennungen einer unabhängigen Person und deren Stellvertreterin bzw. Stellvertreter gemäß Paragraph 42, EU-BStbG.</span></div></div></li></ol></div></li></ol></div></div></div>
+    </div>
+    
+    
+    
+    <div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_SchlagworteContainer_0" class="p">
+      <h3>Schlagworte</h3>
+      Abgabenbehörde
+    </div>
+    <div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_VeroeffentlichungsdatumAenderungsdatumContainer_0" class="p">
+      <div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_VeroeffentlichungsdatumContainer_0" class="FloatLeft">
+        <h3>Im RIS seit</h3>
+        06.11.2019
+      </div>
+      <div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_AenderungsdatumContainer_0" class="FloatLeft">
+        <h3>Zuletzt aktualisiert am</h3>
+        25.07.2022
+      </div>
+      <div class="ClearingPane">
+      </div>
+    </div>
+    <div class="p">
+      <h3>Gesetzesnummer</h3>
+      20008209
+    </div>
+    <div class="p">
+      <div class="FloatLeft">
+        <h3>Dokumentnummer</h3>
+        NOR40217553
+      </div>
+      
+      <div class="ClearingPane">
+      </div>
+    </div>
+    <div id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_EliContainer_0" class="p">
+      <h3>European Legislation Identifier (ELI)</h3>
+      <a id="MainContent_DocumentRepeater_BundesnormenDocumentData_0_EliLink_0" href="/eli/bgbl/i/2013/14/P1/NOR40217553" target="_blank">https://www.ris.bka.gv.at/eli/bgbl/i/2013/14/P1/NOR40217553</a>
+    </div>
+    <div class="p">
+      
+    </div>
+  </div>
+</div>
+                                         
+    
+
+        </div>
+
+        
+
+        <div class="ClearingPane"></div>
+
+        <div id="BottomDocumentNavigation_ContainerPanel" class="BottomDocumentNavigation">
+	
+  <h2 class="onlyScreenreader">
+    Navigation im Suchergebnis
+  </h2>
+  <ul>
+    
+    
+    
+    
+    <li id="BottomDocumentNavigation_PreviousDocumentLinkContainer" class="FloatRight Next">
+      <span id="BottomDocumentNavigation_PositionTrackingFromText"></span>
+      <span id="BottomDocumentNavigation_PositionTrackingOutOfText"></span>
+      <span id="BottomDocumentNavigation_PositionTrackingToText"></span>
+    </li>
+    
+  </ul>
+  <div class="ClearingPane"></div>
+
+</div>
+
+      </div>
+
+      
+<div id="footer">
+    <div id="Topline">
+        <a href="#header">
+            Zum Seitenanfang
+        </a><span class="onlyScreenreader">.</span>
+    </div>
+    <h2 class="onlyScreenreader">
+        &#220;ber diese Seite
+    </h2>
+    <ul id="Bottomline">
+        <li id="Copyright">
+            
+                © 2026 Bundeskanzleramt der Republik Österreich
+            
+        </li>
+        
+    </ul>
+</div>
+    </div>
+  </div>
+
+
+
+<script type="text/javascript">
+//<![CDATA[
+ris.popup.completeNormIcon = '/Images/CompleteNorm.gif'
+ris.popup.completeNormForReferenceDateIcon = '/Images/CompleteNormForReferenceDate.gif'
+ris.popup.linkIcon = '/Images/forward.gif'
+ris.popup.bgblLinkServiceUrl = '/UI/Bund/BgblLinkService.asmx'
+ris.popup.lgblLinkServiceUrl = '/UI/Land/Landesnormen/LgblLinkService.asmx'
+ris.popup.selectedDocumentVersionClass = 'selectedDocumentVersion'
+ris.popup.currentDocumentVersionClass = 'currentDocumentVersion'
+ris.popup.iconOnlyLinkClass = 'iconOnlyLink'
+
+SmartPage_OnStartUp (false, false);
+WebTabStrip.Initialize ($('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip'));
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_StartseiteTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_BundesrechtTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_LandesrechtTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_BezirkeTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_GemeinderechtTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_JudikaturTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_SonstigeTab > *:first');
+StyleUtility.CreateBorderSpans ('#Header_MainNavigation_RisTabbedMenu_MainMenuTabStrip_GesamtabfrageTab > *:first');
+//]]>
+</script>
+</form>
+</body>
+</html>

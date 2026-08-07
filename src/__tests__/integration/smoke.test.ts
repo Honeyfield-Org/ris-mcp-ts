@@ -2,7 +2,9 @@
  * Integration smoke tests against the real RIS API.
  *
  * These tests hit the live Austrian Legal Information System API at
- * https://data.bka.gv.at/ris/api/v2.6/ and require network access.
+ * https://data.bka.gv.at/ris/api/v2.6/ and require network access. The last
+ * case fetches from the RIS *website* (www.ris.bka.gv.at) instead: what it
+ * pins is a rendered page, which the API does not serve.
  *
  * They are NOT included in the standard `pnpm test` run.
  * Run explicitly with: pnpm run test:integration
@@ -13,7 +15,14 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { searchBundesrecht, searchJudikatur, getDocumentByNumber } from '../../client.js';
+import {
+  searchBundesrecht,
+  searchJudikatur,
+  getDocumentByNumber,
+  getDocumentContent,
+} from '../../client.js';
+import { loadDocument } from '../../document-loader.js';
+import { extractOutline } from '../../formatting.js';
 import { parseSearchResults } from '../../parser.js';
 
 describe('RIS API Smoke Tests', () => {
@@ -145,6 +154,48 @@ describe('RIS API Smoke Tests', () => {
       } else {
         expect(typeof result.error).toBe('string');
       }
+    });
+  });
+
+  describe('loadDocument with a rendered RIS page (issue #94)', () => {
+    /** "Gesamte Rechtsvorschrift" for the Datenschutzgesetz — the live page. */
+    const GF_URL =
+      'https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10001597';
+
+    it('should scope a live GeltendeFassung page to the law itself', async () => {
+      // Fetched through the same client function the loader uses, so this is the
+      // markup scoping will actually see. It is the *raw* page: the wrapper the
+      // scoping keys on has to be pinned before the loader removes everything
+      // around it, or a rename at RIS would read as "the chrome is gone" in
+      // every assertion below instead of failing here, by name.
+      const rawHtml = await getDocumentContent(GF_URL);
+      expect(rawHtml).toContain('class="documentContent"');
+
+      const loaded = await loadDocument(
+        { url: GF_URL, responseFormat: 'markdown' },
+        new AbortController().signal,
+      );
+      expect(loaded.success).toBe(true);
+      if (!loaded.success) {
+        return;
+      }
+
+      const { text, html } = loaded.document;
+      const content = text.split('## Inhalt\n\n')[1];
+      expect(content).toBeDefined();
+
+      // Structure, not content: the skip links open every RIS page and the
+      // copyright closes it, so what is named here is the chrome, never a
+      // sentence of the law — which gets amended.
+      expect(content).not.toContain('Seitenbereiche');
+      expect(content).not.toContain('Bundeskanzleramt der Republik');
+
+      // The outline is the viewer's jump rail, built the way both document
+      // tools build it. "Über diese Seite" is the footer's screenreader
+      // heading — the first entry a reader would see if scoping missed.
+      const outline = extractOutline(html, text);
+      expect(outline.length).toBeGreaterThan(0);
+      expect(outline.map((entry) => entry.label)).not.toContain('Über diese Seite');
     });
   });
 });

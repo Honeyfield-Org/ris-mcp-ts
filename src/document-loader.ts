@@ -24,7 +24,7 @@ import {
   searchLandesrecht,
   searchSonstige,
 } from './client.js';
-import { formatDocument, type DocumentMetadata } from './formatting.js';
+import { formatDocument, scopeRisContent, type DocumentMetadata } from './formatting.js';
 import { findDocumentByDokumentnummer } from './parser.js';
 import type { NormalizedSearchResults } from './types.js';
 
@@ -85,6 +85,12 @@ export async function loadDocument(
   let contentUrl = inputUrl;
   let htmlContent: string | undefined;
   let metadata: DocumentMetadata;
+  /**
+   * Whether `metadata.titel` is the URL the caller passed in, for want of any
+   * name for the document. Only that placeholder may be replaced by a page
+   * title; see the adoption below.
+   */
+  let titelIsInputUrl = false;
 
   if (dokumentnummer && !inputUrl) {
     // Strategy: Try direct URL construction first, fallback to search API
@@ -216,6 +222,7 @@ export async function loadDocument(
       citation: {},
       dokument_url: inputUrl,
     };
+    titelIsInputUrl = true;
   }
 
   if (!contentUrl) {
@@ -227,11 +234,28 @@ export async function loadDocument(
     htmlContent = await getDocumentContent(contentUrl, undefined, signal);
   }
 
+  // A `url` the caller pasted out of a browser is regularly a rendered RIS page
+  // rather than the bare document, and carries the site around the law (issue
+  // #94). Scoped once, here, so the text, the html the callers extract the
+  // outline from, and the cache they fill all describe the same document — a
+  // second pass anywhere else would scope an already scoped fragment. A bare
+  // document has no `.documentContent` and comes back as the identical string.
+  const scoped = scopeRisContent(htmlContent);
+
+  // The url branch had nothing to name the document by but that URL. A scoped
+  // page carries the name RIS gives it, which is what the reader saw in the
+  // browser — and only that placeholder is replaced: the search branch's titel
+  // comes from the API, and the direct branch's is the Dokumentnummer, an
+  // identifier the caller can use again.
+  if (titelIsInputUrl && scoped.pageTitle !== null) {
+    metadata.titel = scoped.pageTitle;
+  }
+
   return {
     success: true,
     document: {
-      text: formatDocument(htmlContent, metadata, responseFormat),
-      html: htmlContent,
+      text: formatDocument(scoped.html, metadata, responseFormat),
+      html: scoped.html,
       contentUrl,
       metadata,
     },
