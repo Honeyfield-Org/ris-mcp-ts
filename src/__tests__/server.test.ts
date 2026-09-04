@@ -134,6 +134,17 @@ describe('registered tool metadata', () => {
       expect(suchworte).toContain('"titel" and/or "paragraph"');
     },
   );
+
+  it('should carry the payload-cost hint on every search tool limit', () => {
+    const withLimit = Object.entries(registeredTools).filter(([, tool]) =>
+      Boolean(tool.inputSchema?.shape.limit),
+    );
+
+    expect(withLimit).toHaveLength(11);
+    for (const [name, tool] of withLimit) {
+      expect(tool.inputSchema?.shape.limit.description, name).toContain('payload budget');
+    }
+  });
 });
 
 // =============================================================================

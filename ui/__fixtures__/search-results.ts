@@ -14,9 +14,7 @@ export const LAW_DOCUMENT: SearchDocument = {
   dokumentnummer: 'NOR40198929',
   applikation: 'BrKons',
   titel: 'Allgemeines bürgerliches Gesetzbuch',
-  kurztitel: 'Allgemeines bürgerliches Gesetzbuch',
   citation: {
-    kurztitel: 'Allgemeines bürgerliches Gesetzbuch',
     langtitel:
       'Allgemeines bürgerliches Gesetzbuch für die gesammten deutschen Erbländer der Oesterreichischen Monarchie<br/>StF: JGS Nr. 946/1811',
     kundmachungsorgan: 'JGS Nr. 946/1811',
@@ -28,9 +26,7 @@ export const LAW_DOCUMENT: SearchDocument = {
   citation_display: '§ 0 Allgemeines bürgerliches Gesetzbuch (JGS Nr. 946/1811)',
   content_urls: {
     html: 'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.html',
-    xml: 'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.xml',
     pdf: 'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.pdf',
-    rtf: 'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40198929/NOR40198929.rtf',
   },
   dokument_url: 'https://www.ris.bka.gv.at/eli/jgs/1811/946/P0/NOR40198929',
   gesamte_rechtsvorschrift_url:
@@ -43,10 +39,8 @@ export const LAW_DOCUMENT_WITHOUT_PDF: SearchDocument = {
   dokumentnummer: 'NOR12017691',
   citation_display: '§ 1 Allgemeines bürgerliches Gesetzbuch (JGS Nr. 946/1811)',
   content_urls: {
-    xml: 'https://www.ris.bka.gv.at/Dokumente/Bundesnormen/NOR12017691/NOR12017691.xml',
     html: null,
     pdf: null,
-    rtf: null,
   },
   dokument_url: 'https://www.ris.bka.gv.at/eli/jgs/1811/946/P1/NOR12017691',
 };
@@ -60,9 +54,7 @@ export const JUSTIZ_CHAIN_DOCUMENT: SearchDocument = {
   dokumentnummer: 'JJR_19901010_OGH0002_0020OB00535_9000000_001',
   applikation: 'Justiz',
   titel: '2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h',
-  kurztitel: '2Ob535/90; 1Ob564/95; 1Ob140/00w; 3Ob127/04d; 6Ob27/05x; 1Ob14/05y; 3Ob24/05h',
   citation: {
-    kurztitel: '2Ob535/90; 1Ob564/95',
     langtitel: null,
     kundmachungsorgan: null,
     paragraph: null,
@@ -73,9 +65,7 @@ export const JUSTIZ_CHAIN_DOCUMENT: SearchDocument = {
   citation_display: 'JJR_19901010_OGH0002_0020OB00535_9000000_001',
   content_urls: {
     html: 'https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.html',
-    xml: 'https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.xml',
     pdf: 'https://www.ris.bka.gv.at/Dokumente/Justiz/JJR_19901010_OGH0002_0020OB00535_9000000_001/JJR_19901010_OGH0002_0020OB00535_9000000_001.pdf',
-    rtf: null,
   },
   dokument_url: null,
   gesamte_rechtsvorschrift_url: null,
@@ -93,9 +83,7 @@ export const VWGH_DOCUMENT: SearchDocument = {
   dokumentnummer: 'JWR_2025090038_20260624L04',
   applikation: 'Vwgh',
   titel: 'Ra 2025/09/0038',
-  kurztitel: null,
   citation: {
-    kurztitel: null,
     langtitel: null,
     kundmachungsorgan: null,
     paragraph: null,
@@ -106,9 +94,7 @@ export const VWGH_DOCUMENT: SearchDocument = {
   citation_display: 'Ra 2025/09/0038',
   content_urls: {
     html: 'https://www.ris.bka.gv.at/Dokumente/Vwgh/JWR_2025090038_20260624L04/JWR_2025090038_20260624L04.html',
-    xml: null,
     pdf: null,
-    rtf: null,
   },
   dokument_url: null,
   gesamte_rechtsvorschrift_url: null,
@@ -170,9 +156,7 @@ export const LIVE_OGH_DOCUMENT: SearchDocument = {
   dokumentnummer: 'JJR_20011022_OGH0002_0010OB00049_01I0000_001',
   applikation: 'Justiz',
   titel: '1Ob49/01i; 10Ob62/22y; 6Ob100/25m',
-  kurztitel: '1Ob49/01i; 10Ob62/22y; 6Ob100/25m',
   citation: {
-    kurztitel: '1Ob49/01i; 10Ob62/22y; 6Ob100/25m',
     langtitel: null,
     kundmachungsorgan: null,
     paragraph: null,
@@ -195,9 +179,7 @@ export const DSB_DOCUMENT: SearchDocument = {
   dokumentnummer: 'DSBT_20260101_2025_1_043_098_00',
   applikation: 'Dsk',
   titel: 'Geheimhaltung, Löschung, Rechtmäßigkeit der Verarbeitung',
-  kurztitel: null,
   citation: {
-    kurztitel: null,
     langtitel: null,
     kundmachungsorgan: null,
     paragraph: null,

@@ -203,6 +203,25 @@ describe('toViewModel — law rows', () => {
     expect(row.title).toBe('§ 0 Allgemeines bürgerliches Gesetzbuch (JGS Nr. 946/1811)');
   });
 
+  it('builds a complete row from the lean server shape', () => {
+    const lean = {
+      dokumentnummer: 'NOR40052760',
+      applikation: 'BrKons',
+      titel: 'Allgemeines bürgerliches Gesetzbuch',
+      citation: { langtitel: null, inkrafttreten: '2002-01-01', ausserkrafttreten: null },
+      citation_display: '§ 1295 ABGB',
+      content_urls: { html: 'https://www.ris.bka.gv.at/x.html', pdf: null },
+      dokument_url: null,
+    };
+
+    const [row] = toViewModel({ ...LAW_RESULT, documents: [lean] }).rows;
+
+    expect(row.title).toBe('§ 1295 ABGB');
+    expect(row.subtitle).toBe('Allgemeines bürgerliches Gesetzbuch');
+    expect(row.risUrl).toBe('https://www.ris.bka.gv.at/x.html');
+    expect(row.pdfUrl).toBeNull();
+  });
+
   it('shows the work title underneath and the application as a badge', () => {
     expect(row.subtitle).toBe('Allgemeines bürgerliches Gesetzbuch');
     expect(row.badge).toBe('Bundesrecht');
@@ -270,7 +289,7 @@ describe('toViewModel — court rows', () => {
 
 describe('toViewModel — defensive display', () => {
   it('falls back to the document number when neither citation nor title exist', () => {
-    const bare = { ...LAW_DOCUMENT, citation_display: '', titel: '', kurztitel: null };
+    const bare = { ...LAW_DOCUMENT, citation_display: '', titel: '' };
     const [row] = toViewModel({ ...LAW_RESULT, documents: [bare] }).rows;
 
     expect(row.title).toBe('NOR40198929');

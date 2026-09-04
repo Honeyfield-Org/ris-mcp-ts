@@ -48,7 +48,7 @@ Example queries:
         kundmachungsdatum_von: DateSchema.optional().describe('Publication date from (YYYY-MM-DD)'),
         kundmachungsdatum_bis: DateSchema.optional().describe('Publication date to (YYYY-MM-DD)'),
         seite: SeiteSchema.describe('Page number (default: 1)'),
-        limit: LimitSchema.describe('Results per page: 10, 20, 50, or 100 (default: 20)'),
+        limit: LimitSchema,
         response_format: z
           .enum(['markdown', 'json'])
           .default('markdown')

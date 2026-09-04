@@ -7,7 +7,7 @@
  * guard the success paths — an empty search result is a successful search.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { z } from 'zod';
 
 import { RISAPIError, RISParsingError, RISTimeoutError } from '../client.js';
@@ -17,7 +17,11 @@ import {
   executeSearchTool,
   formatErrorResponse,
 } from '../helpers.js';
-import { SearchResultOutputShape, type Document, type NormalizedSearchResults } from '../types.js';
+import {
+  SearchResultOutputShape,
+  type NormalizedSearchResults,
+  type StructuredDocument,
+} from '../types.js';
 
 // =============================================================================
 // Test Helpers
@@ -46,11 +50,11 @@ function createRawDocument(id: string) {
   };
 }
 
-function createNormalizedResults(documentCount: number): NormalizedSearchResults {
+function createNormalizedResults(documentCount: number, pageSize = 20): NormalizedSearchResults {
   return {
     hits: documentCount,
     page_number: 1,
-    page_size: 20,
+    page_size: pageSize,
     documents: Array.from({ length: documentCount }, (_, i) =>
       createRawDocument(`NOR4005276${i}`),
     ) as NormalizedSearchResults['documents'],
@@ -160,7 +164,7 @@ const SearchResultOutputSchema = z.object(SearchResultOutputShape);
 
 /** Read structuredContent as the search payload it is declared to be. */
 function structuredSearchResult(structuredContent: unknown) {
-  return structuredContent as { documents: Document[] } & Record<string, unknown>;
+  return structuredContent as { documents: StructuredDocument[] } & Record<string, unknown>;
 }
 
 describe('executeSearchTool structured content', () => {
@@ -185,8 +189,20 @@ describe('executeSearchTool structured content', () => {
 
     const [document] = structuredSearchResult(response.structuredContent).documents;
     expect(document.dokumentnummer).toBe('NOR40052760');
-    expect(document.kurztitel).toBe('ABGB');
+    expect(document.titel).toBe('ABGB');
     expect(document.content_urls.html).toBe('https://www.ris.bka.gv.at/Dokumente/x.html');
+  });
+
+  it('should ship the lean projection, not the full parsed document', async () => {
+    const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(1));
+
+    const response = await executeSearchTool(searchFn, {}, 'markdown', undefined, QUERY_ECHO);
+
+    const [document] = structuredSearchResult(response.structuredContent).documents;
+    expect(document).not.toHaveProperty('kurztitel');
+    expect(document.citation).not.toHaveProperty('kurztitel');
+    expect(document.content_urls).not.toHaveProperty('xml');
+    expect(document.content_urls).not.toHaveProperty('rtf');
   });
 
   it('should satisfy the declared output schema', async () => {
@@ -283,5 +299,77 @@ describe('executeSearchTool structured content', () => {
 
     expect(response.isError).toBeUndefined();
     expect(SearchResultOutputSchema.safeParse(response.structuredContent).success).toBe(true);
+  });
+
+  describe('over the structured-content budget', () => {
+    const BIG_PAGE = { ...QUERY_ECHO, limit: 100, seite: 1 };
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('should deliver a smaller RIS page size and repoint the echo', async () => {
+      vi.stubEnv('RIS_STRUCTURED_CONTENT_BUDGET', '20000');
+      const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(100, 100));
+
+      const response = await executeSearchTool(searchFn, {}, 'markdown', undefined, BIG_PAGE);
+
+      const structured = structuredSearchResult(response.structuredContent);
+      const pageSize = structured.page_size as number;
+      expect([10, 20, 50]).toContain(pageSize);
+      expect(structured.documents).toHaveLength(pageSize);
+      expect(structured.query).toMatchObject({ limit: pageSize, seite: 1 });
+      expect(structured.notice).toMatch(/^Seitengröße von 100 auf \d+ reduziert/);
+      expect(JSON.stringify(response.structuredContent).length).toBeLessThanOrEqual(20000);
+    });
+
+    it('should describe the delivered page in the text block too', async () => {
+      vi.stubEnv('RIS_STRUCTURED_CONTENT_BUDGET', '20000');
+      const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(100, 100));
+
+      const response = await executeSearchTool(searchFn, {}, 'markdown', undefined, BIG_PAGE);
+
+      const structured = structuredSearchResult(response.structuredContent);
+      const pageSize = structured.page_size as number;
+      const text = response.content[0].text;
+      expect(text).toContain(`(Seite 1 von ${Math.ceil(100 / pageSize)})`);
+      expect(text).toContain(structured.notice as string);
+      // The last listed hit is the last delivered one, not the 100th.
+      expect(text).toContain(`### ${pageSize}. `);
+      expect(text).not.toContain(`### ${pageSize + 1}. `);
+    });
+
+    it('should append the notice to the json text as well', async () => {
+      vi.stubEnv('RIS_STRUCTURED_CONTENT_BUDGET', '20000');
+      const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(100, 100));
+
+      const response = await executeSearchTool(searchFn, {}, 'json', undefined, BIG_PAGE);
+
+      const structured = structuredSearchResult(response.structuredContent);
+      expect(response.content[0].text).toContain(`"page_size": ${structured.page_size}`);
+      expect(response.content[0].text).toContain(structured.notice as string);
+    });
+
+    it('should still satisfy the declared output schema', async () => {
+      vi.stubEnv('RIS_STRUCTURED_CONTENT_BUDGET', '20000');
+      const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(100, 100));
+
+      const response = await executeSearchTool(searchFn, {}, 'markdown', undefined, BIG_PAGE);
+
+      expect(SearchResultOutputSchema.safeParse(response.structuredContent).success).toBe(true);
+    });
+
+    it('should leave a page within budget without a notice', async () => {
+      const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(20));
+
+      const response = await executeSearchTool(searchFn, {}, 'markdown', undefined, {
+        ...QUERY_ECHO,
+        limit: 20,
+        seite: 1,
+      });
+
+      expect(response.structuredContent).not.toHaveProperty('notice');
+      expect(response.content[0].text).not.toContain('reduziert');
+    });
   });
 });

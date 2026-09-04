@@ -60,7 +60,7 @@ Example queries:
         kundmachungsdatum_bis: DateSchema.optional().describe('Announcement date to (YYYY-MM-DD)'),
         im_ris_seit: z.enum(IM_RIS_SEIT_VALUES).optional().describe('Filter by time in RIS'),
         seite: SeiteSchema.describe('Page number (default: 1)'),
-        limit: LimitSchema.describe('Results per page: 10, 20, 50, or 100 (default: 20)'),
+        limit: LimitSchema,
         response_format: z
           .enum(['markdown', 'json'])
           .default('markdown')

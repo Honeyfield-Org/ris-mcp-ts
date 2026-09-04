@@ -15,17 +15,14 @@ import {
   JUDIKATUR_RECHTSGEBIETE,
 } from '../../src/facets.js';
 
-/** URLs of the renditions RIS offers for a document. */
+/** URLs of the renditions RIS offers for a document — the two the widget links. */
 export interface ContentUrls {
-  xml?: string | null;
   html?: string | null;
-  rtf?: string | null;
   pdf?: string | null;
 }
 
 /** Citation metadata as delivered by the server. */
 export interface Citation {
-  kurztitel?: string | null;
   langtitel?: string | null;
   kundmachungsorgan?: string | null;
   paragraph?: string | null;
@@ -37,15 +34,15 @@ export interface Citation {
 /**
  * One document of a search result.
  *
- * Mirrors `DocumentSchema` in `src/types.ts`. The four court fields are present
- * on Judikatur documents and absent on laws, so their presence — not their
- * value — identifies a court decision; `null` means RIS supplied nothing.
+ * Mirrors `StructuredDocumentSchema` in `src/types.ts`. The four court fields
+ * are present on Judikatur documents and absent on laws, so their presence —
+ * not their value — identifies a court decision; `null` means RIS supplied
+ * nothing.
  */
 export interface SearchDocument {
   dokumentnummer: string;
   applikation: string;
   titel: string;
-  kurztitel?: string | null;
   citation: Citation;
   citation_display: string;
   content_urls: ContentUrls;
@@ -347,19 +344,19 @@ function titleFor(doc: SearchDocument, caseNumbers: string[]): string {
   const citation = text(doc.citation_display);
   if (citation && citation !== doc.dokumentnummer) return citation;
 
-  return caseNumbers[0] || text(doc.titel) || text(doc.kurztitel) || doc.dokumentnummer;
+  return caseNumbers[0] || text(doc.titel) || doc.dokumentnummer;
 }
 
 /**
  * Pick the line under the headline, or nothing.
  *
- * RIS sets `titel` and `kurztitel` of a Judikatur document to its
- * `geschaeftszahl` verbatim (confirmed across a live `ris_judikatur` page), so
- * on those the subtitle would only restate the case chain — which the row
- * already advertises with „+N weitere" and shows in full once expanded.
+ * RIS sets `titel` of a Judikatur document to its `geschaeftszahl` verbatim
+ * (confirmed across a live `ris_judikatur` page), so on those the subtitle
+ * would only restate the case chain — which the row already advertises with
+ * „+N weitere" and shows in full once expanded.
  */
 function subtitleFor(doc: SearchDocument, title: string): string {
-  const subtitle = text(doc.kurztitel) || text(doc.titel);
+  const subtitle = text(doc.titel);
 
   if (subtitle === title || subtitle === text(doc.geschaeftszahl)) return '';
   return subtitle;
