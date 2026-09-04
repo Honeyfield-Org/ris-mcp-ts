@@ -130,6 +130,15 @@ describe('tool output schema declarations', () => {
     expect(Object.keys(properties)).toEqual(
       expect.arrayContaining(['total_hits', 'page', 'page_size', 'has_more', 'documents', 'query']),
     );
+    // The lean document shape is the contract, not the parser's full one (#106).
+    const documents = properties.documents as { items?: { properties?: Record<string, unknown> } };
+    const documentKeys = Object.keys(documents.items?.properties ?? {});
+    expect(documentKeys).toContain('citation_display');
+    expect(documentKeys).not.toContain('kurztitel');
+    const contentUrls = documents.items?.properties?.content_urls as {
+      properties?: Record<string, unknown>;
+    };
+    expect(Object.keys(contentUrls.properties ?? {})).toEqual(['html', 'pdf']);
   });
 
   it('should declare the guaranteed tool key inside the query schema', async () => {
@@ -190,7 +199,7 @@ describe('search tool structured content', () => {
 
     const { documents } = result.structuredContent as { documents: { titel: string }[] };
     expect(documents).toHaveLength(1);
-    expect(documents[0]).toMatchObject({ dokumentnummer: 'NOR40052761', kurztitel: 'ABGB' });
+    expect(documents[0]).toMatchObject({ dokumentnummer: 'NOR40052761', titel: 'ABGB' });
   });
 
   it('should keep the markdown text alongside the structured payload', async () => {

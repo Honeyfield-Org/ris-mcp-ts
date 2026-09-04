@@ -7,6 +7,7 @@
 import { RISAPIError, RISParsingError, RISTimeoutError } from './client.js';
 import { formatSearchResults, truncateResponse } from './formatting.js';
 import { parseSearchResults } from './parser.js';
+import { toStructuredDocument } from './structured-search.js';
 import { type NormalizedSearchResults, limitToDokumenteProSeite } from './types.js';
 
 // =============================================================================
@@ -189,8 +190,10 @@ export type SearchFunction = (
  * Execute a search tool and return formatted results.
  * Handles the common try-catch, parsing, formatting, and truncation logic.
  *
- * The formatted text stays the primary payload; the parsed result is attached as
- * `structuredContent` so clients can consume the hits without re-parsing prose.
+ * The formatted text stays the complete rendering; the parsed result is
+ * attached as `structuredContent` in the lean shape of `StructuredDocumentSchema`
+ * (see structured-search.ts) so clients can consume the hits without re-parsing
+ * prose.
  * Error results carry no structured payload — there is no result to describe.
  *
  * `signal` is the MCP request's cancellation signal (`extra.signal`). It reaches
@@ -217,7 +220,11 @@ export async function executeSearchTool(
     const result = truncateResponse(formatted);
     return {
       ...createMcpResponse(result),
-      structuredContent: { ...searchResult, query: queryEcho },
+      structuredContent: {
+        ...searchResult,
+        documents: searchResult.documents.map(toStructuredDocument),
+        query: queryEcho,
+      },
     };
   } catch (e) {
     if (signal?.aborted) {

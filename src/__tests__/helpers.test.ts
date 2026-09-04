@@ -17,7 +17,11 @@ import {
   executeSearchTool,
   formatErrorResponse,
 } from '../helpers.js';
-import { SearchResultOutputShape, type Document, type NormalizedSearchResults } from '../types.js';
+import {
+  SearchResultOutputShape,
+  type NormalizedSearchResults,
+  type StructuredDocument,
+} from '../types.js';
 
 // =============================================================================
 // Test Helpers
@@ -160,7 +164,7 @@ const SearchResultOutputSchema = z.object(SearchResultOutputShape);
 
 /** Read structuredContent as the search payload it is declared to be. */
 function structuredSearchResult(structuredContent: unknown) {
-  return structuredContent as { documents: Document[] } & Record<string, unknown>;
+  return structuredContent as { documents: StructuredDocument[] } & Record<string, unknown>;
 }
 
 describe('executeSearchTool structured content', () => {
@@ -185,8 +189,20 @@ describe('executeSearchTool structured content', () => {
 
     const [document] = structuredSearchResult(response.structuredContent).documents;
     expect(document.dokumentnummer).toBe('NOR40052760');
-    expect(document.kurztitel).toBe('ABGB');
+    expect(document.titel).toBe('ABGB');
     expect(document.content_urls.html).toBe('https://www.ris.bka.gv.at/Dokumente/x.html');
+  });
+
+  it('should ship the lean projection, not the full parsed document', async () => {
+    const searchFn = vi.fn().mockResolvedValue(createNormalizedResults(1));
+
+    const response = await executeSearchTool(searchFn, {}, 'markdown', undefined, QUERY_ECHO);
+
+    const [document] = structuredSearchResult(response.structuredContent).documents;
+    expect(document).not.toHaveProperty('kurztitel');
+    expect(document.citation).not.toHaveProperty('kurztitel');
+    expect(document.content_urls).not.toHaveProperty('xml');
+    expect(document.content_urls).not.toHaveProperty('rtf');
   });
 
   it('should satisfy the declared output schema', async () => {

@@ -212,6 +212,22 @@ export const DocumentSchema = z.object({
 export type Document = z.infer<typeof DocumentSchema>;
 
 /**
+ * One document as it travels in a search tool's `structuredContent`.
+ *
+ * A projection of {@link DocumentSchema} without its redundancies: `kurztitel`
+ * always equals `titel` (the parser derives both from the same field),
+ * `citation.kurztitel` repeats it once more, and the xml/rtf renditions are the
+ * html URL with another extension — together 35 % of a Judikatur page. A
+ * decision loses nothing: its case number stays in `geschaeftszahl`. The text
+ * block keeps the full shape (#106).
+ */
+export const StructuredDocumentSchema = DocumentSchema.omit({ kurztitel: true }).extend({
+  citation: CitationSchema.omit({ kurztitel: true }),
+  content_urls: ContentUrlSchema.pick({ html: true, pdf: true }),
+});
+export type StructuredDocument = z.infer<typeof StructuredDocumentSchema>;
+
+/**
  * Paginated search results from the RIS API.
  */
 export const SearchResultSchema = z.object({
@@ -237,7 +253,7 @@ export const SearchResultOutputShape = {
   page: z.number().describe('Page number of this result set (1-based)'),
   page_size: z.number().describe('Number of documents per page'),
   has_more: z.boolean().describe('Whether further result pages are available'),
-  documents: z.array(DocumentSchema).describe('The documents on this page'),
+  documents: z.array(StructuredDocumentSchema).describe('The documents on this page'),
   query: z
     .object({
       tool: z
