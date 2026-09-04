@@ -261,6 +261,12 @@ export const SearchResultOutputShape = {
   page: z.number().describe('Page number of this result set (1-based)'),
   page_size: z.number().describe('Number of documents per page'),
   has_more: z.boolean().describe('Whether further result pages are available'),
+  notice: z
+    .string()
+    .optional()
+    .describe(
+      'Present when the page was delivered at a smaller size than requested to fit the payload budget — page, page_size and query already describe the delivered page; page with query.limit',
+    ),
   documents: z.array(StructuredDocumentSchema).describe('The documents on this page'),
   query: z
     .object({

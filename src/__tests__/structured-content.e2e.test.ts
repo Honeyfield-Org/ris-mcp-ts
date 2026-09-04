@@ -69,11 +69,15 @@ function getResourceLink(
 }
 
 /** Search API response body with the given document references. */
-function searchBody(documents: unknown[]): string {
+function searchBody(documents: unknown[], pageSize = 10): string {
   return JSON.stringify({
     OgdSearchResult: {
       OgdDocumentResults: {
-        Hits: { '#text': String(documents.length), '@pageNumber': '1', '@pageSize': '10' },
+        Hits: {
+          '#text': String(documents.length),
+          '@pageNumber': '1',
+          '@pageSize': String(pageSize),
+        },
         OgdDocumentReference: documents,
       },
     },
@@ -176,6 +180,7 @@ describe('tool output schema declarations', () => {
 describe('search tool structured content', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it('should return structuredContent the SDK validated against the declared schema', async () => {
@@ -336,6 +341,37 @@ describe('search tool structured content', () => {
 
     expect(result.isError).toBe(true);
     expect(result.structuredContent).toBeUndefined();
+  });
+
+  it('should fit an over-budget page by downgrading the page size, validated end to end', async () => {
+    vi.stubEnv('RIS_STRUCTURED_CONTENT_BUDGET', '5000');
+    const documents = Array.from({ length: 100 }, (_, i) =>
+      documentReference(`NOR${String(i).padStart(8, '0')}`, DOCUMENT_HTML_URL),
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => okResponse(searchBody(documents, 100))),
+    );
+
+    const result = await client.callTool({
+      name: 'ris_bundesrecht',
+      arguments: { suchworte: 'Eigentum', limit: 100 },
+    });
+
+    expect(result.isError).not.toBe(true);
+    const structured = result.structuredContent as {
+      page_size: number;
+      documents: unknown[];
+      query: { limit: number; seite: number };
+      notice?: string;
+    };
+    expect([10, 20, 50]).toContain(structured.page_size);
+    expect(structured.documents).toHaveLength(structured.page_size);
+    expect(structured.query).toMatchObject({ limit: structured.page_size, seite: 1 });
+    expect(structured.notice).toMatch(/^Seitengröße von 100 auf \d+ reduziert/);
+    expect(JSON.stringify(result.structuredContent).length).toBeLessThanOrEqual(5000);
+    expect(getContent(result)[0]).toMatchObject({ type: 'text' });
+    expect((getContent(result)[0] as { text: string }).text).toContain(structured.notice);
   });
 });
 

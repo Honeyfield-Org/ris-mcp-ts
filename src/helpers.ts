@@ -7,7 +7,7 @@
 import { RISAPIError, RISParsingError, RISTimeoutError } from './client.js';
 import { formatSearchResults, truncateResponse } from './formatting.js';
 import { parseSearchResults } from './parser.js';
-import { toStructuredDocument } from './structured-search.js';
+import { fitStructuredSearchPage } from './structured-search.js';
 import { type NormalizedSearchResults, limitToDokumenteProSeite } from './types.js';
 
 // =============================================================================
@@ -205,6 +205,13 @@ export type SearchFunction = (
  * so a client can page through the results without reconstructing the call. It is
  * required, not optional: a search tool added later could otherwise omit it and
  * silently strand its clients without pagination for that one tool.
+ *
+ * The page is fitted into the structured-content budget *before* it is
+ * formatted (see `fitStructuredSearchPage`), so the text block and the
+ * structured payload always describe the same page; a downgrade notice is
+ * appended to the text after truncation so it can never be cut off, and
+ * travels as `structuredContent.notice` for the clients that show the model
+ * the structured payload instead of the text (#106).
  */
 export async function executeSearchTool(
   searchFn: SearchFunction,
@@ -216,15 +223,12 @@ export async function executeSearchTool(
   try {
     const apiResponse = await searchFn(params, undefined, signal);
     const searchResult = parseSearchResults(apiResponse as NormalizedSearchResults);
-    const formatted = formatSearchResults(searchResult, responseFormat);
-    const result = truncateResponse(formatted);
+    const page = fitStructuredSearchPage(searchResult, queryEcho);
+    const formatted = formatSearchResults(page.result, responseFormat);
+    const text = truncateResponse(formatted);
     return {
-      ...createMcpResponse(result),
-      structuredContent: {
-        ...searchResult,
-        documents: searchResult.documents.map(toStructuredDocument),
-        query: queryEcho,
-      },
+      ...createMcpResponse(page.notice === null ? text : `${text}\n\n---\n${page.notice}`),
+      structuredContent: page.structured,
     };
   } catch (e) {
     if (signal?.aborted) {
