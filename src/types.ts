@@ -125,10 +125,18 @@ export type DokumenteProSeite = z.infer<typeof DokumenteProSeiteSchema>;
  * Only 10/20/50/100 map cleanly to the RIS API's DokumenteProSeite enum;
  * any other value would be silently coerced to 20, so the schema rejects it
  * up front instead.
+ *
+ * The description is the model's only cost signal: `limit` is chosen by the
+ * model, not the user, and without it a broad search reached for 100 and lost
+ * the whole answer to the client's result limit (#106). It lives here rather
+ * than on the eleven tools so it cannot drift between them.
  */
 export const LimitSchema = z
   .union([z.literal(10), z.literal(20), z.literal(50), z.literal(100)])
-  .default(20);
+  .default(20)
+  .describe(
+    'Results per page: 10, 20, 50 or 100 (default: 20). Every hit costs about 1-2k characters of structured payload, so prefer 20 for browsing and 50 for a broad survey; a page that would exceed the payload budget is delivered at the next smaller page size and says so (page_size, query.limit and notice).',
+  );
 export type Limit = z.infer<typeof LimitSchema>;
 
 /**

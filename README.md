@@ -225,7 +225,7 @@ Search Austrian federal laws such as ABGB, StGB, UGB, and more.
 | `applikation` | string | "BrKons" (consolidated, default), "Begut" (drafts), "BgblAuth" (gazette), "Erv" (English translations) |
 | `fassung_vom` | string | Date for historical version (YYYY-MM-DD) |
 | `seite` | number | Page number (default: 1) |
-| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20) |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" (default) or "json" |
 
 All parameters are optional. At least one search parameter (`suchworte`, `titel`, or `paragraph`) should be provided.
@@ -252,7 +252,7 @@ Search state laws of the nine Austrian provinces.
 | `gesetzesnummer` | string | Exact law number (Gesetzesnummer) of a specific state law |
 | `applikation` | string | "LrKons" (consolidated, default) |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 </details>
@@ -280,7 +280,7 @@ Search court decisions from Austrian courts.
 | `entscheidungsdatum_bis` | string | Decision date to (YYYY-MM-DD) |
 | `sortierung` | string | Sort by decision date: "datum_auf" (oldest first) or "datum_ab" (newest first) |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 **Available `gerichtsbarkeit` values (16):**
@@ -322,7 +322,7 @@ Search the Federal Law Gazette (BGBl) — official publications of federal legis
 | `titel` | string | Search in titles |
 | `applikation` | string | "BgblAuth" (authentic from 2004, default), "BgblPdf" (PDF), "BgblAlt" (1945–2003) |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 </details>
@@ -343,7 +343,7 @@ Search State Law Gazettes (LGBl) — official publications of state legislation.
 | `titel` | string | Search in titles |
 | `applikation` | string | "LgblAuth" (authentic, default), "Lgbl" (general), "LgblNO" (Niederoesterreich) |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 </details>
@@ -366,7 +366,7 @@ Search government bills — draft legislation submitted to parliament.
 | `sortierung_richtung` | string | Ascending or Descending |
 | `sortierung_spalte` | string | Kurztitel, EinbringendeStelle, Beschlussdatum |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 </details>
@@ -428,7 +428,7 @@ Search announcements from district administrative authorities.
 | `kundmachungsdatum_bis` | string | Date to (YYYY-MM-DD) |
 | `im_ris_seit` | string | Added recently: EinerWoche, ZweiWochen, EinemMonat, DreiMonaten, SechsMonaten, EinemJahr |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 </details>
@@ -449,7 +449,7 @@ Search municipal law — local ordinances and regulations.
 | `applikation` | string | "Gr" (municipal law, default) or "GrA" (official gazettes) |
 | `im_ris_seit` | string | Added recently |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 Additional parameters depend on the selected application. See `Gr` (municipal law) and `GrA` (official gazettes) specific parameters in the source code.
@@ -472,7 +472,7 @@ Search miscellaneous legal collections and specialized databases.
 | `datum_bis` | string | Date to (YYYY-MM-DD) |
 | `im_ris_seit` | string | Added recently |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 **Available collections:**
@@ -506,7 +506,7 @@ Track document creation, modification, and deletion across the RIS database.
 | `aenderungen_bis` | string | Changes to date (YYYY-MM-DD) |
 | `include_deleted` | boolean | Include deleted documents (default: false) |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 **Available applications (36):**
@@ -537,7 +537,7 @@ Search state ordinance gazettes (Verordnungsblätter).
 | `kundmachungsdatum_von` | string | Date from (YYYY-MM-DD) |
 | `kundmachungsdatum_bis` | string | Date to (YYYY-MM-DD) |
 | `seite` | number | Page number |
-| `limit` | number | Results per page |
+| `limit` | number | Results per page: 10, 20, 50, 100 (default: 20). Prefer 20; a page over the structured-payload budget is delivered at the next smaller size (see [Result size](#result-size)) |
 | `response_format` | string | "markdown" or "json" |
 
 </details>

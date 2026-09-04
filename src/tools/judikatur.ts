@@ -172,7 +172,7 @@ Example queries:
           'Sort by decision date: "datum_auf" (oldest first) or "datum_ab" (newest first).',
         ),
         seite: SeiteSchema.describe('Page number'),
-        limit: LimitSchema.describe('Results per page: 10, 20, 50, or 100 (default: 20)'),
+        limit: LimitSchema,
         response_format: z
           .enum(['markdown', 'json'])
           .default('markdown')

@@ -146,4 +146,9 @@ describe('LimitSchema', () => {
     const result = LimitSchema.parse(undefined);
     expect(result).toBe(20);
   });
+
+  it('should tell the model what a page costs and what happens over budget', () => {
+    expect(LimitSchema.description).toContain('20 for browsing');
+    expect(LimitSchema.description).toContain('payload budget');
+  });
 });
