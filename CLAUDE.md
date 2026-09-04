@@ -29,8 +29,8 @@ generated sources are never stale; you rarely call it by hand.
 ## Testing
 
 ```bash
-pnpm test                # Server unit tests (1082 tests, 22 files) — node env
-pnpm run test:ui         # Widget tests under ui/ (435 tests, 10 files) — jsdom env
+pnpm test                # Server unit tests (1118 tests, 23 files) — node env
+pnpm run test:ui         # Widget tests under ui/ (436 tests, 10 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
 pnpm run test:integration # Integration tests (separate config, requires network)
