@@ -301,11 +301,11 @@ describe('structuredContentBudget', () => {
     vi.unstubAllEnvs();
   });
 
-  it('defaults to 60 000 characters', () => {
+  it('defaults to 45 000 characters', () => {
     vi.stubEnv('RIS_STRUCTURED_CONTENT_BUDGET', undefined);
 
-    expect(structuredContentBudget()).toBe(60_000);
-    expect(DEFAULT_STRUCTURED_CONTENT_BUDGET).toBe(60_000);
+    expect(structuredContentBudget()).toBe(45_000);
+    expect(DEFAULT_STRUCTURED_CONTENT_BUDGET).toBe(45_000);
   });
 
   it('reads a positive integer from RIS_STRUCTURED_CONTENT_BUDGET', () => {
@@ -317,7 +317,7 @@ describe('structuredContentBudget', () => {
   it.each(['abc', '0', '-5', '1.5', ''])('falls back to the default for %j', (raw) => {
     vi.stubEnv('RIS_STRUCTURED_CONTENT_BUDGET', raw);
 
-    expect(structuredContentBudget()).toBe(60_000);
+    expect(structuredContentBudget()).toBe(45_000);
   });
 
   it('is the default budget of fitStructuredSearchPage', () => {
@@ -326,5 +326,26 @@ describe('structuredContentBudget', () => {
     const page = fitStructuredSearchPage(resultOf(100, 100), ECHO);
 
     expect(page.downgrade).toEqual({ from: 100, to: 20 });
+  });
+
+  it('downgrades a 50-hit page that Claude Code rejects at ~58k under the default budget', () => {
+    vi.stubEnv('RIS_STRUCTURED_CONTENT_BUDGET', undefined);
+
+    // 50 documents that serialize to just under 60 000 characters — the
+    // 58 659-character page measured live on 2026-09-08 (#106): under the old
+    // 60 000 default it was delivered as is and Claude Code rejected it.
+    const heavy = resultOf(50, 50);
+    const unpadded = JSON.stringify(
+      fitStructuredSearchPage(heavy, { ...ECHO, limit: 50 }, Number.MAX_SAFE_INTEGER).structured,
+    ).length;
+    const padding = 'x'.repeat(Math.ceil((58_000 - unpadded) / 50));
+    for (const doc of heavy.documents) {
+      doc.titel = doc.titel + padding;
+    }
+
+    const page = fitStructuredSearchPage(heavy, { ...ECHO, limit: 50 });
+
+    expect(page.downgrade).toEqual({ from: 50, to: 20 });
+    expect(JSON.stringify(page.structured).length).toBeLessThanOrEqual(45_000);
   });
 });
