@@ -51,7 +51,7 @@
 
 ## Offen
 
-- MCP-Registry-Namespace: der Eintrag `io.github.philrox/ris` steht seit 1.0.2 (2026-02-09) still — kein Workflow publiziert ihn, und GitHub-OIDC aus diesem Repo vergibt nur `io.github.<Repo-Owner>/*`, also `io.github.Honeyfield-Org/*` (Registry-Quelle: `buildPermissions` in `internal/api/handlers/v0/auth/github_oidc.go`); Servernamen sind unveränderlich. Entweder nach jedem Release manuell als `philrox` publizieren oder einmalig auf `io.github.honeyfield-org/ris` neu publizieren und den alten Eintrag deprecaten — Ablauf in CONTRIBUTING.md „MCP Registry“ (Stand 2026-09-08).
+- MCP-Registry-Namespace: der Eintrag `io.github.philrox/ris` steht seit 1.0.2 (2026-02-09) still — kein Workflow publiziert ihn, und GitHub-OIDC aus diesem Repo vergibt nur `io.github.<Repo-Owner>/*`, also `io.github.Honeyfield-Org/*` (Registry-Quelle: `buildPermissions` in `internal/api/handlers/v0/auth/github_oidc.go`); Servernamen sind unveränderlich. Entweder nach jedem Release manuell als `philrox` publizieren oder einmalig auf `io.github.Honeyfield-Org/ris` (exakte Schreibweise, das Prefix-Matching ist case-sensitiv) neu publizieren und den alten Eintrag deprecaten — Ablauf in CONTRIBUTING.md „MCP Registry“ (Stand 2026-09-08).
 - Elicitation (SDK v2) als Kandidat für den Auth-/Paywall-Flow aus Issue #24 — entscheidet den v2-Migrationszeitpunkt mit.
 
 ## Verworfen

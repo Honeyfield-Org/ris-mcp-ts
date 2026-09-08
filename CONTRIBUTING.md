@@ -311,13 +311,17 @@ equal its `mcpName`. The repository URL already points at
 gitignored.
 
 To move to the org namespace instead: set `name` in `server.json` and `mcpName`
-in `package.json` to `io.github.honeyfield-org/ris`, publish it — the
-interactive login needs an org **Owner**, or the release workflow can do it
-with `mcp-publisher login github-oidc` and `id-token: write` — then mark the old
-entry deprecated and update the README badge:
+in `package.json` to `io.github.Honeyfield-Org/ris` — **exact case**: the
+registry grants the OIDC namespace as GitHub spells the owner
+(`repository_owner` claim) and matches it with a case-sensitive prefix check —
+then release, so npm carries the new `mcpName` (the registry validates the
+package against it), publish the server — the interactive login needs an org
+**Owner**, or the release workflow can do it with `mcp-publisher login
+github-oidc` and `id-token: write` — and finally mark the old entry deprecated
+and update the README badge:
 
 ```bash
-mcp-publisher status --status deprecated --all-versions --message "Moved to io.github.honeyfield-org/ris" io.github.philrox/ris
+mcp-publisher status --status deprecated --all-versions --message "Moved to io.github.Honeyfield-Org/ris" io.github.philrox/ris
 ```
 
 ## Questions?
