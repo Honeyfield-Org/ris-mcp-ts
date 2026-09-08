@@ -285,7 +285,7 @@ Each tool lives in `src/tools/<name>.ts` and exports a `register<Name>Tool(serve
 
 - **Timeout**: 30,000ms (30 seconds)
 - **Character limit**: 25,000 characters (formatting.ts `CHARACTER_LIMIT`, exported — it is also the chunk size of `ris_dokument_abschnitt`)
-- **Structured-content budget**: 60,000 characters of serialized `structuredContent` per search page (structured-search.ts `DEFAULT_STRUCTURED_CONTENT_BUDGET`, env `RIS_STRUCTURED_CONTENT_BUDGET`); a page over it is delivered at the next smaller RIS page size whose offset stays exact, never by cutting `documents[]`
+- **Structured-content budget**: 45,000 characters of serialized `structuredContent` per search page (structured-search.ts `DEFAULT_STRUCTURED_CONTENT_BUDGET`, env `RIS_STRUCTURED_CONTENT_BUDGET`); a page over it is delivered at the next smaller RIS page size whose offset stays exact, never by cutting `documents[]`
 - **Document cache**: 10 entries / 1,000,000 characters / 10 min TTL per `registerAllTools()` call (document-cache.ts)
 - **Pagination**: 10/20/50/100 documents per page (mapped via `limitToDokumenteProSeite()` in types.ts)
 - **Allowed document hosts**: `data.bka.gv.at`, `www.ris.bka.gv.at`, `ris.bka.gv.at` (SSRF protection in client.ts)
@@ -662,7 +662,7 @@ keeps the parser's full shape and is unchanged by any of this.
 
 **The structured payload has a character budget, the text block has its own.**
 `fitStructuredSearchPage()` (structured-search.ts) serializes the payload and,
-over `DEFAULT_STRUCTURED_CONTENT_BUDGET` (60,000; env
+over `DEFAULT_STRUCTURED_CONTENT_BUDGET` (45,000; env
 `RIS_STRUCTURED_CONTENT_BUDGET`), delivers the page at the largest smaller RIS
 page size whose offset arithmetic stays exact — `(seite − 1) · limit` must be a
 multiple of the new size, so page 1 accepts any and deeper pages fall back to a
@@ -676,9 +676,13 @@ Code measures exactly `JSON.stringify(structuredContent)` against
 `MAX_MCP_OUTPUT_TOKENS` (25,000 tokens), replaces the whole result with a file
 pointer when over, and shows the model the structured JSON instead of the text
 block whenever a tool returns both — measured live 2026-09-04 with a rejected
-117,770-character `ris_judikatur limit: 50` page; claude.ai fails between 45k
-and 112k characters (#106). `LimitSchema`'s description is the model's cost
-signal for `limit`.
+117,770-character `ris_judikatur limit: 50` page, and on 2026-09-08 with the
+60,000 default still in place: 58,659 and 59,362 characters rejected, 46,311
+and 41,515 accepted, which is why the default is 45,000 (#106). claude.ai has
+no observed size limit — its widget rendered 138,050 characters completely
+and the model there reads the text block, not the structured payload
+(reporter measurement 2026-09-04). `LimitSchema`'s description is the model's
+cost signal for `limit`.
 
 Both document tools declare an `outputSchema` whose payload *carries the
 document text itself*. That is what makes it safe: clients may treat the text
