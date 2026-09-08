@@ -576,12 +576,16 @@ Search state ordinance gazettes (Verordnungsblätter).
 ### Result size
 
 The text block of every tool is capped at 25,000 characters. The search tools'
-`structuredContent` has its own budget of 60,000 characters (serialized); a
+`structuredContent` has its own budget of 45,000 characters (serialized); a
 page that would exceed it is delivered at the next smaller RIS page size
 (100 → 50 → 20 → 10) with `page`, `page_size`, `has_more` and the `query` echo
 rewritten to that size and a German `notice` in both the text and the payload.
 Page with `query.limit` and `query.seite` as echoed. Prefer `limit: 20`; 50
 suits a broad survey; 100 is only ever delivered when the hits are small.
+The default is calibrated to Claude Code, which rejects a result whose
+structured payload exceeds 25,000 tokens (measured: rejected at 58,659
+characters, accepted at 46,311; the margin below that covers content that
+tokenizes worse); claude.ai renders far larger payloads and needs no budget.
 Self-hosters whose client accepts larger results can raise the budget with the
 `RIS_STRUCTURED_CONTENT_BUDGET` environment variable (a positive integer).
 
