@@ -20,3 +20,8 @@ src/generated/
 # playwright-report/ only appears if an html reporter is ever configured.
 test-results/
 playwright-report/
+
+# Local tool artefacts: the Playwright MCP plugin writes screenshots and traces
+# to .playwright-mcp/, the superpowers skills keep their plans in .superpowers/.
+.playwright-mcp/
+.superpowers/
