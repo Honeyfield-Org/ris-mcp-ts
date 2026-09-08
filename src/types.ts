@@ -135,7 +135,7 @@ export const LimitSchema = z
   .union([z.literal(10), z.literal(20), z.literal(50), z.literal(100)])
   .default(20)
   .describe(
-    'Results per page: 10, 20, 50 or 100 (default: 20). Every hit costs about 1-2k characters of structured payload, so prefer 20 for browsing and 50 for a broad survey; a page that would exceed the payload budget is delivered at the next smaller page size and says so (page_size, query.limit and notice).',
+    'Results per page: 10, 20, 50 or 100 (default: 20). Every hit costs about 1k characters of structured payload, so prefer 20 for browsing and 50 for a broad survey; a page that would exceed the payload budget is delivered at the next smaller page size and says so (page_size, query.limit and notice).',
   );
 export type Limit = z.infer<typeof LimitSchema>;
 

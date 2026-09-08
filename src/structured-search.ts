@@ -39,8 +39,9 @@ export function toStructuredDocument(doc: Document): StructuredDocument {
  * live on 2026-09-08 against production: 58 659 and 59 362 characters
  * (Judikatur pages of 50) were rejected, 46 311 and 41 515 were accepted —
  * so the previous default of 60 000 let pages through that the client then
- * dropped (#106). 45 000 sits below every accepted size with a margin for
- * content that tokenizes worse than court decisions. claude.ai has no
+ * dropped (#106). 45 000 sits just below the smallest accepted Judikatur
+ * page (46 311) and well under the smallest rejected one, leaving a margin
+ * for content that tokenizes worse than court decisions. claude.ai has no
  * observed size limit: its widget rendered 138 050 characters completely,
  * and the model there reads the text block rather than this payload
  * (reporter measurement, 2026-09-04). The widget's 64 000-character
