@@ -266,16 +266,19 @@ Found a bug or have a feature request? Please [open an issue](../../issues) usin
 
 ## Releasing (Maintainers)
 
-Releases are automated via GitHub Actions with [OIDC trusted publishing](https://docs.npmjs.com/trusted-publishers/) — no npm tokens required.
+Releases are automated via GitHub Actions with [OIDC trusted publishing](https://docs.npmjs.com/trusted-publishers/) — no npm tokens required. Direct pushes to `main` are blocked, so the version bump goes through a pull request like any other change, and the tag is set on the merged commit:
 
-```bash
-pnpm version patch   # or minor / major
-git push && git push --tags
-```
+1. On a branch, bump `version` in `package.json` and both `version` fields in `server.json` (`.version` and `.packages[0].version`) to the new number. Do not use `pnpm version` — it would also create a local tag on the unmerged commit.
+2. Commit as `chore(release): x.y.z (#<PRs since the last release>)`, open a PR, wait for CI, merge.
+3. Tag the merged commit on `main` and push the tag:
 
-This will:
-1. Bump the version in `package.json` and create a git tag (e.g., `v1.0.1`)
-2. Trigger the release workflow which runs all checks, builds, creates a GitHub Release, and publishes to npm with provenance attestations
+   ```bash
+   git fetch origin main
+   git tag vx.y.z origin/main
+   git push origin vx.y.z
+   ```
+
+The tag triggers the release workflow: `pnpm run check` and build, a GitHub Release with notes grouped by commit type, npm publish with provenance, the MCP Registry publish (below), the Docker image to ECR and the gateway deploy — which fails the run if the live `initialize` version does not match the tag. Roll back a deploy by running the "Deploy Gateway" workflow by hand with an existing image tag.
 
 ### MCP Registry
 
