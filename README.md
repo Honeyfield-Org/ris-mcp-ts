@@ -31,7 +31,7 @@ The server translates these natural language requests into structured API calls 
 
 ## Features
 
-- **12 specialized tools** covering all major RIS collections
+- **13 specialized tools** covering all major RIS collections
 - **Federal law** (ABGB, StGB, UGB, ...) and **state law** for all 9 provinces
 - **Court decisions** from 16 court types (Supreme Court, Constitutional Court, Administrative Court, ...)
 - **Law gazettes** — Federal (BGBl) and state (LGBl)
@@ -154,6 +154,7 @@ npx -y ris-mcp-ts
 | `ris_landesgesetzblatt` | Search State Law Gazettes (LGBl) |
 | `ris_regierungsvorlagen` | Search government bills |
 | `ris_dokument` | Retrieve full document text by ID or URL |
+| `ris_dokument_abschnitt` | Return one section of an open document by character offset (feeds the document viewer widget) |
 | `ris_bezirke` | Search district authority announcements |
 | `ris_gemeinden` | Search municipal law and regulations |
 | `ris_sonstige` | Search miscellaneous collections (8 sub-apps) |
@@ -405,6 +406,36 @@ At least one of `dokumentnummer` or `url` is required. Long documents are trunca
 | MRP, ERL, PRUEF, AVSV, SPG, KMGER | Cabinet protocols, decrees, trade exams, social insurance, health plans, court announcements |
 
 > The full routing registry lives in `DOCUMENT_ROUTES` (`src/client.ts`); unknown prefixes fall back to a Justiz search.
+
+</details>
+
+<details>
+<summary><strong>ris_dokument_abschnitt</strong> — Document Section</summary>
+
+Return one section of a document already open in the RIS document viewer. Intended for the viewer widget, not for direct use — for the full text of a document use `ris_dokument`.
+
+The tool is declared app-only (`_meta.ui.visibility: ["app"]`): hosts that honour the flag hide it from the model and let only the viewer widget call it. It serves the same text `ris_dokument` produced, from the document cache where possible, so the offsets the viewer holds address the same document.
+
+**Inputs:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `dokumentnummer` | string | RIS document number of the open document - from the ris_dokument call that opened it |
+| `url` | string | Direct URL of the open document, for documents opened by URL rather than by number |
+| `offset` | number | Character offset into the document text; 0 returns the first section and the outline (default: 0) |
+
+At least one of `dokumentnummer` or `url` is required. Each section is 25,000 characters long.
+
+**Output (`structuredContent`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `text` | string | The requested section of the document text |
+| `total_length` | number | Length of the complete document text — compare across calls to detect that the document was re-fetched and offsets shifted |
+| `next_offset` | number \| null | Offset to request for the following section, or null at the end of the document |
+| `outline` | array | Jump targets of the document. Only returned for offset 0; empty when the document has no headings |
+| `dokumentnummer` | string | RIS document number of the document this section belongs to (absent for documents opened by URL) |
+| `source_url` | string | RIS URL the document text was rendered from |
 
 </details>
 
