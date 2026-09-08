@@ -591,14 +591,14 @@ editable**: a new tunnel URL means deleting the connector and adding it again.
 
 GitHub Actions runs on push/PR to main:
 - **CI**: Matrix test (Node 20, 22) → `pnpm run check` + coverage
-- **Release**: Tag push (`v*`) → check + build + GitHub Release + npm publish (Trusted Publishing/OIDC, no NPM_TOKEN)
+- **Release**: Tag push (`v*`) → check + build + GitHub Release + npm publish (Trusted Publishing/OIDC, no NPM_TOKEN) + MCP Registry publish (GitHub OIDC, `io.github.Honeyfield-Org/ris`)
 - **CodeQL**: Weekly security scanning
 
 ### Release Flow
 
 ```
 feature branch → PR → merge to main → git tag v1.x.x → push tag
-  → GitHub Release + npm publish (OIDC) + Docker build → ECR → gateway deploy
+  → GitHub Release + npm publish (OIDC) + MCP Registry publish (OIDC) + Docker build → ECR → gateway deploy
 ```
 
 Direct pushes to main are blocked — version-bump commits go through a PR as well.

@@ -132,6 +132,48 @@ jobs:
       - name: Publish to npm
         run: npm publish --provenance --access public
 
+  publish-registry:
+    name: Publish to MCP Registry
+    needs: publish-npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # The registry validates the npm package's mcpName against server.json's
+      # name, so keep the version in step with the tag even if a release
+      # commit forgot to bump it.
+      - name: Set version from tag
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' server.json > server.tmp && mv server.tmp server.json
+
+      # `latest` is deliberate: the registry rejects OIDC tokens from
+      # outdated publisher binaries with "invalid audience".
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      # OIDC grants io.github.<repository_owner>/*, i.e. io.github.Honeyfield-Org/*
+      # for this repo, which is why mcpName/server.json carry that exact spelling.
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      # Retried because the registry fetches the freshly published package
+      # from npm, and npm can lag a little right after publish.
+      - name: Publish server to MCP Registry
+        run: |
+          for i in 1 2 3 4 5; do
+            ./mcp-publisher publish && exit 0
+            echo "publish failed (attempt $i), retrying in 30s"
+            sleep 30
+          done
+          exit 1
+
   build-image:
     name: Build and push image
     needs: release

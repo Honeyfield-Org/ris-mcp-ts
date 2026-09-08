@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20.19.0-brightgreen.svg)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-blue.svg)](https://modelcontextprotocol.io/)
-[![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.philrox%2Fris-green.svg)](https://registry.modelcontextprotocol.io)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.Honeyfield--Org%2Fris-green.svg)](https://registry.modelcontextprotocol.io)
 
 An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that gives AI assistants access to Austria's official legal database — the **Rechtsinformationssystem (RIS)**.
 

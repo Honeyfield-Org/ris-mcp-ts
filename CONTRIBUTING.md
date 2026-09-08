@@ -279,48 +279,31 @@ This will:
 
 ### MCP Registry
 
-The release workflow publishes to npm only. The entry in the
-[MCP Registry](https://registry.modelcontextprotocol.io) — `io.github.philrox/ris`,
-described by `server.json` — is **not** published by CI. It was last pushed by
-hand for 1.0.2 (2026-02-09); every release since has bumped `server.json`
-without anybody publishing it, so the registry still lists 1.0.2 and the
-pre-transfer repository URL. Two things stand in the way of simply adding an
-`mcp-publisher` step to `release.yml`:
+The `publish-registry` job in `release.yml` runs after `publish-npm` on every
+`v*` tag: it writes the tag version into `server.json`, installs
+`mcp-publisher`, runs `mcp-publisher login github-oidc` (`id-token: write`, no
+secret) and publishes — with a short retry, because the registry validates the
+package against npm, which can lag right behind a fresh publish. The
+[MCP Registry](https://registry.modelcontextprotocol.io) entry is
+`io.github.Honeyfield-Org/ris`, described by `server.json`. Nothing here is a
+manual step per release; the version comes from the tag, so a forgotten
+`server.json` bump is harmless.
 
-- The server name lives in the namespace of the GitHub *user* `philrox`.
-  GitHub OIDC from a workflow run grants `io.github.<repository owner>/*`,
-  which for this repository is `io.github.Honeyfield-Org/*` — so
-  `mcp-publisher login github-oidc` in CI could not publish the existing name.
-- A server name is immutable in the registry, so the entry cannot be renamed.
-  Moving to the org namespace means publishing a *new* server and deprecating
-  the old one.
+What still has to match by hand: `name` in `server.json` must equal `mcpName`
+in `package.json`, in that **exact spelling** — the registry grants the OIDC
+namespace as GitHub spells the `repository_owner` claim
+(`io.github.Honeyfield-Org/*`) and matches it with a case-sensitive prefix
+check, so any other casing fails to publish.
 
-Until that decision is made, publishing is a manual step after each release,
-run from the `philrox` account (the interactive GitHub login always grants the
-personal namespace):
+The registry previously listed this server as `io.github.philrox/ris`
+(personal namespace, last published by hand for 1.0.2 on 2026-02-09 — OIDC
+from a workflow run only grants `io.github.<repository owner>/*`, so CI could
+never have published that name). Server names are immutable, so that entry
+isn't migrated — it stays and is deprecated once, by hand, from the `philrox`
+account, after the first successful automated publish of the new name:
 
 ```bash
 mcp-publisher login github   # device flow, as philrox
-mcp-publisher publish        # reads server.json; npm must already carry that version
-```
-
-`server.json` is kept current by the release commits: `version` and
-`packages[0].version` must equal `package.json`'s `version`, and `name` must
-equal its `mcpName`. The repository URL already points at
-`Honeyfield-Org/ris-mcp-ts`. The token files `mcp-publisher` writes are
-gitignored.
-
-To move to the org namespace instead: set `name` in `server.json` and `mcpName`
-in `package.json` to `io.github.Honeyfield-Org/ris` — **exact case**: the
-registry grants the OIDC namespace as GitHub spells the owner
-(`repository_owner` claim) and matches it with a case-sensitive prefix check —
-then release, so npm carries the new `mcpName` (the registry validates the
-package against it), publish the server — the interactive login needs an org
-**Owner**, or the release workflow can do it with `mcp-publisher login
-github-oidc` and `id-token: write` — and finally mark the old entry deprecated
-and update the README badge:
-
-```bash
 mcp-publisher status --status deprecated --all-versions --message "Moved to io.github.Honeyfield-Org/ris" io.github.philrox/ris
 ```
 

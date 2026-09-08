@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.philrox/ris",
+  "name": "io.github.Honeyfield-Org/ris",
   "description": "Access Austrian laws, court decisions & legal documents via the RIS API.",
   "repository": {
     "url": "https://github.com/Honeyfield-Org/ris-mcp-ts",
