@@ -1,7 +1,7 @@
 {
   "name": "ris-mcp-ts",
   "version": "1.8.0",
-  "mcpName": "io.github.philrox/ris",
+  "mcpName": "io.github.Honeyfield-Org/ris",
   "description": "MCP Server for Austrian Legal Information System (RIS) - TypeScript",
   "type": "module",
   "main": "dist/index.js",
