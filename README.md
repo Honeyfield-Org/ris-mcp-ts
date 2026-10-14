@@ -147,36 +147,40 @@ npx -y ris-mcp-ts
 
 Besides stdio, the server speaks **Streamable HTTP** (`POST /mcp`, health check at `GET /health`, port 3000). That is what you need for LibreChat, claude.ai custom connectors and hosted MCP platforms: one long-running container, many users, no `npx` per chat.
 
-```yaml
-# docker-compose.yml
-services:
-  ris-mcp:
-    build: . # or: image: <your-registry>/ris-mcp:latest
-    restart: unless-stopped
-    expose:
-      - "3000" # internal only; publish via a reverse proxy, see below
-```
-
 ```bash
+cp .env.example .env             # optional, every setting has a default
 docker compose up -d --build
-curl http://localhost:3000/health   # {"status":"ok","service":"ris-mcp",...}  (needs "ports: 3000:3000" for a local test)
+curl http://127.0.0.1:3000/health   # {"status":"ok","service":"ris-mcp",...}
 ```
 
-The endpoint to hand to any client is `http://<host>:3000/mcp` (inside a Docker network: `http://ris-mcp:3000/mcp`).
+The bundled [`docker-compose.yml`](docker-compose.yml) binds the port to `127.0.0.1` only. The endpoint to hand to a client is `http://<host>:3000/mcp` (inside a Docker network: `http://ris-mcp:3000/mcp`).
+
+### Settings
+
+All optional, set as environment variables (see [`.env.example`](.env.example)):
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `MCP_STATELESS` | `false` | `true` serves every request on its own, with no sessions: nothing is lost on a restart, there is no 100-session cap, and several replicas work behind a plain load balancer. **Recommended for LibreChat** and any host that shows no interactive widget. The viewer widget's per-session document cache then lives for one request only. |
+| `MCP_AUTH_TOKEN` | *(empty)* | Non-empty: `/mcp` requires `Authorization: Bearer <token>` (401 otherwise); `/health` stays open. Use it when the endpoint is reachable beyond a private network and the client can send a header (LibreChat, Claude Code). claude.ai custom connectors cannot, so leave it empty for those. |
+| `RATE_LIMIT_PER_MINUTE` | `60` | Requests per minute per MCP session (per client IP before a session exists, and always in stateless mode). Raise it when many users share one client IP, e.g. a LibreChat server in stateless mode. Anything that is not a positive integer falls back to 60. |
+| `ALLOWED_ORIGINS` | *(empty)* | Browser origins allowed to call `/mcp`, comma-separated. See below. |
+| `PORT` | `3000` | Listen port. |
 
 What to know before connecting a client:
 
-- **Server-to-server only.** Requests without an `Origin` header pass; requests *with* one are rejected with 403 (`ALLOWED_ORIGINS`, comma-separated, whitelists exact origins). No CORS headers are sent, so clients that talk to the server straight from a browser tab are not supported. LibreChat, claude.ai and hosted platforms call from their backend and are unaffected.
-- **No authentication.** The data is public (RIS Open Government Data), but the endpoint is open. Keep it on an internal Docker network, or put a reverse proxy with access control in front when it must be reachable from outside.
-- **Rate limit:** 60 requests per minute per MCP session (per client IP before a session exists). The server assumes exactly one proxy hop (`trust proxy 1`).
-- **Sessions are in memory** (max 100, evicted after 30 minutes idle). After a restart clients get `404 Session nicht gefunden` and have to reconnect, which MCP clients do on their own.
-- **Streaming:** if a reverse proxy sits in front, disable response buffering for `/mcp` (the server already sends `X-Accel-Buffering: no`).
+- **Server-to-server only.** Requests without an `Origin` header pass; requests *with* one are rejected with 403. No CORS headers are sent, so clients that talk to the server straight from a browser tab are not supported. LibreChat, claude.ai and hosted platforms call from their backend and are unaffected.
+- **Open by default.** The data is public (RIS Open Government Data), but the endpoint is not protected unless you set `MCP_AUTH_TOKEN`. Keep it on an internal Docker network, or put a reverse proxy in front when it must be reachable from outside.
+- **Sessions** (stateful mode) are kept in memory: at most 100, evicted after 30 minutes idle. After a restart a client gets `404 Session nicht gefunden` and has to reconnect. Stateless mode has none of this.
+- **Streaming:** behind a reverse proxy, disable response buffering for `/mcp` (the server already sends `X-Accel-Buffering: no`). The server assumes exactly one proxy hop (`trust proxy 1`).
+- **Usage instructions for the model.** The server sends a short instruction text in the `initialize` result (which tool for what, how to page, how to cite, answer in the user's language). Claude and LibreChat (`serverInstructions: true`) pass it to the model, which makes tool choice noticeably more reliable.
 
 ### LibreChat
 
-Put the service next to LibreChat, for example in LibreChat's `docker-compose.override.yml`, so both share a Docker network and mount your `librechat.yaml`:
+Ready-made files are in [`examples/librechat/`](examples/librechat/). Copy `docker-compose.override.yml` next to LibreChat's `docker-compose.yml` and merge `librechat.yaml` into yours:
 
 ```yaml
+# docker-compose.override.yml  (excerpt)
 services:
   api:
     volumes:
@@ -186,29 +190,36 @@ services:
   ris-mcp:
     build: ../ris-mcp-ts-fork
     restart: unless-stopped
+    environment:
+      MCP_STATELESS: "true"          # LibreChat renders no widget, and many users share one IP
+      RATE_LIMIT_PER_MINUTE: "600"
+      MCP_AUTH_TOKEN: ${RIS_MCP_AUTH_TOKEN:-}
 ```
 
-Then register the server in `librechat.yaml` and restart the `api` container:
-
 ```yaml
+# librechat.yaml  (merge into your file)
 mcpServers:
   ris:
     type: streamable-http
     url: http://ris-mcp:3000/mcp
     timeout: 60000
     serverInstructions: true
+    headers:                         # only if you set RIS_MCP_AUTH_TOKEN in LibreChat's .env
+      Authorization: "Bearer ${RIS_MCP_AUTH_TOKEN}"
 ```
 
-The server then shows up in the chat's MCP menu and can be attached to agents. For a quick local try without Docker, `type: stdio` with `command: npx` and `args: ["-y", "ris-mcp-ts"]` works too, but starts one process per user session.
+Restart the `api` container; the server then shows up in the chat's MCP menu and can be attached to agents. For a quick try without Docker, `type: stdio` with `command: npx` and `args: ["-y", "ris-mcp-ts"]` works too, but starts one process per user session.
 
 ### Claude (claude.ai, Claude Desktop, Claude Code)
 
-- **claude.ai / Claude Desktop (custom connector):** Settings → Connectors → *Add custom connector*, URL `https://<your-public-host>/mcp`. The request comes from Anthropic's cloud, so the URL must be **public HTTPS**; `localhost` or an internal Docker name will not work. No OAuth is needed. This is the only host family that renders the interactive result list and document viewer.
+- **claude.ai / Claude Desktop (custom connector):** Settings → Connectors → *Add custom connector*, URL `https://<your-public-host>/mcp`. The request comes from Anthropic's cloud, so the URL must be **public HTTPS**; `localhost` or an internal Docker name will not work. Leave `MCP_AUTH_TOKEN` empty: the connector dialog has no field for a static header. This is the only host family that renders the interactive result list and document viewer, so keep `MCP_STATELESS` off for it.
 - **Claude Desktop (local):** stdio via the JSON config, see [Claude Desktop](#claude-desktop) above.
 - **Claude Code against a remote instance:**
 
   ```bash
   claude mcp add --transport http ris https://<your-public-host>/mcp
+  # with MCP_AUTH_TOKEN set on the server:
+  claude mcp add --transport http ris https://<your-public-host>/mcp --header "Authorization: Bearer <token>"
   ```
 
 ### Hosted platforms with a custom-MCP field (e.g. Grünerator)
@@ -220,13 +231,18 @@ Platforms with a section like *„Eigenen MCP-Server hinzufügen“* take a name
 | Name | `RIS – Österreichisches Rechtsinformationssystem` (any label) |
 | Server-URL | `https://<your-public-host>/mcp` |
 
-Their backend connects to that URL, so it must be reachable from the internet over HTTPS and must end in `/mcp`. A minimal public setup with Caddy (automatic TLS) next to the container:
+Their backend connects to that URL, so it must be reachable from the internet over HTTPS and must end in `/mcp`. Without a header field the endpoint has to stay open (empty `MCP_AUTH_TOKEN`); the rate limit caps abuse and the data is public anyway. Whether such a platform shares one IP across its users decides whether you need to raise `RATE_LIMIT_PER_MINUTE`.
+
+A minimal public setup with Caddy (automatic TLS) next to the container:
 
 ```yaml
 services:
   ris-mcp:
     build: .
     restart: unless-stopped
+    environment:
+      MCP_STATELESS: "true"
+      RATE_LIMIT_PER_MINUTE: "300"
   caddy:
     image: caddy:2
     restart: unless-stopped
@@ -243,8 +259,6 @@ ris.example.org {
     reverse_proxy ris-mcp:3000
 }
 ```
-
-Because the endpoint has no authentication of its own, anyone who learns the URL can use it. The rate limit above caps the damage, and the data is public anyway; if you want more control, restrict by IP or add basic auth at the proxy (only possible where the platform lets you send the matching header).
 
 > **Widgets:** the interactive result list and document viewer render only in hosts that support MCP Apps (claude.ai, ChatGPT). LibreChat and most other platforms show the complete text answer of every tool instead — nothing is lost, only the interactive UI is missing. `ris_dokument_abschnitt` is a helper for the viewer and may appear in their tool list; it is harmless.
 

@@ -22,6 +22,7 @@ import {
   sweepIdleSessions,
   registerSession,
 } from '../http.js';
+import { SERVER_INSTRUCTIONS } from '../instructions.js';
 import { registerAllTools } from '../tools/index.js';
 
 // ---------------------------------------------------------------------------
@@ -589,7 +590,10 @@ describe('HTTP transport (http.ts)', () => {
 
       await request(app).post('/mcp').send({ jsonrpc: '2.0', method: 'initialize', id: 1 });
 
-      expect(McpServer).toHaveBeenCalledWith({ name: 'ris-mcp', version: VERSION });
+      expect(McpServer).toHaveBeenCalledWith(
+        { name: 'ris-mcp', version: VERSION },
+        { instructions: SERVER_INSTRUCTIONS },
+      );
     });
   });
 
