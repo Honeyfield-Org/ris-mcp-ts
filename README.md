@@ -143,6 +143,111 @@ npx -y ris-mcp-ts
 # or: pnpm dlx ris-mcp-ts
 ```
 
+## Remote Deployment (Docker Compose)
+
+Besides stdio, the server speaks **Streamable HTTP** (`POST /mcp`, health check at `GET /health`, port 3000). That is what you need for LibreChat, claude.ai custom connectors and hosted MCP platforms: one long-running container, many users, no `npx` per chat.
+
+```yaml
+# docker-compose.yml
+services:
+  ris-mcp:
+    build: . # or: image: <your-registry>/ris-mcp:latest
+    restart: unless-stopped
+    expose:
+      - "3000" # internal only; publish via a reverse proxy, see below
+```
+
+```bash
+docker compose up -d --build
+curl http://localhost:3000/health   # {"status":"ok","service":"ris-mcp",...}  (needs "ports: 3000:3000" for a local test)
+```
+
+The endpoint to hand to any client is `http://<host>:3000/mcp` (inside a Docker network: `http://ris-mcp:3000/mcp`).
+
+What to know before connecting a client:
+
+- **Server-to-server only.** Requests without an `Origin` header pass; requests *with* one are rejected with 403 (`ALLOWED_ORIGINS`, comma-separated, whitelists exact origins). No CORS headers are sent, so clients that talk to the server straight from a browser tab are not supported. LibreChat, claude.ai and hosted platforms call from their backend and are unaffected.
+- **No authentication.** The data is public (RIS Open Government Data), but the endpoint is open. Keep it on an internal Docker network, or put a reverse proxy with access control in front when it must be reachable from outside.
+- **Rate limit:** 60 requests per minute per MCP session (per client IP before a session exists). The server assumes exactly one proxy hop (`trust proxy 1`).
+- **Sessions are in memory** (max 100, evicted after 30 minutes idle). After a restart clients get `404 Session nicht gefunden` and have to reconnect, which MCP clients do on their own.
+- **Streaming:** if a reverse proxy sits in front, disable response buffering for `/mcp` (the server already sends `X-Accel-Buffering: no`).
+
+### LibreChat
+
+Put the service next to LibreChat, for example in LibreChat's `docker-compose.override.yml`, so both share a Docker network and mount your `librechat.yaml`:
+
+```yaml
+services:
+  api:
+    volumes:
+      - type: bind
+        source: ./librechat.yaml
+        target: /app/librechat.yaml
+  ris-mcp:
+    build: ../ris-mcp-ts-fork
+    restart: unless-stopped
+```
+
+Then register the server in `librechat.yaml` and restart the `api` container:
+
+```yaml
+mcpServers:
+  ris:
+    type: streamable-http
+    url: http://ris-mcp:3000/mcp
+    timeout: 60000
+    serverInstructions: true
+```
+
+The server then shows up in the chat's MCP menu and can be attached to agents. For a quick local try without Docker, `type: stdio` with `command: npx` and `args: ["-y", "ris-mcp-ts"]` works too, but starts one process per user session.
+
+### Claude (claude.ai, Claude Desktop, Claude Code)
+
+- **claude.ai / Claude Desktop (custom connector):** Settings → Connectors → *Add custom connector*, URL `https://<your-public-host>/mcp`. The request comes from Anthropic's cloud, so the URL must be **public HTTPS**; `localhost` or an internal Docker name will not work. No OAuth is needed. This is the only host family that renders the interactive result list and document viewer.
+- **Claude Desktop (local):** stdio via the JSON config, see [Claude Desktop](#claude-desktop) above.
+- **Claude Code against a remote instance:**
+
+  ```bash
+  claude mcp add --transport http ris https://<your-public-host>/mcp
+  ```
+
+### Hosted platforms with a custom-MCP field (e.g. Grünerator)
+
+Platforms with a section like *„Eigenen MCP-Server hinzufügen“* take a name and a server URL, and nothing else:
+
+| Field | Value |
+|-------|-------|
+| Name | `RIS – Österreichisches Rechtsinformationssystem` (any label) |
+| Server-URL | `https://<your-public-host>/mcp` |
+
+Their backend connects to that URL, so it must be reachable from the internet over HTTPS and must end in `/mcp`. A minimal public setup with Caddy (automatic TLS) next to the container:
+
+```yaml
+services:
+  ris-mcp:
+    build: .
+    restart: unless-stopped
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+```
+
+```
+# Caddyfile
+ris.example.org {
+    reverse_proxy ris-mcp:3000
+}
+```
+
+Because the endpoint has no authentication of its own, anyone who learns the URL can use it. The rate limit above caps the damage, and the data is public anyway; if you want more control, restrict by IP or add basic auth at the proxy (only possible where the platform lets you send the matching header).
+
+> **Widgets:** the interactive result list and document viewer render only in hosts that support MCP Apps (claude.ai, ChatGPT). LibreChat and most other platforms show the complete text answer of every tool instead — nothing is lost, only the interactive UI is missing. `ris_dokument_abschnitt` is a helper for the viewer and may appear in their tool list; it is harmless.
+
 ## Available Tools
 
 | Tool | Description |
