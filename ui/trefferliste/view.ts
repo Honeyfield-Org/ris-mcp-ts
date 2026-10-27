@@ -33,8 +33,7 @@ export interface ResultHandlers {
 
 /** Either a result to render, or a notice explaining why there is none. */
 export type Outcome =
-  | { kind: 'result'; result: SearchResultPayload }
-  | { kind: 'notice'; node: HTMLElement };
+  { kind: 'result'; result: SearchResultPayload } | { kind: 'notice'; node: HTMLElement };
 
 /**
  * Which call a tool result answers, which decides what a failure may claim.

@@ -39,8 +39,7 @@ export interface LoadedDocument {
 }
 
 export type LoadDocumentResult =
-  | { success: true; document: LoadedDocument }
-  | { success: false; error: string };
+  { success: true; document: LoadedDocument } | { success: false; error: string };
 
 export interface LoadDocumentArgs {
   dokumentnummer?: string;
