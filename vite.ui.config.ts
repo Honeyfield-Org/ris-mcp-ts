@@ -1,8 +1,8 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 
 const uiRoot = fileURLToPath(new URL('./ui', import.meta.url));
@@ -39,6 +39,37 @@ if (!widget || !WIDGETS.includes(widget)) {
   );
 }
 
+/**
+ * Ships zod's English error messages and none of its 49 translations.
+ *
+ * ext-apps validates host messages with `z.…`, and a namespace used as a value
+ * keeps every member alive for Rollup — `z.locales` included, which was half of
+ * each widget (~187 000 of ~360 000 characters with zod 4.3) and grew past the
+ * bundle budget with 4.6. Nothing in a widget reads a translation: zod installs
+ * `en` itself, from its own `../locales/en.js` import, which this leaves alone.
+ * Only the barrel behind `z.locales` / `core.locales` is replaced, by one that
+ * exports `en`. If zod moves the barrel, nothing matches and the bundle grows
+ * back — `ui-template.test.ts` fails on a Japanese literal when that happens.
+ */
+const ZOD_LOCALES_PREFIX = '\0zod-locales-en:';
+
+function zodEnglishOnly(): Plugin {
+  return {
+    name: 'ris-zod-english-only',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (source !== '../locales/index.js' || !importer || !/[\\/]zod[\\/]v4[\\/]/.test(importer)) {
+        return null;
+      }
+      return ZOD_LOCALES_PREFIX + join(dirname(importer), '..', 'locales', 'en.js');
+    },
+    load(id) {
+      if (!id.startsWith(ZOD_LOCALES_PREFIX)) return null;
+      return `export { default as en } from ${JSON.stringify(id.slice(ZOD_LOCALES_PREFIX.length))};`;
+    },
+  };
+}
+
 export default defineConfig({
   root: uiRoot,
   // useRecommendedBuildConfig would set output.inlineDynamicImports, which is
@@ -46,7 +77,7 @@ export default defineConfig({
   // notably cssCodeSplit: false, which merges every widget's CSS into one file.
   // The inlining itself happens in the plugin's generateBundle hook and is
   // unaffected by opting out.
-  plugins: [viteSingleFile({ useRecommendedBuildConfig: false })],
+  plugins: [zodEnglishOnly(), viteSingleFile({ useRecommendedBuildConfig: false })],
   build: {
     outDir,
     // Each widget is built in its own pass into the same directory, so only the

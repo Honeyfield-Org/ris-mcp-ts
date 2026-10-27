@@ -78,6 +78,16 @@ describe.each(BUNDLES)('generated widget template: %s', (_widget, html) => {
     expect(html).toContain('ui/notifications/tool-result');
   });
 
+  it("ships none of zod's translated error messages", () => {
+    // ext-apps uses zod as `z.…`, which keeps the whole namespace — including
+    // `z.locales`, 50 translations nobody in a widget ever reads — alive for
+    // Rollup. vite.ui.config.ts swaps that module for one that exports `en`
+    // only. A literal from the Japanese locale stands for all of them: if zod
+    // moves the file and the swap stops matching, this fails before the
+    // budget below does.
+    expect(html).not.toContain('メールアドレス');
+  });
+
   it('stays under the bundle budget', () => {
     expect(html.length).toBeLessThan(400_000);
   });
