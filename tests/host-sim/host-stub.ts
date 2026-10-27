@@ -16,8 +16,7 @@
  * so reaches the widget as an unexplained 45s timeout rather than as a reply.
  */
 export type HostSimCallAnswer = { delayMs?: number } & (
-  | { result: unknown; rpcError?: never }
-  | { rpcError: string; result?: never }
+  { result: unknown; rpcError?: never } | { rpcError: string; result?: never }
 );
 
 /**
@@ -29,8 +28,7 @@ export type HostSimCallAnswer = { delayMs?: number } & (
  * scripting it, and the widget must read the answer rather than its own wish.
  */
 export type HostSimDisplayModeAnswer = { delayMs?: number } & (
-  | { mode: 'inline' | 'fullscreen' | 'pip'; rpcError?: never }
-  | { rpcError: string; mode?: never }
+  { mode: 'inline' | 'fullscreen' | 'pip'; rpcError?: never } | { rpcError: string; mode?: never }
 );
 
 /**

@@ -90,8 +90,7 @@ async function declaredDisplayModes(page: Page): Promise<unknown> {
   expect(handshakes).toHaveLength(1);
 
   const params = handshakes[0]?.params as
-    | { appCapabilities?: { availableDisplayModes?: unknown } }
-    | undefined;
+    { appCapabilities?: { availableDisplayModes?: unknown } } | undefined;
 
   return params?.appCapabilities?.availableDisplayModes;
 }
