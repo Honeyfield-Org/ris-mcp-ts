@@ -29,7 +29,7 @@ generated sources are never stale; you rarely call it by hand.
 ## Testing
 
 ```bash
-pnpm test                # Server unit tests (1118 tests, 23 files) — node env
+pnpm test                # Server unit tests (1121 tests, 23 files) — node env
 pnpm run test:ui         # Widget tests under ui/ (436 tests, 10 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
@@ -243,6 +243,18 @@ that is never written: they look fine to every `<script src=…>` assertion and
 fail to start in every host. `gen-ui.mjs` refuses a bundle that still carries a
 relative import, and `ui-template.test.ts` asserts the same thing plus the
 presence of the SDK.
+
+**zod ships in English only.** ext-apps validates host messages through `z.…`,
+and a namespace used as a value keeps every member alive — `z.locales` with 49
+translations included, which was ~187 000 of ~360 000 characters per widget
+under zod 4.3 and pushed both past the 400 000 budget under 4.6. The
+`zodEnglishOnly()` plugin in `vite.ui.config.ts` replaces zod's
+`../locales/index.js` barrel with one that exports `en`; zod's own `en` import
+is untouched, and the server, which is not bundled, keeps every locale. Measured:
+~360 000 → ~211 000 characters (zod 4.3.6), ~445 000 → ~280 000 (4.6.6). The
+plugin hangs on a zod-internal path, so `ui-template.test.ts` asserts a Japanese
+locale literal is absent — a zod rename fails that test instead of silently
+re-growing the bundle.
 
 Widget discovery still comes from the sources (`ui/<name>/index.html`), so a new
 widget means a new directory, not a config edit. `src/generated/` is gitignored
