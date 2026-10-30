@@ -19,6 +19,7 @@ pnpm run gen:ui          # Build the widget bundles → src/generated/<widget>-h
 pnpm start               # Run compiled version (stdio)
 pnpm run start:http      # Run HTTP server (Streamable HTTP transport)
 pnpm run check           # typecheck + lint + format:check + test + test:ui
+pnpm run build:mcpb      # Claude Desktop extension → ris-mcp-<version>.mcpb (run `build` first)
 ```
 
 **Node floor: ≥ 20.19** (`engines` in package.json) — required by vite 7, which
@@ -29,7 +30,7 @@ generated sources are never stale; you rarely call it by hand.
 ## Testing
 
 ```bash
-pnpm test                # Server unit tests (1121 tests, 23 files) — node env
+pnpm test                # Server unit tests (1157 tests, 26 files) — node env
 pnpm run test:ui         # Widget tests under ui/ (436 tests, 10 files) — jsdom env
 pnpm run test:watch      # Run tests in watch mode
 pnpm run test:coverage   # Tests with V8 coverage report
@@ -138,6 +139,7 @@ src/
 ├── document-loader.ts # Shared resolve+fetch+scope+format path for the two document tools
 ├── document-cache.ts  # Bounded LRU cache backing the viewer's chunk tool
 ├── helpers.ts         # Shared helper functions for tool handlers
+├── instructions.ts    # SERVER_INSTRUCTIONS: the model-facing usage text sent in `initialize` (see Hosting)
 ├── structured-search.ts # Search tools' structuredContent: lean projection + character budget with page-size downgrade (#106)
 ├── constants.ts       # Static mappings, enum values, configuration
 ├── version.ts         # Shared VERSION constant (read from package.json)
@@ -172,9 +174,12 @@ src/
     ├── helpers.test.ts
     ├── history.test.ts
     ├── http.test.ts / http-transport.e2e.test.ts
+    ├── http-deployment.e2e.test.ts # MCP_AUTH_TOKEN, MCP_STATELESS, RATE_LIMIT_PER_MINUTE (real SDK)
+    ├── mcpb-manifest.test.ts # mcpb/manifest.json lists exactly the registered tools
     ├── parser.test.ts
     ├── security.e2e.test.ts
     ├── server.test.ts
+    ├── server-instructions.e2e.test.ts # instructions delivered, name only real tools, size budget
     ├── structured-content.e2e.test.ts
     ├── structured-search.test.ts # projection, budget maths, env override
     ├── tool-errors.e2e.test.ts
@@ -223,6 +228,11 @@ tests/host-sim/        # Playwright host simulation: mounts the built bundles in
 vite.ui.config.ts      # Widget build: one widget per pass, named by RIS_UI_WIDGET
 playwright.host.config.ts # Host-sim suite: testDir tests/host-sim, chromium
 scripts/gen-ui.mjs     # Drives the builds, then writes src/generated/<widget>-html.ts
+docker-compose.yml     # Standalone HTTP server for local/self-hosting (localhost-bound); .env.example lists its settings
+examples/librechat/    # docker-compose.override.yml + librechat.yaml snippet for LibreChat
+mcpb/                  # Claude Desktop extension: manifest.json (version is injected at build), icon
+scripts/build-mcpb.mjs # Stages dist + prod deps (hoisted) and packs ris-mcp-<version>.mcpb
+docs/assets/           # README header and audience tiles (SVG)
 ```
 
 ### Widget Build Pipeline
@@ -646,6 +656,11 @@ Direct pushes to main are blocked — version-bump commits go through a PR as we
 - `sessionIdGenerator: () => crypto.randomUUID()` for stateful sessions
 - `sessions.set()` called AFTER `handleRequest()` (SDK generates sessionId during initialize)
 - Origin validation middleware on `/mcp`: requests without an Origin header pass (non-browser MCP clients); a present Origin must be in the `ALLOWED_ORIGINS` env var (comma-separated, exact match) or the request gets 403. Unset = no browser origin allowed (server-to-server default). Configured in the compose file on the host, not in this repo.
+- CORS only for `ALLOWED_ORIGINS`: `applyCors()` runs right after `validateOrigin()` and before auth and the rate limiter. A present Origin that passed the allowlist is echoed in `Access-Control-Allow-Origin` (never `*`) with `Mcp-Session-Id` and `WWW-Authenticate` exposed; an `OPTIONS` preflight is answered 204 there, so it needs no token and spends no rate-limit budget, and a 401 still carries the headers. With `ALLOWED_ORIGINS` unset nothing fires (browsers stay blocked); requests without an Origin get no CORS headers. Checked in real Chromium (allowed origin reads the session id, another origin is blocked).
+- Optional `MCP_AUTH_TOKEN`: non-empty → `/mcp` needs `Authorization: Bearer <token>` (401 + `WWW-Authenticate: Bearer`), checked with a constant-time digest compare. Middleware order is Origin → auth → rate limiter, so unauthenticated requests spend no budget; `/health` is outside it. Default off — claude.ai custom connectors cannot send a static header.
+- Optional `MCP_STATELESS` (`1`/`true`/`yes`): each POST builds its own `McpServer` + transport (`sessionIdGenerator: undefined`), closed on the response's `close`; GET/DELETE answer 405. No session map, cap or post-restart 404. The viewer's per-session document cache then lives for one request, so keep it off for widget hosts. `http.ts` builds servers through `createServer()` in both modes.
+- `RATE_LIMIT_PER_MINUTE` overrides the 60/min limit; strictly digits (`parseInt` would read `1.5x` as 1), anything else falls back to 60. Stateless mode keys the limiter on the client IP only, so raise it for hosts that front many users from one IP.
+- `SERVER_INSTRUCTIONS` (`src/instructions.ts`) goes to both transports via `McpServer`'s `instructions` option. Every conversation pays for it in tokens, hence the size test; the e2e test also checks that each `ris_*` name in it is a registered tool. `ris_dokument_abschnitt` is deliberately absent from it.
 - Dockerfile uses `HUSKY=0` env + `--frozen-lockfile` for production pnpm install
 
 ## MCP Tools (13)

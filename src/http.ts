@@ -13,6 +13,7 @@ import type { Express, NextFunction, Request, Response } from 'express';
 import express from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
+import { SERVER_INSTRUCTIONS } from './instructions.js';
 import { registerAllTools } from './tools/index.js';
 import { VERSION } from './version.js';
 
@@ -79,6 +80,116 @@ export function validateOrigin(req: Request, res: Response, next: NextFunction):
 // client IP nor create an entry in its store.
 app.use('/mcp', validateOrigin);
 
+/**
+ * CORS for the origins in ALLOWED_ORIGINS — what makes that allowlist usable by
+ * a client that runs in a browser tab. Without it a listed origin passes the
+ * check above and is then blocked by the browser anyway, because the response
+ * carries no CORS headers. The allowlist is the same one: an origin the server
+ * would reject answers 403 before it gets here, and with ALLOWED_ORIGINS unset
+ * nothing in this block ever fires.
+ *
+ * Sits ahead of the auth check and the rate limiter on purpose. A preflight
+ * carries no Authorization header by design, so it must not be answered with
+ * 401, and it should not spend the client's request budget; the 401 of a real
+ * request still needs the headers, or the browser reports a CORS failure
+ * instead of the status. The allowed origin is echoed, never `*`: the
+ * `Mcp-Session-Id` header is exposed so a browser client can read its session.
+ */
+export function applyCors(req: Request, res: Response, next: NextFunction): void {
+  const origin = req.headers.origin;
+  if (origin === undefined) {
+    next();
+    return;
+  }
+
+  res.vary('Origin');
+  res.set({
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Expose-Headers': 'Mcp-Session-Id, WWW-Authenticate',
+  });
+
+  if (req.method === 'OPTIONS') {
+    res.set({
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers':
+        'Content-Type, Accept, Authorization, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-ID',
+      'Access-Control-Max-Age': '600',
+    });
+    res.status(204).end();
+    return;
+  }
+
+  next();
+}
+
+app.use('/mcp', applyCors);
+
+// Optional shared secret for /mcp. Unset or empty means the endpoint stays open,
+// which is the long-standing default (and what claude.ai custom connectors need:
+// they cannot send a static header). Set it when the endpoint is reachable beyond
+// a private network and the clients can send `Authorization: Bearer <token>` —
+// LibreChat (`headers:`), Claude Code (`--header`). Read once at module load.
+const AUTH_TOKEN = (process.env.MCP_AUTH_TOKEN ?? '').trim();
+
+/** Digest both sides so the comparison is constant-time whatever their lengths. */
+function digest(value: string): Buffer {
+  return crypto.createHash('sha256').update(value).digest();
+}
+
+/**
+ * Bearer-token check for /mcp; a no-op while MCP_AUTH_TOKEN is unset. Ordered
+ * after the Origin check and before the rate limiter, so an unauthenticated
+ * request neither reaches a handler nor spends the budget of the client IP.
+ * /health is registered outside this middleware on purpose: the container
+ * healthcheck and load balancers carry no token.
+ */
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  if (AUTH_TOKEN === '') {
+    next();
+    return;
+  }
+
+  const presented = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? '')?.[1] ?? '';
+  if (crypto.timingSafeEqual(digest(presented), digest(AUTH_TOKEN))) {
+    next();
+    return;
+  }
+
+  res
+    .status(401)
+    .set('WWW-Authenticate', 'Bearer')
+    .json({ error: 'Nicht autorisiert. Gültiges Bearer-Token erforderlich.' });
+}
+
+app.use('/mcp', requireAuth);
+
+// Stateless mode: every POST gets its own McpServer + transport and nothing is
+// remembered between requests — no session map, no session cap, no 404 after a
+// restart, and several replicas behind a plain load balancer work. The price is
+// the per-session document cache the viewer widget pages through: it lives and
+// dies with the request, so a widget host would refetch per section. Hosts that
+// render no widget (LibreChat, most platforms) never notice. Off by default.
+const STATELESS = ['1', 'true', 'yes'].includes(
+  (process.env.MCP_STATELESS ?? '').trim().toLowerCase(),
+);
+
+const DEFAULT_RATE_LIMIT = 60;
+
+/**
+ * Requests per minute and MCP session, overridable with RATE_LIMIT_PER_MINUTE.
+ * Anything that is not a positive integer falls back to the default. Stateless
+ * mode has no session to key on, so every client behind one IP — a LibreChat
+ * server serving all its users — shares one bucket there; raise the limit
+ * accordingly.
+ */
+function parseRateLimit(raw: string | undefined): number {
+  // Strictly digits: parseInt would read "1.5x" as 1 and turn a typo into a
+  // limit of one request per minute.
+  const trimmed = (raw ?? '').trim();
+  const value = /^\d+$/.test(trimmed) ? Number(trimmed) : 0;
+  return value > 0 ? value : DEFAULT_RATE_LIMIT;
+}
+
 // Rate limiting: MCP-specific. Most requests trigger an upstream RIS API call,
 // but the document viewer's `ris_dokument_abschnitt` does not — it pages through
 // a cached string, so its calls cost no RIS request at all. The limit stays at
@@ -89,7 +200,7 @@ app.use('/mcp', validateOrigin);
 // a RIS request, so that bucket could not be unbounded either.
 export const mcpLimiter = rateLimit({
   windowMs: 60_000,
-  max: 60,
+  max: parseRateLimit(process.env.RATE_LIMIT_PER_MINUTE),
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   // Key on the session id only if it belongs to an established session —
@@ -184,6 +295,46 @@ async function handleWithTransport(
   }
 }
 
+function createServer(): McpServer {
+  const server = new McpServer(
+    { name: 'ris-mcp', version: VERSION },
+    { instructions: SERVER_INSTRUCTIONS },
+  );
+  registerAllTools(server);
+  return server;
+}
+
+/**
+ * Serve one request on a throwaway server and transport (MCP_STATELESS).
+ * Closing on the response's `close` event releases both however the request
+ * ends — finished, aborted by the client, or failed.
+ */
+async function handleStateless(req: Request, res: Response): Promise<void> {
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  const server = createServer();
+  res.on('close', () => {
+    void server.close().catch(() => undefined);
+  });
+
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error('Fehler bei der zustandslosen Verarbeitung:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Interner Serverfehler. Bitte später erneut versuchen.' });
+    }
+  }
+}
+
+/** Without sessions there is no stream to resume and none to terminate. */
+function rejectStateless(_req: Request, res: Response): void {
+  res
+    .status(405)
+    .set('Allow', 'POST')
+    .json({ jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed.' }, id: null });
+}
+
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
   res.json({
@@ -195,6 +346,11 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // MCP endpoint — POST creates or reuses sessions, GET/DELETE require existing session
 app.post('/mcp', async (req: Request, res: Response) => {
+  if (STATELESS) {
+    await handleStateless(req, res);
+    return;
+  }
+
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
   // Reuse existing session
@@ -214,9 +370,7 @@ app.post('/mcp', async (req: Request, res: Response) => {
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: (): string => crypto.randomUUID(),
   });
-  const server = new McpServer({ name: 'ris-mcp', version: VERSION });
-
-  registerAllTools(server);
+  const server = createServer();
 
   transport.onclose = (): void => {
     if (transport.sessionId) {
@@ -235,6 +389,11 @@ app.post('/mcp', async (req: Request, res: Response) => {
 });
 
 app.get('/mcp', async (req: Request, res: Response) => {
+  if (STATELESS) {
+    rejectStateless(req, res);
+    return;
+  }
+
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
   if (sessionId) {
@@ -250,6 +409,11 @@ app.get('/mcp', async (req: Request, res: Response) => {
 });
 
 app.delete('/mcp', async (req: Request, res: Response) => {
+  if (STATELESS) {
+    rejectStateless(req, res);
+    return;
+  }
+
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
   if (sessionId) {
@@ -275,7 +439,10 @@ if (process.env.NODE_ENV !== 'test') {
   sweepTimer.unref();
 
   const httpServer = app.listen(PORT, () => {
-    console.log(`RIS MCP HTTP server listening on port ${PORT}`);
+    console.log(
+      `RIS MCP HTTP server listening on port ${PORT} ` +
+        `(${STATELESS ? 'stateless' : 'stateful'}, auth ${AUTH_TOKEN === '' ? 'off' : 'on'})`,
+    );
   });
 
   // Graceful shutdown (N4) — Node runs as PID 1 in the container, so we must

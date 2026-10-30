@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="104" fill="#324f41"/>
+  <rect x="64" y="368" width="384" height="14" rx="7" fill="#8abd24"/>
+  <text x="256" y="318" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="280" font-weight="700" fill="#f8fbfa">§</text>
+  <text x="256" y="440" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="10" fill="#f8fbfa">RIS</text>
+</svg>

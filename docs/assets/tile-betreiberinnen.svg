@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="580" height="150" viewBox="0 0 580 150" role="img" aria-labelledby="t">
+  <title id="t">Ich betreibe LibreChat – Einrichten, absichern, warten  →</title>
+  <rect x="2" y="2" width="576" height="146" rx="20" fill="#f8fbfa" stroke="#3d5f4b" stroke-width="3"/>
+  <circle cx="82" cy="75" r="44" fill="#324f41"/>
+  <g fill="#f8fbfa">
+    <rect x="58" y="49" width="48" height="14" rx="4"/>
+    <rect x="58" y="68" width="48" height="14" rx="4"/>
+    <rect x="58" y="87" width="48" height="14" rx="4"/>
+  </g>
+  <g fill="#324f41">
+    <circle cx="68" cy="56" r="2.5"/><circle cx="68" cy="75" r="2.5"/><circle cx="68" cy="94" r="2.5"/>
+  </g>
+  <text x="148" y="52" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2" fill="#5a8a14">BETREIBER:INNEN</text>
+  <text x="148" y="88" font-family="Helvetica, Arial, sans-serif" font-size="29" font-weight="800" fill="#324f41">Ich betreibe LibreChat</text>
+  <text x="148" y="118" font-family="Helvetica, Arial, sans-serif" font-size="19" fill="#3a3a3a">Einrichten, absichern, warten  →</text>
+</svg>

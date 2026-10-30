@@ -1,0 +1,22 @@
+# Drop next to LibreChat's docker-compose.yml (Docker Compose merges the override
+# automatically). Adjust the build path to where this repository lives, or replace
+# `build` with an `image:` from your registry.
+services:
+  api:
+    volumes:
+      - type: bind
+        source: ./librechat.yaml
+        target: /app/librechat.yaml
+
+  ris-mcp:
+    build: ../ris-mcp-ts
+    restart: unless-stopped
+    # No "ports:" — LibreChat reaches it as http://ris-mcp:3000/mcp inside the
+    # compose network, and nothing else can.
+    environment:
+      # LibreChat has no interactive widget and serves many users from one IP.
+      MCP_STATELESS: "true"
+      RATE_LIMIT_PER_MINUTE: "600"
+      # Optional. Also add RIS_MCP_AUTH_TOKEN to LibreChat's .env so that
+      # librechat.yaml can reference it (see below).
+      MCP_AUTH_TOKEN: ${RIS_MCP_AUTH_TOKEN:-}
