@@ -9,6 +9,7 @@
     "ris-mcp-ts": "dist/index.js"
   },
   "scripts": {
+    "build:mcpb": "node scripts/build-mcpb.mjs",
     "gen:ui": "node scripts/gen-ui.mjs",
     "prebuild": "pnpm run typecheck",
     "build": "tsc",

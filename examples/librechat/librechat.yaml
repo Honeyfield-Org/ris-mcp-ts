@@ -1,0 +1,13 @@
+# Merge this block into your existing librechat.yaml (it is not a complete file),
+# then restart the `api` container.
+mcpServers:
+  ris:
+    type: streamable-http
+    url: http://ris-mcp:3000/mcp
+    timeout: 60000
+    # Hands the server's usage instructions (which tool for what, how to cite) to
+    # the model — worth the few hundred tokens.
+    serverInstructions: true
+    # Only if you set RIS_MCP_AUTH_TOKEN; otherwise delete these three lines.
+    headers:
+      Authorization: "Bearer ${RIS_MCP_AUTH_TOKEN}"

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="260" viewBox="0 0 1200 260" role="img" aria-labelledby="t d">
+  <title id="t">RIS für LibreChat und Claude</title>
+  <desc id="d">Österreichisches Recht und Rechtsprechung direkt im Chat, mit Quellen.</desc>
+  <rect width="1200" height="260" fill="#324f41"/>
+  <rect y="246" width="1200" height="14" fill="#8abd24"/>
+  <text x="1060" y="228" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="300" font-weight="700" fill="#f8fbfa" opacity="0.14">§</text>
+  <text x="70" y="112" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="4" fill="#8abd24">RECHTSINFORMATIONSSYSTEM</text>
+  <text x="70" y="172" font-family="Helvetica, Arial, sans-serif" font-size="58" font-weight="800" fill="#f8fbfa">RIS für LibreChat &amp; Claude</text>
+  <text x="70" y="214" font-family="Helvetica, Arial, sans-serif" font-size="26" fill="#f8fbfa">Österreichisches Recht und Rechtsprechung – direkt im Chat, mit Quellen.</text>
+</svg>
