@@ -8,6 +8,7 @@
  * API Documentation: https://data.bka.gv.at/ris/api/v2.6/
  */
 
+import { risFetch } from './fetch-context.js';
 import type {
   NormalizedSearchResults,
   RawApiResponse,
@@ -211,7 +212,7 @@ async function requestOnce(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url, {
+    const response = await risFetch(url, {
       method: 'GET',
       headers: {
         Accept: 'application/json',
@@ -374,7 +375,7 @@ export async function getDocumentContent(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url, {
+    const response = await risFetch(url, {
       method: 'GET',
       signal: withTimeoutSignal(controller.signal, signal),
     });

@@ -589,6 +589,29 @@ tokenizes worse); claude.ai renders far larger payloads and needs no budget.
 Self-hosters whose client accepts larger results can raise the budget with the
 `RIS_STRUCTURED_CONTENT_BUDGET` environment variable (a positive integer).
 
+## Use as a Library
+
+Hosts that run their own MCP server (for example a metered gateway) can register the RIS tools without the
+bundled transports:
+
+```ts
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerRisTools, RIS_ERROR_META_KEY, UNCOUNTED_TOOLS } from 'ris-mcp-ts/library';
+
+const server = new McpServer({ name: 'my-host', version: '1.0.0' });
+registerRisTools(server, {
+  fetch: (url, init) => fetch(url, init), // every RIS request of a tool call goes through here (cache, rate limit)
+  wrapHandler: (toolName, handler) => async (args, extra) => handler(args, extra), // auth, quota, logging
+  // documentCache: share one cache across per-request servers in stateless hosting
+});
+```
+
+- Every successful result carries the CC BY 4.0 attribution (text block and `structuredContent.attribution`);
+  every tool description says that only the authentic RIS promulgations are legally binding.
+- Failed calls carry their kind in `result._meta[RIS_ERROR_META_KEY]`: `timeout`, `upstream` (RIS 5xx or network),
+  `client` (RIS 4xx), `parsing`, `validation` or `internal` — so a host can, e.g., not bill RIS outages.
+- `UNCOUNTED_TOOLS` lists app-only helpers (`ris_dokument_abschnitt`) a host should not bill again.
+
 ## Development
 
 ### Prerequisites

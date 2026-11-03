@@ -14,7 +14,7 @@ import {
   truncateResponse,
   type OutlineEntry,
 } from '../formatting.js';
-import { createErrorResponse, formatErrorResponse } from '../helpers.js';
+import { createErrorResponse, createRisErrorResponse } from '../helpers.js';
 import { DocumentOutputShape } from '../types.js';
 import { VIEWER_WIDGET_META } from '../widgets.js';
 
@@ -145,7 +145,7 @@ Note: For long documents, content may be truncated. Use specific searches to nar
         if (extra.signal.aborted) {
           throw e;
         }
-        return createErrorResponse(formatErrorResponse(e));
+        return createRisErrorResponse(e);
       }
     },
   );

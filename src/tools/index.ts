@@ -7,7 +7,8 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import { createDocumentCache } from '../document-cache.js';
+import { type DocumentCache } from '../document-cache.js';
+import { registerRisTools } from '../library.js';
 import { registerWidgetResources } from '../widgets.js';
 
 import { registerBezirkeTool } from './bezirke.js';
@@ -25,17 +26,19 @@ import { registerSonstigeTool } from './sonstige.js';
 import { registerVerordnungenTool } from './verordnungen.js';
 
 /**
- * Register all 13 RIS tools and the widget resources they reference.
+ * Register all 13 RIS tools and the widget resources they reference, with the
+ * CC BY 4.0 attribution and the legal notice (see `library.ts`).
  *
- * The document cache is a closure over this call, which gives it the lifetime of
- * the server it belongs to: one per session on HTTP, where `http.ts` builds a
- * fresh `McpServer` per session, and one per process on stdio, where `server.ts`
- * builds exactly one. `ris_dokument` fills it and `ris_dokument_abschnitt` pages
- * through what it holds.
+ * The document cache gets the lifetime of the server it belongs to: one per
+ * session on HTTP, where `http.ts` builds a fresh `McpServer` per session, and
+ * one per process on stdio, where `server.ts` builds exactly one.
  */
 export function registerAllTools(server: McpServer): void {
-  const documentCache = createDocumentCache();
+  registerRisTools(server);
+}
 
+/** Registers the tools on `server` with `documentCache`; `library.ts` passes its proxy. */
+export function registerToolsOn(server: McpServer, documentCache: DocumentCache): void {
   registerWidgetResources(server);
 
   registerBundesrechtTool(server);

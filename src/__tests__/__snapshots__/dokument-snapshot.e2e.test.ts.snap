@@ -35,7 +35,10 @@ exports[`ris_dokument response identity > should freeze the json response 1`] = 
     "dokument_url": "https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html"
   },
   "content": "Kurztitel\\n\\nAllgemeines bürgerliches Gesetzbuch\\n\\nKundmachungsorgan\\n\\nJGS Nr. 946/1811 zuletzt geändert durch RGBl. Nr. 69/1916\\n\\nTyp\\n\\nBG\\n\\n§/Artikel/Anlage\\n\\n§ 1295\\n\\nInkrafttretensdatum\\n\\n01.01.1917\\n\\nAbkürzung\\n\\nABGB\\n\\nIndex\\n\\n20/01 Allgemeines bürgerliches Gesetzbuch (ABGB)\\n\\nText\\n\\nVon der Verbindlichkeit zum Schadenersatze:\\n\\n1) von dem Schaden aus Verschulden;\\n\\n§ 1295.\\n\\n(1) Jedermann ist berechtigt, von dem Beschädiger den Ersatz des Schadens, welchen dieser ihm aus Verschulden zugefügt hat, zu fordern; der Schaden mag durch Übertretung einer Vertragspflicht oder ohne Beziehung auf einen Vertrag verursacht worden sein.\\n\\n(2) Auch wer in einer gegen die guten Sitten verstoßenden Weise absichtlich Schaden zufügt, ist dafür verantwortlich, jedoch falls dies in Ausübung eines Rechtes geschah, nur dann, wenn die Ausübung des Rechtes offenbar den Zweck hatte, den anderen zu schädigen.\\n\\nSchlagworte\\n\\nVertragsverletzung, Delikt, Schikane\\n\\nZuletzt aktualisiert am\\n\\n21.11.2017\\n\\nGesetzesnummer\\n\\n10001622\\n\\nDokumentnummer\\n\\nNOR12019037\\n\\nalte Dokumentnummer\\n\\nN2181111519Z"
-}",
+}
+
+---
+Datenquelle: RIS – Rechtsinformationssystem des Bundes, CC BY 4.0 – https://www.ris.bka.gv.at",
     "type": "text",
   },
 ]
@@ -83,7 +86,10 @@ Tarifpost Art der Tätigkeit Pauschalgebühr Zuzüglich Zeitgebühr je angefange
 
 3 Kombiniertes Registrierungs- und Autorisierungsverfahren 178,80 26,20
 
-Berlakovich",
+Berlakovich
+
+---
+Datenquelle: RIS – Rechtsinformationssystem des Bundes, CC BY 4.0 – https://www.ris.bka.gv.at",
     "type": "text",
   },
 ]
@@ -160,7 +166,10 @@ NOR12019037
 
 alte Dokumentnummer
 
-N2181111519Z",
+N2181111519Z
+
+---
+Datenquelle: RIS – Rechtsinformationssystem des Bundes, CC BY 4.0 – https://www.ris.bka.gv.at",
     "type": "text",
   },
 ]
@@ -242,7 +251,10 @@ NOR12019037
 
 alte Dokumentnummer
 
-N2181111519Z",
+N2181111519Z
+
+---
+Datenquelle: RIS – Rechtsinformationssystem des Bundes, CC BY 4.0 – https://www.ris.bka.gv.at",
     "type": "text",
   },
 ]
@@ -319,7 +331,10 @@ NOR12019037
 
 alte Dokumentnummer
 
-N2181111519Z",
+N2181111519Z
+
+---
+Datenquelle: RIS – Rechtsinformationssystem des Bundes, CC BY 4.0 – https://www.ris.bka.gv.at",
     "type": "text",
   },
 ]
@@ -327,15 +342,12 @@ N2181111519Z",
 
 exports[`ris_dokument response identity > should freeze the truncated response for a long document 1`] = `
 {
-  "length": 24915,
-  "sha256": "78db9d0a1bb7a7914afb1e5d9bd84320743230cb168eafe8ed07a8e6a2af1595",
-  "tail": "bsatz mit Text zum Kuerzen.
-
-Ein Absatz mit Text zum Kuerzen.
-
-Ein Absatz mit Text zum Kuerzen.
+  "length": 25014,
+  "sha256": "f7eecf4e53086c7cceac6fa10d3976b395f4c8e413ec830793f4151c1fd27a6e",
+  "tail": "-
+Antwort gekuerzt (68276 -> 24790 Zeichen). Verwende spezifischere Suchparameter oder ris_dokument fuer Einzeldokumente.
 
 ---
-Antwort gekuerzt (68276 -> 24790 Zeichen). Verwende spezifischere Suchparameter oder ris_dokument fuer Einzeldokumente.",
+Datenquelle: RIS – Rechtsinformationssystem des Bundes, CC BY 4.0 – https://www.ris.bka.gv.at",
 }
 `;
