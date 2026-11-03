@@ -107,15 +107,54 @@ export function createErrorResponse(text: string): McpToolResponse<[TextContent]
 }
 
 /**
+ * `_meta` key carrying the kind of a tool error, so a host can tell an RIS
+ * outage (not the caller's fault — e.g. not counted against a quota) from a
+ * bad request without parsing German prose.
+ */
+export const RIS_ERROR_META_KEY = 'io.github.honeyfield-org/ris-error';
+
+/**
+ * - `timeout`: RIS did not answer in time (after the retry)
+ * - `upstream`: RIS answered 5xx or the request failed on the network
+ * - `client`: RIS answered 4xx
+ * - `parsing`: RIS answered something that is not a valid result
+ * - `validation`: the arguments were rejected before any RIS request
+ * - `internal`: anything else
+ */
+export type RisErrorKind =
+  'timeout' | 'upstream' | 'client' | 'parsing' | 'validation' | 'internal';
+
+export function risErrorKind(error: unknown): RisErrorKind {
+  if (error instanceof RISTimeoutError) return 'timeout';
+  if (error instanceof RISParsingError) return 'parsing';
+  if (error instanceof RISAPIError) {
+    const status = error.statusCode;
+    return status !== undefined && status >= 400 && status < 500 ? 'client' : 'upstream';
+  }
+  return 'internal';
+}
+
+/** Error response for a caught exception: German message plus its {@link RisErrorKind}. */
+export function createRisErrorResponse(error: unknown): McpToolResponse<[TextContent]> {
+  return {
+    ...createErrorResponse(formatErrorResponse(error)),
+    _meta: { [RIS_ERROR_META_KEY]: risErrorKind(error) },
+  };
+}
+
+/**
  * Create a validation error response listing required parameters.
  */
 export function createValidationErrorResponse(
   requiredParams: string[],
 ): McpToolResponse<[TextContent]> {
   const paramList = requiredParams.map((p) => `- \`${p}\``).join('\n');
-  return createErrorResponse(
-    '**Fehler:** Bitte gib mindestens einen Suchparameter an:\n' + paramList,
-  );
+  return {
+    ...createErrorResponse(
+      '**Fehler:** Bitte gib mindestens einen Suchparameter an:\n' + paramList,
+    ),
+    _meta: { [RIS_ERROR_META_KEY]: 'validation' satisfies RisErrorKind },
+  };
 }
 
 /**
@@ -234,6 +273,6 @@ export async function executeSearchTool(
     if (signal?.aborted) {
       throw e;
     }
-    return createErrorResponse(formatErrorResponse(e));
+    return createRisErrorResponse(e);
   }
 }

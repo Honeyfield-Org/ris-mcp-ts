@@ -13,7 +13,7 @@ import { z } from 'zod';
 import type { DocumentCache } from '../document-cache.js';
 import { loadDocument } from '../document-loader.js';
 import { chunkResponse, extractOutline } from '../formatting.js';
-import { createErrorResponse, formatErrorResponse } from '../helpers.js';
+import { createErrorResponse, createRisErrorResponse } from '../helpers.js';
 import { DocumentChunkOutputShape } from '../types.js';
 import { DOCUMENT_CHUNK_META } from '../widgets.js';
 
@@ -103,7 +103,7 @@ export function registerDokumentAbschnittTool(server: McpServer, cache: Document
         if (extra.signal.aborted) {
           throw e;
         }
-        return createErrorResponse(formatErrorResponse(e));
+        return createRisErrorResponse(e);
       }
     },
   );

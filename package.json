@@ -128,5 +128,16 @@
     "!dist/__tests__/",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./library": {
+      "import": "./dist/library.js",
+      "types": "./dist/library.d.ts"
+    },
+    "./package.json": "./package.json"
+  }
 }

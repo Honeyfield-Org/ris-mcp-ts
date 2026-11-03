@@ -18,7 +18,7 @@
  * declares an `outputSchema` whose payload *carries the text block*, so the
  * v1.3.0 failure mode — a client rendering structured metadata in place of the
  * document — cannot recur. What the assertions below pin is exactly that
- * property, `structuredContent.text === content[0].text`, plus the shape around
+ * property, `structuredContent.text === content[0].text` minus the appended attribution line, plus the shape around
  * it.
  */
 
@@ -29,7 +29,14 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 
+import { ATTRIBUTION, ATTRIBUTION_BLOCK } from '../attribution.js';
 import { server } from '../server.js';
+/** The text block minus the CC BY 4.0 attribution line `library.ts` appends. */
+function withoutAttribution(text: string): string {
+  const suffix = `\n\n---\n${ATTRIBUTION_BLOCK}`;
+  expect(text.endsWith(suffix)).toBe(true);
+  return text.slice(0, -suffix.length);
+}
 
 // =============================================================================
 // Setup
@@ -171,7 +178,7 @@ describe('ris_dokument response identity', () => {
       arguments: { dokumentnummer: 'NOR12019037' },
     });
 
-    const text = (result.content as { text: string }[])[0].text;
+    const text = withoutAttribution((result.content as { text: string }[])[0].text);
     const url = (result.structuredContent as { source_url: string }).source_url;
 
     // What the dropped block used to carry has two homes left, so removing it
@@ -188,7 +195,7 @@ describe('ris_dokument response identity', () => {
       arguments: { dokumentnummer: 'NOR12019037' },
     });
 
-    const text = (result.content as { text: string }[])[0].text;
+    const text = withoutAttribution((result.content as { text: string }[])[0].text);
 
     // The property the whole reversal rests on: a client that renders only the
     // structured payload renders the same document, not metadata about it.
@@ -197,6 +204,7 @@ describe('ris_dokument response identity', () => {
       text,
       total_length: text.length,
       source_url: 'https://ris.bka.gv.at/Dokumente/Bundesnormen/NOR12019037/NOR12019037.html',
+      attribution: ATTRIBUTION,
     });
   });
 
@@ -222,7 +230,7 @@ describe('ris_dokument response identity', () => {
       arguments: { dokumentnummer: 'NOR12019037' },
     });
 
-    const text = (result.content as { text: string }[])[0].text;
+    const text = withoutAttribution((result.content as { text: string }[])[0].text);
     const structured = result.structuredContent as {
       text: string;
       total_length: number;

@@ -247,6 +247,15 @@ export const SearchResultSchema = z.object({
 });
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 
+/** CC BY 4.0 attribution every successful result carries (see attribution.ts). */
+export const AttributionSchema = z
+  .object({
+    text: z.string(),
+    license: z.string(),
+    source_url: z.string(),
+  })
+  .describe('Quellenangabe nach CC BY 4.0');
+
 /**
  * Shape declared as `outputSchema` by every search tool, describing the
  * `structuredContent` they return.
@@ -257,6 +266,7 @@ export type SearchResult = z.infer<typeof SearchResultSchema>;
  * violation that fails the whole tool call.
  */
 export const SearchResultOutputShape = {
+  attribution: AttributionSchema.optional(),
   total_hits: z.number().describe('Total number of documents in RIS matching the search'),
   page: z.number().describe('Page number of this result set (1-based)'),
   page_size: z.number().describe('Number of documents per page'),
@@ -301,6 +311,7 @@ export const OutlineEntryShape = {
  * would lose by rendering only `structuredContent` is inside `structuredContent`.
  */
 export const DocumentChunkOutputShape = {
+  attribution: AttributionSchema.optional(),
   /**
    * Absent for a document the caller addressed by URL: it has no Dokumentnummer
    * to echo, and inventing one — the URL, or the "Unbekannt" placeholder the
@@ -348,6 +359,7 @@ export const DocumentChunkOutputShape = {
  * document — `ris_dokument_abschnitt` starts the canonical series at 0.
  */
 export const DocumentOutputShape = {
+  attribution: AttributionSchema.optional(),
   /** Absent for a URL-addressed document, exactly as in the chunk shape above. */
   dokumentnummer: z
     .string()

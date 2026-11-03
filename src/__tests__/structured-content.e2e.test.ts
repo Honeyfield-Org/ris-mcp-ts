@@ -21,7 +21,14 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 
+import { ATTRIBUTION_BLOCK } from '../attribution.js';
 import { server } from '../server.js';
+/** The text block minus the CC BY 4.0 attribution line `library.ts` appends. */
+function withoutAttribution(text: string): string {
+  const suffix = `\n\n---\n${ATTRIBUTION_BLOCK}`;
+  expect(text.endsWith(suffix)).toBe(true);
+  return text.slice(0, -suffix.length);
+}
 
 // =============================================================================
 // Setup: MCP Client connected to server via InMemoryTransport
@@ -403,7 +410,7 @@ describe('ris_dokument text and source URL', () => {
     // client read from tools/list — a mismatch throws an McpError.
     expect(result.isError).not.toBe(true);
     expect((result.structuredContent as { text: string }).text).toBe(
-      (result.content as { text: string }[])[0].text,
+      withoutAttribution((result.content as { text: string }[])[0].text),
     );
   });
 
