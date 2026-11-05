@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env*
+!.env.example
 *.log
 *.tgz
 *.tsbuildinfo
@@ -25,3 +26,7 @@ playwright-report/
 # to .playwright-mcp/, the superpowers skills keep their plans in .superpowers/.
 .playwright-mcp/
 .superpowers/
+
+# Claude Desktop extension build
+.mcpb-build/
+*.mcpb

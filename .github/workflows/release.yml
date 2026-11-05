@@ -35,6 +35,13 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      # Claude Desktop extension, attached to the GitHub Release below. Best
+      # effort on purpose: a packaging problem must not block the npm publish,
+      # the registry publish and the production deploy that wait on this job.
+      - name: Build Claude Desktop extension
+        continue-on-error: true
+        run: pnpm run build:mcpb
+
       - name: Generate release notes
         id: notes
         run: |
@@ -95,6 +102,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           body_path: release-notes.md
+          files: ris-mcp-*.mcpb
 
   publish-npm:
     name: Publish to npm

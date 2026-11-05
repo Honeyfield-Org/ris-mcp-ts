@@ -1,0 +1,50 @@
+{
+  "manifest_version": "0.3",
+  "name": "ris-mcp",
+  "display_name": "RIS – Österreichisches Rechtsinformationssystem",
+  "version": "0.0.0",
+  "description": "Österreichisches Recht und Rechtsprechung direkt im Chat abfragen: Gesetze, Entscheidungen, Gesetzblätter – live aus dem RIS.",
+  "long_description": "Mit dieser Erweiterung kann Claude das Rechtsinformationssystem des Bundes (RIS, data.bka.gv.at) abfragen: Bundesrecht und Landesrecht (auch in der Fassung zu einem Stichtag), Entscheidungen der Gerichte und Behörden, Bundes- und Landesgesetzblätter, Regierungsvorlagen und mehr. Antworten kommen mit Dokumentnummer und Link zur Originalquelle. Es werden nur öffentliche Daten abgefragt; es ist kein Konto und kein API-Schlüssel nötig. Die Erweiterung ist keine Rechtsberatung.",
+  "author": {
+    "name": "philrox",
+    "url": "https://github.com/Honeyfield-Org/ris-mcp-ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Honeyfield-Org/ris-mcp-ts"
+  },
+  "homepage": "https://github.com/Honeyfield-Org/ris-mcp-ts#readme",
+  "documentation": "https://github.com/Honeyfield-Org/ris-mcp-ts#readme",
+  "support": "https://github.com/Honeyfield-Org/ris-mcp-ts/issues",
+  "license": "MIT",
+  "keywords": ["ris", "rechtsinformationssystem", "österreich", "austria", "recht", "gesetze", "judikatur"],
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"]
+    }
+  },
+  "tools": [
+    { "name": "ris_bundesrecht", "description": "Bundesrecht suchen (ABGB, StGB, UGB …), auch in der Fassung zu einem Stichtag" },
+    { "name": "ris_landesrecht", "description": "Landesrecht aller neun Bundesländer suchen" },
+    { "name": "ris_judikatur", "description": "Entscheidungen der Gerichte suchen (OGH, VfGH, VwGH, BVwG …)" },
+    { "name": "ris_bundesgesetzblatt", "description": "Bundesgesetzblätter (BGBl I/II/III) suchen" },
+    { "name": "ris_landesgesetzblatt", "description": "Landesgesetzblätter suchen" },
+    { "name": "ris_regierungsvorlagen", "description": "Regierungsvorlagen suchen" },
+    { "name": "ris_dokument", "description": "Volltext eines Dokuments laden (Dokumentnummer oder URL)" },
+    { "name": "ris_dokument_abschnitt", "description": "Hilfswerkzeug des Dokument-Viewers: ein Abschnitt eines geöffneten Dokuments" },
+    { "name": "ris_bezirke", "description": "Kundmachungen der Bezirksverwaltungsbehörden suchen" },
+    { "name": "ris_gemeinden", "description": "Gemeinderecht suchen" },
+    { "name": "ris_sonstige", "description": "Sonstige Sammlungen (Ministerratsprotokolle, Erlässe, Parteientransparenz …)" },
+    { "name": "ris_history", "description": "Änderungshistorie von Dokumenten abfragen" },
+    { "name": "ris_verordnungen", "description": "Verordnungsblätter der Länder suchen" }
+  ],
+  "tools_generated": false,
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": { "node": ">=20.3.0" }
+  }
+}

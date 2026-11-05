@@ -1,3 +1,14 @@
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="RIS für LibreChat und Claude – Österreichisches Recht und Rechtsprechung direkt im Chat, mit Quellen." width="100%">
+</p>
+
+<table align="center">
+  <tr>
+    <td><a href="#librechat-betreiberinnen"><img src="docs/assets/tile-betreiberinnen.svg" alt="Ich betreibe LibreChat: Einrichten, absichern, warten" width="400"></a></td>
+    <td><a href="#endnutzerinnen"><img src="docs/assets/tile-nutzerinnen.svg" alt="Ich nutze den Chat: Fragen stellen, Quellen prüfen" width="400"></a></td>
+  </tr>
+</table>
+
 # RIS MCP Server
 
 [![CI](https://github.com/Honeyfield-Org/ris-mcp-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/Honeyfield-Org/ris-mcp-ts/actions/workflows/ci.yml)
@@ -42,6 +53,170 @@ The server translates these natural language requests into structured API calls 
 - **Markdown and JSON** output formats
 - **Free and open** — uses Austria's Open Government Data API, no API key needed
 
+<a id="anleitung"></a>
+
+## Anleitung (Deutsch)
+
+Das **Rechtsinformationssystem des Bundes (RIS)** ist die offizielle Datenbank für österreichisches Recht: Bundes- und Landesrecht, Entscheidungen der Gerichte, Gesetzblätter, Regierungsvorlagen. Dieser Server verbindet das RIS mit deinem KI-Chat. Du stellst eine Frage, die KI sucht live im RIS und antwortet mit **Dokumentnummer und Link zur Originalquelle**. Es braucht kein Konto und keinen API-Schlüssel, und es werden ausschließlich öffentliche Daten abgefragt.
+
+Je nachdem, wer du bist, geht es hier weiter:
+
+<table>
+  <tr>
+    <td><a href="#librechat-betreiberinnen"><img src="docs/assets/tile-betreiberinnen.svg" alt="Ich betreibe LibreChat" width="400"></a></td>
+    <td><a href="#endnutzerinnen"><img src="docs/assets/tile-nutzerinnen.svg" alt="Ich nutze den Chat" width="400"></a></td>
+  </tr>
+</table>
+
+<a id="librechat-betreiberinnen"></a>
+
+### Für LibreChat-Betreiber:innen
+
+Du richtest den Server einmal ein, danach steht er allen Nutzer:innen deiner LibreChat-Instanz zur Verfügung.
+
+**Das brauchst du**
+
+- eine selbst betriebene LibreChat-Instanz mit Docker Compose
+- Zugriff auf den Server und das Recht, `docker-compose.override.yml`, `librechat.yaml` und `.env` zu ändern
+- `git`
+
+**Schritt 1: Server neben LibreChat ablegen**
+
+```bash
+cd /pfad/zu/librechat
+git clone https://github.com/Honeyfield-Org/ris-mcp-ts.git ../ris-mcp-ts
+```
+
+**Schritt 2: Override anlegen**
+
+```bash
+cp ../ris-mcp-ts/examples/librechat/docker-compose.override.yml .
+```
+
+Das fügt zwei Dinge hinzu: den Dienst `ris-mcp` (nur im internen Docker-Netz erreichbar, nicht aus dem Internet) und den Mount für deine `librechat.yaml`. Hast du schon eine `docker-compose.override.yml`, übernimm die Einträge von Hand. Prüfe außerdem den Pfad bei `build:`, falls du den Server woanders abgelegt hast.
+
+**Schritt 3: `librechat.yaml` ergänzen**
+
+Füge diesen Block in deine bestehende `librechat.yaml` ein (Vorlage: [`examples/librechat/librechat.yaml`](examples/librechat/librechat.yaml)):
+
+```yaml
+mcpServers:
+  ris:
+    type: streamable-http
+    url: http://ris-mcp:3000/mcp
+    timeout: 60000
+    serverInstructions: true
+```
+
+`serverInstructions: true` gibt dem Modell eine kurze Anleitung mit, welches Werkzeug wofür da ist und wie zitiert wird. Das lohnt sich.
+
+**Schritt 4 (optional): Zugangs-Token**
+
+Im internen Docker-Netz erreicht nur LibreChat den Server, ein Token brauchst du dort nicht. Öffnest du den Port nach außen, setze eines:
+
+```bash
+openssl rand -hex 32      # Ergebnis als RIS_MCP_AUTH_TOKEN in LibreChats .env eintragen
+```
+
+Ergänze dann in der `librechat.yaml` unter `ris:` diese Zeilen:
+
+```yaml
+    headers:
+      Authorization: "Bearer ${RIS_MCP_AUTH_TOKEN}"
+```
+
+**Schritt 5: Starten und prüfen**
+
+```bash
+docker compose up -d --build
+docker compose logs ris-mcp --tail 5
+# → RIS MCP HTTP server listening on port 3000 (stateless, auth off)
+docker compose exec ris-mcp wget -qO- http://localhost:3000/health
+# → {"status":"ok","service":"ris-mcp","activeSessions":0}
+```
+
+Öffne dann LibreChat, starte einen Chat, aktiviere „ris“ im MCP-Menü (oder füge den Server einem Agenten hinzu) und frage zum Beispiel: *„Was steht in § 1295 ABGB?“* Die Antwort sollte einen Link auf ris.bka.gv.at enthalten.
+
+> [!NOTE]
+> Die Menüs und Optionsnamen in LibreChat ändern sich zwischen Versionen. Gleiche die YAML-Optionen mit der [LibreChat-Dokumentation zu MCP](https://www.librechat.ai/docs/features/mcp) deiner Version ab.
+
+**Betrieb**
+
+| Aufgabe | So geht es |
+|---------|------------|
+| Aktualisieren | `cd ../ris-mcp-ts && git pull && cd ../librechat && docker compose up -d --build ris-mcp` |
+| Logs ansehen | `docker compose logs -f ris-mcp` |
+| Einstellungen ändern | Umgebungsvariablen im Override, Übersicht unter [Settings](#settings) |
+| Token tauschen | `RIS_MCP_AUTH_TOKEN` in `.env` ändern, dann `docker compose up -d` |
+
+**Datenschutz in Kürze**
+
+- Der Server hat keine Datenbank und schreibt keine Dateien. Im Log stehen nur Start, Stopp und Fehler, keine Suchanfragen.
+- Die Suchbegriffe deiner Nutzer:innen werden an die RIS-API (`data.bka.gv.at`) weitergegeben. Ein Reverse-Proxy davor kann eigene Logs schreiben.
+- Weise deine Nutzer:innen darauf hin, keine personenbezogenen Daten Dritter in Suchanfragen zu schreiben (siehe [Endnutzer:innen](#endnutzerinnen)).
+
+**Fehlersuche**
+
+| Symptom | Mögliche Ursache | Lösung |
+|---------|------------------|--------|
+| „ris“ fehlt im MCP-Menü | `librechat.yaml` nicht eingebunden oder YAML-Fehler | Mount prüfen, `docker compose logs api` ansehen, `api` neu starten |
+| Aufruf scheitert mit 401 | Token fehlt oder stimmt nicht überein | `RIS_MCP_AUTH_TOKEN` in LibreChats `.env` und im Override gleich setzen, beide Dienste neu erstellen |
+| „Zu viele Anfragen“ (429) | Rate-Limit erreicht, alle Nutzer:innen teilen sich eine IP | `RATE_LIMIT_PER_MINUTE` im Override erhöhen |
+| „Session nicht gefunden“ | Server wurde neu gestartet, zustandsloser Modus ist aus | `MCP_STATELESS: "true"` setzen (im Beispiel schon gesetzt) |
+| Antwort endet mit „Antwort gekürzt“ | Dokument länger als 25.000 Zeichen | Normal. Die Quelle ist verlinkt, oder die Frage genauer stellen |
+| Fehler oder Zeitüberschreitung beim Abruf | RIS-API nicht erreichbar (Zeitlimit 30 Sekunden) | Später erneut versuchen, ausgehende Verbindung zu `data.bka.gv.at` prüfen |
+
+**Optional: Claude für deine Organisation**
+
+Ihr nutzt neben LibreChat auch Claude? Dann braucht der Server einen öffentlich erreichbaren HTTPS-Endpunkt und bleibt ohne Token. Die Schritte stehen unter [Claude (claude.ai, Claude Desktop, Claude Code)](#claude-claudeai-claude-desktop-claude-code). Für einzelne Rechner gibt es außerdem das [Ein-Klick-Paket für Claude Desktop](#claude-desktop-ein-klick-paket).
+
+<a id="endnutzerinnen"></a>
+
+### Für Endnutzer:innen
+
+So nutzt du das RIS im Chat, ohne etwas zu installieren.
+
+**So geht es los**
+
+1. Öffne LibreChat und starte einen neuen Chat.
+2. Aktiviere **ris** im MCP-Menü des Eingabefelds. Je nach Einrichtung ist es schon voreingestellt, frag im Zweifel bei den Betreiber:innen nach.
+3. Stelle deine Frage, so wie du sie einer Kollegin stellen würdest.
+
+**Beispiele für Fragen**
+
+- *„Was steht in § 1295 ABGB?“*
+- *„Welche Fassung des Datenschutzgesetzes galt am 1. Jänner 2020?“*
+- *„Finde Entscheidungen des OGH zu § 1319a ABGB.“*
+- *„Was hat der Verfassungsgerichtshof zur Meinungsfreiheit entschieden?“*
+- *„Welche Regierungsvorlagen gibt es zum Klimaschutz?“*
+- *„Was wurde zuletzt im Landesgesetzblatt für Wien zum Baurecht kundgemacht?“*
+- *„Hat sich das Mietrechtsgesetz in den letzten Jahren geändert?“*
+
+**So fragst du gut**
+
+- **Nenne Gesetz und Paragraph**, wenn du sie kennst („§ 1295 ABGB“ statt „das Schadenersatzgesetz“).
+- **Nenne das Datum**, wenn es um eine ältere Rechtslage geht („Fassung vom 1. Jänner 2020“).
+- **Nenne Gericht oder Geschäftszahl**, wenn du eine bestimmte Entscheidung suchst („OGH, 5 Ob 234/20b“).
+- **Grenze ein**: Ein Bundesland, ein Zeitraum oder ein Rechtsgebiet liefern bessere Treffer als eine sehr allgemeine Frage.
+- **Frag nach**, wenn die Antwort zu knapp ist: „Zeig mir den vollen Text von Absatz 2.“
+
+**Was du in der Antwort siehst**
+
+- Die KI zeigt an, dass sie im RIS sucht. Das ist gewollt.
+- Zu jedem Treffer gehören **Dokumentnummer oder Geschäftszahl und ein Link** zur Originalquelle im RIS.
+- Endet eine Antwort mit „Antwort gekürzt“, war das Dokument zu lang. Öffne den Link, oder frag nach einem bestimmten Abschnitt.
+
+**Grenzen und Verantwortung**
+
+- Das ist **Rechtsinformation, keine Rechtsberatung**. Das RIS ist die offizielle Quelle. Die KI kann aber falsch zusammenfassen oder etwas übersehen, **prüfe wichtige Aussagen deshalb immer im verlinkten Original**.
+- **Schreibe keine personenbezogenen Daten Dritter oder vertrauliche Fallinformationen** in deine Frage. Suchbegriffe werden an das RIS des Bundeskanzleramts weitergegeben.
+- Wenn nichts gefunden wird, formuliere die Frage anders oder nenne genauere Angaben. Das heißt nicht, dass es keine Regelung gibt.
+
+**Nutzt du Claude statt LibreChat?**
+
+- In **claude.ai** fügst du RIS unter Einstellungen → Konnektoren als benutzerdefinierten Konnektor hinzu, sofern deine Organisation das erlaubt. Die Adresse bekommst du von deinen Betreiber:innen.
+- Auf deinem eigenen Rechner mit **Claude Desktop** geht es mit dem [Ein-Klick-Paket](#claude-desktop-ein-klick-paket) ohne Server.
+
 ## Quick Start
 
 Run directly without installation:
@@ -77,6 +252,20 @@ Add to your Claude Desktop config (Settings > Developer > Edit Config):
 ```
 
 > **Note:** The "Add custom connector" UI in Claude Desktop only supports remote MCP servers (HTTP/SSE). Local stdio servers like this one must be configured via the JSON file.
+
+<a id="claude-desktop-ein-klick-paket"></a>
+
+#### One-click package (.mcpb)
+
+Claude Desktop can also install the server as an extension, without editing JSON and without Node.js on your machine. A release with the package attached is not out yet, so build it yourself for now:
+
+```bash
+pnpm install && pnpm run build && pnpm run build:mcpb   # writes ris-mcp-<version>.mcpb
+```
+
+Then double-click the file (or drag it into Claude Desktop under Settings → Extensions) and confirm the install. From the next release on, the `.mcpb` is attached to the GitHub Release. The package has been validated with the official `mcpb` tool and started over stdio from its unpacked form; it has not been installed in Claude Desktop itself. Menu names may differ between versions.
+
+*Auf Deutsch:* Das Paket installierst du per Doppelklick. Es läuft lokal auf deinem Rechner und braucht keinen Server und kein Docker.
 >
 > **Tip:** You can also use `pnpm dlx` instead of `npx` in all configuration examples if you prefer pnpm.
 
@@ -142,6 +331,125 @@ Any MCP-compatible client can connect via stdio transport:
 npx -y ris-mcp-ts
 # or: pnpm dlx ris-mcp-ts
 ```
+
+## Remote Deployment (Docker Compose)
+
+Besides stdio, the server speaks **Streamable HTTP** (`POST /mcp`, health check at `GET /health`, port 3000). That is what you need for LibreChat, claude.ai custom connectors and hosted MCP platforms: one long-running container, many users, no `npx` per chat.
+
+```bash
+cp .env.example .env             # optional, every setting has a default
+docker compose up -d --build
+curl http://127.0.0.1:3000/health   # {"status":"ok","service":"ris-mcp",...}
+```
+
+The bundled [`docker-compose.yml`](docker-compose.yml) binds the port to `127.0.0.1` only. The endpoint to hand to a client is `http://<host>:3000/mcp` (inside a Docker network: `http://ris-mcp:3000/mcp`).
+
+### Settings
+
+All optional, set as environment variables (see [`.env.example`](.env.example)):
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `MCP_STATELESS` | `false` | `true` serves every request on its own, with no sessions: nothing is lost on a restart, there is no 100-session cap, and several replicas work behind a plain load balancer. **Recommended for LibreChat** and any host that shows no interactive widget. The viewer widget's per-session document cache then lives for one request only. |
+| `MCP_AUTH_TOKEN` | *(empty)* | Non-empty: `/mcp` requires `Authorization: Bearer <token>` (401 otherwise); `/health` stays open. Use it when the endpoint is reachable beyond a private network and the client can send a header (LibreChat, Claude Code). claude.ai custom connectors cannot, so leave it empty for those. |
+| `RATE_LIMIT_PER_MINUTE` | `60` | Requests per minute per MCP session (per client IP before a session exists, and always in stateless mode). Raise it when many users share one client IP, e.g. a LibreChat server in stateless mode. Anything that is not a positive integer falls back to 60. |
+| `ALLOWED_ORIGINS` | *(empty)* | Browser origins allowed to call `/mcp`, comma-separated, exact match. Only needed for clients that run in a browser; enables CORS for exactly these origins. See below. |
+| `PORT` | `3000` | Listen port. |
+
+What to know before connecting a client:
+
+- **Server-to-server by default.** Requests without an `Origin` header pass; requests *with* one are rejected with 403. LibreChat, claude.ai and hosted platforms call from their backend and are unaffected. A client that runs in a browser tab sends an `Origin`: list its exact origin in `ALLOWED_ORIGINS` (e.g. `https://app.example.org`) and the server answers the preflight and sends the CORS headers for it, including `Mcp-Session-Id` as an exposed header. Other origins stay blocked; `*` is not supported. A token (`MCP_AUTH_TOKEN`) still applies, the preflight itself needs none.
+- **Open by default.** The data is public (RIS Open Government Data), but the endpoint is not protected unless you set `MCP_AUTH_TOKEN`. Keep it on an internal Docker network, or put a reverse proxy in front when it must be reachable from outside.
+- **Sessions** (stateful mode) are kept in memory: at most 100, evicted after 30 minutes idle. After a restart a client gets `404 Session nicht gefunden` and has to reconnect. Stateless mode has none of this.
+- **Streaming:** behind a reverse proxy, disable response buffering for `/mcp` (the server already sends `X-Accel-Buffering: no`). The server assumes exactly one proxy hop (`trust proxy 1`).
+- **Usage instructions for the model.** The server sends a short instruction text in the `initialize` result (which tool for what, how to page, how to cite, answer in the user's language). Claude and LibreChat (`serverInstructions: true`) pass it to the model, which makes tool choice noticeably more reliable.
+
+### LibreChat
+
+Ready-made files are in [`examples/librechat/`](examples/librechat/). Copy `docker-compose.override.yml` next to LibreChat's `docker-compose.yml` and merge `librechat.yaml` into yours:
+
+```yaml
+# docker-compose.override.yml  (excerpt)
+services:
+  api:
+    volumes:
+      - type: bind
+        source: ./librechat.yaml
+        target: /app/librechat.yaml
+  ris-mcp:
+    build: ../ris-mcp-ts
+    restart: unless-stopped
+    environment:
+      MCP_STATELESS: "true"          # LibreChat renders no widget, and many users share one IP
+      RATE_LIMIT_PER_MINUTE: "600"
+      MCP_AUTH_TOKEN: ${RIS_MCP_AUTH_TOKEN:-}
+```
+
+```yaml
+# librechat.yaml  (merge into your file)
+mcpServers:
+  ris:
+    type: streamable-http
+    url: http://ris-mcp:3000/mcp
+    timeout: 60000
+    serverInstructions: true
+    headers:                         # only if you set RIS_MCP_AUTH_TOKEN in LibreChat's .env
+      Authorization: "Bearer ${RIS_MCP_AUTH_TOKEN}"
+```
+
+Restart the `api` container; the server then shows up in the chat's MCP menu and can be attached to agents. For a quick try without Docker, `type: stdio` with `command: npx` and `args: ["-y", "ris-mcp-ts"]` works too, but starts one process per user session.
+
+### Claude (claude.ai, Claude Desktop, Claude Code)
+
+- **claude.ai / Claude Desktop (custom connector):** Settings → Connectors → *Add custom connector*, URL `https://<your-public-host>/mcp`. The request comes from Anthropic's cloud, so the URL must be **public HTTPS**; `localhost` or an internal Docker name will not work. Leave `MCP_AUTH_TOKEN` empty: the connector dialog has no field for a static header. This is the only host family that renders the interactive result list and document viewer, so keep `MCP_STATELESS` off for it.
+- **Claude Desktop (local):** stdio via the JSON config, see [Claude Desktop](#claude-desktop) above.
+- **Claude Code against a remote instance:**
+
+  ```bash
+  claude mcp add --transport http ris https://<your-public-host>/mcp
+  # with MCP_AUTH_TOKEN set on the server:
+  claude mcp add --transport http ris https://<your-public-host>/mcp --header "Authorization: Bearer <token>"
+  ```
+
+### Hosted platforms with a custom-MCP field
+
+Platforms with a section like *„Eigenen MCP-Server hinzufügen“* take a name and a server URL, and nothing else:
+
+| Field | Value |
+|-------|-------|
+| Name | `RIS – Österreichisches Rechtsinformationssystem` (any label) |
+| Server-URL | `https://<your-public-host>/mcp` |
+
+Their backend connects to that URL, so it must be reachable from the internet over HTTPS and must end in `/mcp`. Without a header field the endpoint has to stay open (empty `MCP_AUTH_TOKEN`); the rate limit caps abuse and the data is public anyway. Whether such a platform shares one IP across its users decides whether you need to raise `RATE_LIMIT_PER_MINUTE`.
+
+A minimal public setup with Caddy (automatic TLS) next to the container:
+
+```yaml
+services:
+  ris-mcp:
+    build: .
+    restart: unless-stopped
+    environment:
+      MCP_STATELESS: "true"
+      RATE_LIMIT_PER_MINUTE: "300"
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+```
+
+```
+# Caddyfile
+ris.example.org {
+    reverse_proxy ris-mcp:3000
+}
+```
+
+> **Widgets:** the interactive result list and document viewer render only in hosts that support MCP Apps (claude.ai, ChatGPT). LibreChat and most other platforms show the complete text answer of every tool instead — nothing is lost, only the interactive UI is missing. `ris_dokument_abschnitt` is a helper for the viewer and may appear in their tool list; it is harmless.
 
 ## Available Tools
 

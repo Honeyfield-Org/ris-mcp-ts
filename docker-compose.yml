@@ -1,0 +1,23 @@
+# Standalone RIS MCP server (Streamable HTTP) — see README, "Remote Deployment".
+#
+#   cp .env.example .env      # optional: token, stateless mode, rate limit
+#   docker compose up -d --build
+#   curl http://127.0.0.1:3000/health
+#
+# The endpoint is http://127.0.0.1:3000/mcp. The port is bound to localhost on
+# purpose: put a reverse proxy with TLS in front of it to publish it, or join the
+# service to your LibreChat network instead (examples/librechat/).
+services:
+  ris-mcp:
+    build: .
+    image: ris-mcp:local
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      # Every variable below is optional; the defaults are the long-standing behaviour.
+      MCP_STATELESS: ${MCP_STATELESS:-false}
+      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+    ports:
+      - "127.0.0.1:${HOST_PORT:-3000}:3000"
